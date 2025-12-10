@@ -1,0 +1,654 @@
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kathy's 旅遊手帳本 - 巴黎鐵塔篇 (Premium)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Indie+Flower&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- 基礎設定 --- */
+        .font-handwriting-zh { font-family: 'Ma Shan Zheng', cursive; }
+        .font-handwriting-en { font-family: 'Indie Flower', cursive; }
+        .font-body { font-family: 'Noto Sans TC', sans-serif; }
+        body { margin: 0; padding: 0; overflow-x: hidden; }
+
+        /* --- 主題系統 --- */
+        :root {
+            --bg-color: #fffbf0;
+            --grid-color: #e5e7eb;
+            --accent-color: #ef4444; 
+            --tape-color-1: #93c5fd;
+            --tape-color-2: #fca5a5;
+        }
+        .theme-classic { --bg-color: #fffbf0; --grid-color: #e5e7eb; --accent-color: #ef4444; }
+        .theme-matcha { --bg-color: #f0fdf4; --grid-color: #dcfce7; --accent-color: #15803d; }
+        .theme-ocean { --bg-color: #eff6ff; --grid-color: #dbeafe; --accent-color: #2563eb; }
+
+        /* --- 畫布區域 (質感升級) --- */
+        #capture-area {
+            background-color: var(--bg-color);
+            /* 疊加格線與噪點紋理，模擬真實紙張質感 */
+            background-image: 
+                linear-gradient(var(--grid-color) 1.5px, transparent 1.5px),
+                linear-gradient(90deg, var(--grid-color) 1.5px, transparent 1.5px),
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+            background-size: 24px 24px, 24px 24px, 200px 200px;
+            transition: background-color 0.5s ease;
+            width: 100%;
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden; 
+            padding: 20px;
+        }
+
+        /* --- 漂浮動畫 --- */
+        @keyframes float {
+            0% { transform: rotate(2deg) translateY(0px); }
+            50% { transform: rotate(2deg) translateY(-8px); }
+            100% { transform: rotate(2deg) translateY(0px); }
+        }
+        /* 僅在非 PDF 模式下啟用動畫 */
+        body:not(.pdf-mode) .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        /* --- 相框與圖片調整 --- */
+        .photo-frame-container {
+            position: relative;
+            overflow: hidden;
+            background-color: #f1f5f9;
+            cursor: grab;
+            touch-action: none;
+            /* 增加內陰影增加立體感 */
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); 
+        }
+        .photo-frame-container:active {
+            cursor: grabbing;
+        }
+        
+        .manipulable-photo {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform-origin: center center;
+            opacity: 0; 
+            transition: opacity 0.3s ease;
+            max-width: none;
+            max-height: none;
+            user-select: none;
+            -webkit-user-drag: none;
+            pointer-events: none; 
+        }
+        .manipulable-photo.loaded {
+            opacity: 1;
+        }
+
+        /* 縮放滑桿 */
+        .zoom-controls {
+            position: absolute;
+            bottom: 15px; 
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 12px; 
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 60; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            border: 1px solid #cbd5e1;
+            backdrop-filter: blur(4px);
+        }
+        .photo-frame-container:hover .zoom-controls,
+        .photo-frame-container:active .zoom-controls {
+            opacity: 1;
+        }
+        
+        .zoom-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100px; 
+            height: 6px; 
+            background: #cbd5e1;
+            border-radius: 5px;
+            outline: none;
+            cursor: grab;
+        }
+        .zoom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px; 
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: grab;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        /* --- 裝飾與膠帶 --- */
+        .washi-tape { position: absolute; height: 28px; width: 90px; opacity: 0.85; z-index: 20; mix-blend-mode: multiply; }
+        /* 膠帶邊緣鋸齒效果 */
+        .tape-1 { background-color: var(--tape-color-1); transform: rotate(-3deg); clip-path: polygon(2% 0, 100% 0, 98% 100%, 0% 100%); mask-image: repeating-linear-gradient(90deg, #000, #000 2px, transparent 2px, transparent 4px); }
+        .tape-2 { background-color: var(--tape-color-2); transform: rotate(4deg); clip-path: polygon(0 0, 98% 2%, 100% 100%, 2% 98%); }
+        .tape-pattern { background-color: #fff; background-image: radial-gradient(#cbd5e1 20%, transparent 20%); background-size: 8px 8px; transform: rotate(-5deg); width: 100px; }
+
+        .polaroid { 
+            background: white; 
+            padding: 12px 12px 25px 12px; /* 底部留白多一點 */
+            box-shadow: 2px 8px 20px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1); 
+            transform: rotate(-2deg); 
+            break-inside: avoid; 
+            page-break-inside: avoid; 
+            transition: transform 0.3s ease;
+        }
+        .polaroid:hover {
+            transform: rotate(0deg) scale(1.02);
+            z-index: 30;
+        }
+
+        .sticker-note { background: #fff; border: 2px solid #334155; border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; box-shadow: 4px 4px 0px rgba(0,0,0,0.1); break-inside: avoid; page-break-inside: avoid; }
+        
+        .center-photo-frame { background: #fff; padding: 10px; border: 3px solid #e2e8f0; box-shadow: 5px 5px 15px rgba(0,0,0,0.1); transform: rotate(1deg); position: relative; break-inside: avoid; page-break-inside: avoid; }
+        .photo-corner { position: absolute; width: 30px; height: 30px; background-color: #94a3b8; z-index: 25; opacity: 0.8; }
+        .corner-tl { top: -5px; left: -5px; clip-path: polygon(0 0, 100% 0, 0 100%); }
+        .corner-tr { top: -5px; right: -5px; clip-path: polygon(0 0, 100% 0, 100% 100%); }
+        .corner-bl { bottom: -5px; left: -5px; clip-path: polygon(0 0, 100% 100%, 0 100%); }
+        .corner-br { bottom: -5px; right: -5px; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+
+        .action-btn { position: absolute; background-color: rgba(255, 255, 255, 0.95); color: #475569; padding: 6px 10px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #cbd5e1; display: flex; align-items: center; gap: 4px; z-index: 40; font-family: 'Noto Sans TC', sans-serif; font-weight: bold; transition: all 0.2s; }
+        .action-btn:hover { background-color: #fff; transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        /* 編輯提示：讓可編輯文字滑鼠游標變化 */
+        [contenteditable="true"] { cursor: text; transition: background-color 0.2s; border-radius: 4px; padding: 2px 4px; }
+        [contenteditable="true"]:hover { background-color: rgba(0,0,0,0.03); }
+        [contenteditable="true"]:focus { background-color: rgba(255,255,255,0.8); outline: 2px dashed #94a3b8; }
+
+        /* Stamp 樣式 */
+        .stamp-mark {
+            mix-blend-mode: multiply;
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        /* UI 控制列 */
+        .ui-controls { position: fixed; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+        .control-group { background: rgba(255, 255, 255, 0.95); padding: 8px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; display: flex; gap: 8px; }
+        .theme-btn { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 1px #cbd5e1; transition: transform 0.2s; }
+        .theme-btn.active { box-shadow: 0 0 0 2px #3b82f6; transform: scale(1.1); }
+        .btn-download { padding: 8px 16px; border-radius: 8px; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; cursor: pointer; border: none; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); color: white; width: 100%; justify-content: center; background: linear-gradient(to right, #8b5cf6, #6366f1); transition: opacity 0.2s; }
+        .btn-download:hover { opacity: 0.9; }
+
+        .floating-badge { position: fixed; bottom: 30px; right: 30px; z-index: 100; background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%); color: #be185d; padding: 8px 20px 8px 16px; border-radius: 50px; font-family: 'Ma Shan Zheng', cursive; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(255, 182, 193, 0.6); border: 2px solid #fff; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: transform 0.2s; }
+        .floating-badge:hover { transform: translateY(-2px); }
+        
+        .reset-link { display: inline-block; margin-top: 10px; color: #94a3b8; font-size: 0.8rem; text-decoration: underline; cursor: pointer; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        .scrapbook-item { break-inside: avoid; page-break-inside: avoid; position: relative; }
+
+        /* PDF 模式：隱藏 UI */
+        .pdf-mode .action-btn, .pdf-mode .ui-controls, .pdf-mode .floating-badge, .pdf-mode .zoom-controls { display: none !important; }
+        .pdf-mode [contenteditable] { outline: none !important; background: transparent !important; }
+        .pdf-mode #capture-area { padding: 0 !important; } /* PDF模式下去除邊距以滿版 */
+        
+    </style>
+    <script>
+        // 增強版錯誤攔截
+        window.addEventListener('unhandledrejection', function(event) {
+            if (event.reason && (event.reason.isTrusted || event.reason.name === 'Error')) {
+                console.log('已攔截並忽略非致命錯誤:', event.reason);
+                event.preventDefault();
+                return;
+            }
+        });
+
+        // 定義內建的 SVG 場景，確保 100% 可載入
+        const svgScenes = {
+            tower: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' preserveAspectRatio='xMidYMid slice'%3E%3Crect width='400' height='300' fill='%23f0fdf4'/%3E%3Cpath d='M0 250 Q 200 220 400 250 L 400 300 L 0 300 Z' fill='%2386efac'/%3E%3Cpath d='M200 50 L 240 250 L 160 250 Z' fill='none' stroke='%23475569' stroke-width='4'/%3E%3Cpath d='M175 120 L 225 120' stroke='%23475569' stroke-width='3'/%3E%3Cpath d='M165 180 L 235 180' stroke='%23475569' stroke-width='3'/%3E%3Ccircle cx='50' cy='50' r='30' fill='%23fef08a' opacity='0.8'/%3E%3Ctext x='200' y='280' font-family='cursive' font-size='20' text-anchor='middle' fill='%2315803d'%3EPicnic Time%3C/text%3E%3C/svg%3E",
+            
+            parisLove: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400' preserveAspectRatio='xMidYMid slice'%3E%3Crect width='400' height='400' fill='%23fff1f2'/%3E%3Cpath d='M200 300 C 100 200 50 150 100 100 A 50 50 0 0 1 200 150 A 50 50 0 0 1 300 100 C 350 150 300 200 200 300 Z' fill='%23fda4af' stroke='%23e11d48' stroke-width='3'/%3E%3Ctext x='200' y='350' font-family='cursive' font-size='30' text-anchor='middle' fill='%23be123c'%3EParis%3C/text%3E%3C/svg%3E",
+            
+            croissant: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' preserveAspectRatio='xMidYMid slice'%3E%3Crect width='400' height='300' fill='%23fffbeb'/%3E%3Cpath d='M100 150 Q 150 100 200 120 Q 250 100 300 150 Q 280 200 200 180 Q 120 200 100 150 Z' fill='%23fbbf24' stroke='%23d97706' stroke-width='4'/%3E%3Cpath d='M130 140 Q 150 120 170 140' stroke='%23d97706' stroke-width='2' fill='none'/%3E%3Cpath d='M230 140 Q 250 120 270 140' stroke='%23d97706' stroke-width='2' fill='none'/%3E%3Ctext x='200' y='250' font-family='cursive' font-size='24' text-anchor='middle' fill='%23b45309'%3EYummy!%3C/text%3E%3C/svg%3E",
+            
+            friends: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' preserveAspectRatio='xMidYMid slice'%3E%3Crect width='400' height='300' fill='%23eff6ff'/%3E%3Ccircle cx='150' cy='120' r='30' fill='%23bfdbfe' stroke='%233b82f6' stroke-width='2'/%3E%3Ccircle cx='250' cy='120' r='30' fill='%23fbcfe8' stroke='%23db2777' stroke-width='2'/%3E%3Cpath d='M150 150 L 150 220 M 150 220 L 120 270 M 150 220 L 180 270' stroke='%231e293b' stroke-width='3'/%3E%3Cpath d='M250 150 L 250 220 M 250 220 L 220 270 M 250 220 L 280 270' stroke='%231e293b' stroke-width='3'/%3E%3Cpath d='M150 170 L 120 190 M 150 170 L 200 160' stroke='%231e293b' stroke-width='3'/%3E%3Cpath d='M250 170 L 200 160 M 250 170 L 280 190' stroke='%231e293b' stroke-width='3'/%3E%3Ctext x='200' y='50' font-family='cursive' font-size='24' text-anchor='middle' fill='%231d4ed8'%3EBest Friends%3C/text%3E%3C/svg%3E"
+        };
+
+        // 將示範圖片全面替換為 SVG，解決所有網路/CORS 問題
+        const demoPhotos = {
+            'img-step1': svgScenes.tower,
+            'img-main': svgScenes.parisLove,
+            'img-step2': svgScenes.croissant,
+            'img-center': svgScenes.friends
+        };
+
+        const photoStates = {};
+
+        window.onload = function() {
+            for (const [id, url] of Object.entries(demoPhotos)) {
+                setupImage(id, url);
+            }
+            setTheme('classic');
+        };
+
+        function setupImage(imgId, url) {
+            const img = document.getElementById(imgId);
+            if (!img) return;
+
+            img.classList.remove('loaded');
+            // 本地 SVG 不需要 CORS 設定，這樣是最安全的
+            img.removeAttribute('crossOrigin'); 
+            img.src = url;
+
+            img.onload = () => {
+                initializePhotoState(img);
+                img.classList.add('loaded');
+            };
+            
+            img.onerror = () => {
+                console.warn("SVG 載入異常", imgId);
+            }
+        }
+
+        function initializePhotoState(img) {
+            const container = img.parentElement;
+            if (!container) return; 
+
+            const containerW = container.clientWidth;
+            const containerH = container.clientHeight;
+            const imgW = img.naturalWidth || 800; 
+            const imgH = img.naturalHeight || 600;
+
+            const scaleX = containerW / imgW;
+            const scaleY = containerH / imgH;
+            const minScale = Math.max(scaleX, scaleY); 
+            const initialScale = Math.max(minScale, 0.5);
+
+            photoStates[img.id] = {
+                scale: initialScale,
+                x: 0,
+                y: 0,
+                minScale: minScale,
+                baseScale: initialScale
+            };
+
+            updateImageTransform(img);
+
+            let slider = container.querySelector('.zoom-slider');
+            if (slider) {
+                slider.min = minScale;
+                slider.max = minScale * 4; 
+                slider.step = 0.01;
+                slider.value = initialScale;
+                
+                const newSlider = slider.cloneNode(true);
+                slider.parentNode.replaceChild(newSlider, slider);
+                
+                newSlider.addEventListener('input', (e) => {
+                    const state = photoStates[img.id];
+                    state.scale = parseFloat(e.target.value);
+                    updateImageTransform(img);
+                });
+                
+                newSlider.addEventListener('mousedown', (e) => e.stopPropagation());
+                newSlider.addEventListener('touchstart', (e) => e.stopPropagation());
+            }
+
+            initPan(container, img);
+        }
+
+        function updateImageTransform(img) {
+            const state = photoStates[img.id];
+            if (!state) return;
+            img.style.transform = `translate(-50%, -50%) translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
+        }
+
+        function initPan(container, img) {
+            let isDragging = false;
+            let startX, startY;
+            let initialX, initialY;
+
+            const onMouseDown = (e) => {
+                if (e.target.closest('.zoom-controls')) return;
+                isDragging = true;
+                const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+                const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+                
+                startX = clientX;
+                startY = clientY;
+                
+                if (!photoStates[img.id]) initializePhotoState(img);
+                initialX = photoStates[img.id].x;
+                initialY = photoStates[img.id].y;
+                
+                container.style.cursor = 'grabbing';
+            };
+
+            const onMouseMove = (e) => {
+                if (!isDragging) return;
+                e.preventDefault(); 
+                
+                const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+                const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+                
+                const dx = clientX - startX;
+                const dy = clientY - startY;
+
+                const state = photoStates[img.id];
+                state.x = initialX + dx / state.scale; 
+                state.y = initialY + dy / state.scale;
+                
+                updateImageTransform(img);
+            };
+
+            const onMouseUp = () => {
+                isDragging = false;
+                container.style.cursor = 'grab';
+            };
+
+            container.onmousedown = onMouseDown;
+            window.onmousemove = onMouseMove; 
+            window.onmouseup = onMouseUp;
+
+            container.ontouchstart = onMouseDown;
+            window.ontouchmove = onMouseMove;
+            window.ontouchend = onMouseUp;
+        }
+
+        function triggerUpload(imgId) {
+            const input = document.createElement('input'); 
+            input.type = 'file'; 
+            input.accept = 'image/*';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const img = document.getElementById(imgId);
+                        img.removeAttribute('crossOrigin');
+                        img.src = event.target.result;
+                        img.onload = () => {
+                             initializePhotoState(img);
+                             img.classList.add('loaded');
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            input.click();
+        }
+
+        function resetPhotos() {
+            if(confirm('確定要將所有照片重置回「巴黎示範照」嗎？')) {
+                for (const [id, url] of Object.entries(demoPhotos)) {
+                    setupImage(id, url);
+                }
+            }
+        }
+
+        function setTheme(themeName) {
+            const captureArea = document.getElementById('capture-area');
+            if (captureArea) captureArea.className = `p-4 md:p-8 font-body text-gray-800 theme-${themeName}`;
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.remove('active'); if(btn.dataset.theme === themeName) btn.classList.add('active');
+            });
+        }
+
+        async function downloadPDF() {
+            const element = document.getElementById('capture-area');
+            const manual = document.getElementById('user-manual'); 
+            const resetBtn = document.querySelector('.reset-link'); 
+
+            if(manual) manual.style.display = 'none';
+            if(resetBtn) resetBtn.style.display = 'none';
+            document.body.classList.add('pdf-mode');
+
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
+            
+            const dateDiv = document.createElement('div');
+            dateDiv.id = 'pdf-date-stamp';
+            dateDiv.style.position = 'absolute'; dateDiv.style.bottom = '20px'; dateDiv.style.right = '40px';
+            dateDiv.style.fontFamily = "'Indie Flower', cursive"; dateDiv.style.fontSize = '1.2rem'; dateDiv.style.color = '#64748b';
+            dateDiv.innerText = `Journal Date: ${dateStr}`;
+            element.appendChild(dateDiv);
+            
+            const totalWidth = element.scrollWidth;
+            const totalHeight = element.scrollHeight;
+
+            let opt = {
+              margin: 0,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: { 
+                  scale: 2, 
+                  useCORS: true, 
+                  scrollY: 0, 
+                  scrollX: 0, 
+                  width: totalWidth,
+                  height: totalHeight,
+                  logging: false 
+              },
+              jsPDF: { 
+                  unit: 'px', 
+                  format: [totalWidth, totalHeight], 
+                  orientation: 'portrait' 
+              },
+              filename: `My_Travel_Scrapbook_${new Date().toISOString().slice(0,10)}.pdf`
+            };
+
+            try {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                await html2pdf().set(opt).from(element).save();
+            } catch (err) {
+                console.error("PDF 產生過程發生錯誤:", err);
+            } finally {
+                if(manual) manual.style.display = 'block';
+                if(resetBtn) resetBtn.style.display = 'inline-block';
+                if(dateDiv) dateDiv.remove();
+                document.body.classList.remove('pdf-mode');
+            }
+        }
+    </script>
+</head>
+<body class="font-body text-gray-800 overflow-x-hidden m-0 p-0">
+
+    <!-- UI 控制區 -->
+    <div class="ui-controls">
+        <div class="control-group">
+            <span class="text-xs font-bold text-gray-500 self-center mr-1">風格:</span>
+            <button class="theme-btn" style="background:#fffbf0" data-theme="classic" onclick="setTheme('classic')" title="法式奶油"></button>
+            <button class="theme-btn" style="background:#f0fdf4" data-theme="matcha" onclick="setTheme('matcha')" title="京都抹茶"></button>
+            <button class="theme-btn" style="background:#eff6ff" data-theme="ocean" onclick="setTheme('ocean')" title="希臘海洋"></button>
+        </div>
+        <div class="flex flex-col gap-2 w-full">
+            <button onclick="downloadPDF()" class="btn-download" title="適合手機傳閱，不分頁">📱 存成數位長條 PDF</button>
+        </div>
+    </div>
+
+    <!-- 浮動標籤 -->
+    <a href="https://kathy594520.github.io/new.github.io/AI/AI" target="_blank" class="floating-badge" title="訪問仙姑凱西設計">
+        <svg class="hand-drawn-rose" style="width:28px;height:28px;stroke:#be185d;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 100 100"><path style="fill:rgba(254,205,211,0.6)" d="M30 70 Q 10 70 20 50 Q 40 40 50 60" /><path style="fill:rgba(167,243,208,0.4);stroke:#047857" d="M70 75 Q 90 80 85 60 Q 70 45 60 65" /><path d="M50 85 Q 55 70 50 60" stroke="#047857" stroke-width="2" fill="none" /><path style="fill:rgba(254,205,211,0.6)" d="M50 20 Q 70 15 80 35 Q 85 55 65 65 Q 45 70 30 55 Q 20 35 40 25 Q 55 20 65 35 Q 70 50 55 55 Q 45 55 45 45 Q 45 35 55 35" stroke="#be185d" stroke-width="2" /></svg>
+        仙姑凱西設計
+    </a>
+
+    <!-- Capture Area -->
+    <div id="capture-area" class="p-4 md:p-8 font-body text-gray-800 theme-classic"> 
+        <div class="max-w-4xl mx-auto relative">
+            
+            <!-- 郵戳裝飾 (新增亮點) -->
+            <div class="absolute top-4 right-8 z-20 pointer-events-none opacity-80 stamp-mark hidden md:block">
+                <svg width="120" height="120" viewBox="0 0 200 200">
+                    <circle cx="100" cy="100" r="90" fill="none" stroke="#2c3e50" stroke-width="3" stroke-dasharray="10,5"/>
+                    <circle cx="100" cy="100" r="70" fill="none" stroke="#2c3e50" stroke-width="2"/>
+                    <path id="curve" d="M 40,100 A 60,60 0 0,1 160,100" fill="none"/>
+                    <text width="200" text-anchor="middle" font-family="'Indie Flower', cursive" font-size="20" fill="#2c3e50">
+                        <textPath href="#curve" startOffset="50%">PARIS - FRANCE</textPath>
+                    </text>
+                    <text x="100" y="110" text-anchor="middle" font-family="'Indie Flower', cursive" font-size="28" fill="#2c3e50" font-weight="bold">ARRIVED</text>
+                    <text x="100" y="140" text-anchor="middle" font-family="monospace" font-size="16" fill="#2c3e50">2025.04</text>
+                </svg>
+            </div>
+
+            <!-- 頂部旗幟 -->
+            <div class="absolute -top-2 left-0 w-full flex justify-between px-4 opacity-90 pointer-events-none overflow-hidden h-16 z-0">
+                <div class="w-6 h-10 bg-blue-600 rounded-b-md mx-1 translate-y-[-5px]"></div>
+                <div class="w-6 h-12 bg-white border border-slate-200 rounded-b-md mx-1"></div>
+                <div class="w-6 h-10 bg-red-600 rounded-b-md mx-1 translate-y-[-8px]"></div>
+                <div class="w-6 h-14 bg-blue-400 rounded-b-md mx-1 translate-y-[-12px]"></div>
+                <div class="w-6 h-11 bg-red-400 rounded-b-md mx-1"></div>
+                <div class="hidden md:block w-6 h-9 bg-slate-200 rounded-b-md mx-1"></div>
+            </div>
+
+            <!-- 標題區 -->
+            <header class="relative z-10 text-center mb-14 mt-10 scrapbook-item">
+                <div class="inline-block relative group">
+                    <h1 class="text-5xl md:text-7xl font-handwriting-zh text-slate-800 transform -rotate-2 drop-shadow-sm transition-transform group-hover:rotate-0" contenteditable="true">
+                        巴黎鐵塔春日野餐趣
+                    </h1>
+                    <svg class="absolute -bottom-5 left-0 w-full h-6 opacity-70" style="color:var(--accent-color)" viewBox="0 0 100 10" preserveAspectRatio="none"><path d="M0 5 Q 50 15 100 5" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/></svg>
+                    <div class="absolute -top-8 -right-10 w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center font-handwriting-en border-4 border-white shadow-lg transform rotate-12 text-center leading-none text-blue-800"><div><span class="text-xs block">Ooh la</span>la!</div></div>
+                </div>
+                <p class="mt-6 text-xl font-handwriting-zh text-slate-500 transform rotate-1" contenteditable="true">戰神廣場 x 瑪黑區散策 x 塞納河日落</p>
+                <!-- 新增 Travel Date -->
+                <p class="mt-2 text-lg font-handwriting-en text-slate-400" contenteditable="true">Travel Date: 2025/04/xx</p>
+            </header>
+
+            <!-- 內容網格 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10 pb-12">
+                <!-- Step 1 -->
+                <div class="relative scrapbook-item">
+                    <div class="washi-tape tape-1 -top-4 left-8"></div>
+                    <div class="sticker-note p-5 bg-white rotate-[-1deg] hover:rotate-0 transition-transform duration-300 relative group">
+                        <div class="flex items-center gap-3 mb-3 border-b-2 border-dashed border-slate-200 pb-2">
+                            <span class="text-2xl font-handwriting-en font-bold" style="color:var(--accent-color)">Step 1</span>
+                            <h2 class="text-xl font-bold font-handwriting-zh text-slate-700" contenteditable="true">鎖定野餐寶地</h2>
+                        </div>
+                        <div class="mb-2 relative rounded-lg overflow-hidden border border-slate-200 photo-frame-container w-full h-48">
+                            <img id="img-step1" src="" class="manipulable-photo">
+                            <div class="zoom-controls"><input type="range" class="zoom-slider"><span>🔍</span></div>
+                            <button onclick="triggerUpload('img-step1')" class="action-btn bottom-2 right-2">📷 換照片</button>
+                        </div>
+                        <p class="font-handwriting-zh text-lg text-slate-600 mt-3 leading-relaxed" contenteditable="true">推薦「戰神廣場」大草坪，正對鐵塔視角無敵！記得帶張紅白格紋的野餐墊喔～</p>
+                    </div>
+                </div>
+
+                <!-- 主視覺 (動畫升級) -->
+                <div class="relative flex justify-center items-center md:row-span-2 scrapbook-item">
+                    <div class="washi-tape tape-2 -top-3 right-10 z-30"></div>
+                    <div class="polaroid bg-white w-72 md:w-80 transform rotate-2 relative group animate-float">
+                        <div class="relative border border-slate-100 photo-frame-container w-full h-80">
+                            <img id="img-main" src="" class="manipulable-photo">
+                            <div class="zoom-controls"><input type="range" class="zoom-slider"><span>🔍</span></div>
+                            <button onclick="triggerUpload('img-main')" class="action-btn bottom-3 right-3">📷 換照片</button>
+                        </div>
+                        <div class="mt-4 text-center font-handwriting-en text-2xl text-slate-600" contenteditable="true">Paris, Je t'aime ❤️</div>
+                    </div>
+                    <div class="absolute top-0 right-0 text-5xl animate-bounce drop-shadow-md">🥐</div>
+                    <div class="absolute bottom-12 -left-4 text-4xl transform -rotate-12">🍷</div>
+                </div>
+
+                <!-- 中間人物照片區塊 -->
+                <div class="md:col-span-2 relative my-8 scrapbook-item">
+                    <div class="washi-tape tape-pattern -top-3 left-1/4 z-30"></div>
+                    <div class="washi-tape tape-1 -bottom-3 right-1/4 z-30" style="transform: rotate(3deg);"></div>
+                    <div class="center-photo-frame mx-auto max-w-2xl bg-white p-4 relative group hover:rotate-0 transition-transform duration-300">
+                        <div class="photo-corner corner-tl"></div> <div class="photo-corner corner-tr"></div> <div class="photo-corner corner-bl"></div> <div class="photo-corner corner-br"></div>
+                        <div class="relative border-2 border-dashed border-slate-300 p-2 photo-frame-container w-full h-64 md:h-80">
+                            <img id="img-center" src="" class="manipulable-photo">
+                            <div class="zoom-controls"><input type="range" class="zoom-slider"><span>🔍</span></div>
+                            <button onclick="triggerUpload('img-center')" class="action-btn bottom-4 right-4 text-base py-2 px-4">📷 上傳我們的人物照</button>
+                        </div>
+                        <div class="text-center mt-4"><h3 class="text-2xl font-handwriting-zh text-slate-700" contenteditable="true">我們的法式浪漫時刻 <span style="color:var(--accent-color)">♥</span></h3></div>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="relative mt-2 scrapbook-item">
+                    <div class="washi-tape tape-pattern -top-3 right-12"></div>
+                    <div class="bg-yellow-50 p-5 shadow-lg transform rotate-1 border border-slate-200 relative">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-2xl font-handwriting-en font-bold" style="color:var(--accent-color)">Step 2</span>
+                            <span class="text-xl">🥖</span>
+                        </div>
+                        <!-- 修正：將容器改為 flex-col (手機) / flex-row (桌面)，並放大圖片容器 -->
+                        <div class="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
+                            <!-- 修正：寬度改為 w-full sm:w-48，高度增加到 h-48 -->
+                            <div class="w-full sm:w-48 h-48 shrink-0 relative rounded-md overflow-hidden border border-slate-300 shadow-sm photo-frame-container">
+                                <img id="img-step2" src="" class="manipulable-photo">
+                                <!-- 修正：移除 inline style，使用預設樣式讓控制項變大 -->
+                                <div class="zoom-controls"><input type="range" class="zoom-slider"><span>🔍</span></div>
+                                <button onclick="triggerUpload('img-step2')" class="action-btn bottom-2 right-2">📷</button>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-bold font-handwriting-zh text-lg mb-1" contenteditable="true">必買法式點心</h3>
+                                <p class="text-base font-handwriting-zh text-slate-600 leading-snug" contenteditable="true">附近麵包店買剛出爐的可頌 (Croissant) 和馬卡龍，這才是巴黎人的下午茶。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="relative md:col-start-2 scrapbook-item">
+                    <div class="sticker-note bg-blue-50 p-6 rotate-[-2deg] relative overflow-hidden group hover:rotate-0 transition-transform">
+                        <div class="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none" style="background-image: repeating-linear-gradient(0deg, #000 0px, #000 1px, transparent 1px, transparent 24px);"></div>
+                        <div class="relative z-10">
+                             <div class="flex items-center gap-2 mb-2">
+                                <span class="text-2xl font-handwriting-en text-blue-600 font-bold">Step 3</span>
+                                <h3 class="text-xl font-bold font-handwriting-zh" contenteditable="true">打卡小筆記</h3>
+                            </div>
+                            <ul class="list-disc list-inside font-handwriting-zh text-lg text-slate-700 space-y-2 pl-2 marker:text-red-400">
+                                <li contenteditable="true">夏樂宮 (Trocadéro) 拍全景</li>
+                                <li contenteditable="true">比爾阿克姆橋看地鐵經過</li>
+                                <li contenteditable="true">塞納河遊船看夕陽</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips (地圖元素升級) -->
+                <div class="md:col-span-2 flex justify-center mt-6 mb-8 scrapbook-item">
+                    <div class="relative bg-orange-100 rounded-full px-12 py-6 border-2 border-orange-300 border-dashed transform rotate-1 hover:scale-105 transition-transform cursor-default overflow-hidden">
+                        <!-- 地圖背景裝飾 -->
+                        <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M54.627 0l.83.828-1.415 1.415-.828-.828-.828.828-1.415-1.415.828-.828-.828-.828 1.415-1.415.828.828.828-.828 1.415 1.415-.828.828zM22.485 0l.83.828-1.415 1.415-.828-.828-.828.828-1.415-1.415.828-.828-.828-.828 1.415-1.415.828.828.828-.828 1.415 1.415-.828.828zM0 22.485l.828.83-1.415 1.415-.828-.828-.828.828L-2.83 22.485l.828-.828-.828-.828 1.415-1.415.828.828.828-.828 1.415 1.415-.828.828zM0 54.627l.828.83-1.415 1.415-.828-.828-.828.828L-2.83 54.627l.828-.828-.828-.828 1.415-1.415.828.828.828-.828 1.415 1.415-.828.828zM56.63 20.485l1.414 1.415-1.414 1.414-1.414-1.414 1.414-1.415zm-36.145 0l1.414 1.415-1.414 1.414-1.414-1.414 1.414-1.415zM20.485 56.63l1.415 1.414-1.415 1.414-1.414-1.414 1.414-1.415zm36.145 0l1.415 1.414-1.415 1.414-1.414-1.414 1.414-1.415zM3.415 32.485l1.414 1.415-1.414 1.414-1.414-1.414 1.414-1.415zm56.142 0l1.414 1.415-1.414 1.414-1.414-1.414 1.414-1.415zM32.485 3.415l1.415 1.414-1.415 1.414-1.414-1.414 1.414-1.414zM32.485 59.557l1.415 1.414-1.415 1.414-1.414-1.414 1.414-1.414z\' fill=\'%23fb923c\' fill-opacity=\'0.2\' fill-rule=\'evenodd\'/%3E%3C/svg%3E');"></div>
+                        <div class="relative z-10">
+                            <div class="absolute -top-5 -left-3 text-4xl transform -rotate-12 drop-shadow-sm">✨</div>
+                            <h3 class="text-2xl font-handwriting-en text-orange-600 font-bold mb-1 text-center">Tips:</h3>
+                            <p class="font-handwriting-zh text-xl text-slate-800 text-center" contenteditable="true">別太早走！日落後「整點」鐵塔會有鑽石閃燈秀 (Sparkling)，持續五分鐘，超級浪漫！</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-t-2 border-dashed border-gray-300 my-8">
+            
+            <!-- 使用說明 -->
+            <section id="user-manual" class="max-w-2xl mx-auto mb-10 p-6 bg-white bg-opacity-80 rounded-lg shadow-sm">
+                <h4 class="text-lg font-bold text-center text-gray-700 mb-4 font-body">📖 手帳使用說明書</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 font-body">
+                    <div class="flex flex-col items-center text-center">
+                        <div class="text-2xl mb-2">📝</div>
+                        <p><b>自由編輯</b><br>點擊文字修改內容。</p>
+                    </div>
+                    <div class="flex flex-col items-center text-center">
+                        <div class="text-2xl mb-2">📷</div>
+                        <p><b>照片管理</b><br>點擊更換；下方滑桿縮放；按住拖曳調整。</p>
+                    </div>
+                    <!-- 已移除裝飾貼紙說明 -->
+                    <div class="flex flex-col items-center text-center">
+                        <div class="text-2xl mb-2">💾</div>
+                        <p><b>保存回憶</b><br>右上角存成數位長條 PDF。</p>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="text-center font-handwriting-en text-slate-400 text-sm pb-10">
+                <p>© 2025 Kathy's 旅遊手帳本. Built with Gemini AI.</p>
+                <div onclick="resetPhotos()" class="reset-link">↺ Reset Demo Photos</div>
+            </footer>
+        </div>
+    </div>
+</body>
+</html>
