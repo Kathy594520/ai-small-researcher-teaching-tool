@@ -1,0 +1,761 @@
+
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>依序撈魚教育遊戲 (完整版)</title>
+    <style>
+        /* CSS 樣式區 */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #89CFF0; /* 池塘藍 */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
+            user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            cursor: none; /* 隱藏預設游標，改用畫出來的網子 */
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* 水波紋動畫背景 */
+        .water-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #b3e5fc 0%, #e1f5fe 100%);
+            z-index: -1;
+        }
+
+        /* UI 層 (共用樣式) */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.95);
+            z-index: 100;
+            padding: 20px;
+            box-sizing: border-box;
+            transition: opacity 0.3s;
+            cursor: default;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+            z-index: -1 !important; /* 確保隱藏後不擋住點擊 */
+        }
+
+        h1 { color: #0277bd; margin-bottom: 10px; text-align: center; }
+        h2 { color: #e65100; margin-bottom: 5px; font-size: 2rem; }
+        
+        .instruction {
+            background: #e1f5fe;
+            color: #01579b;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            max-width: 500px;
+            line-height: 1.6;
+            font-size: 1.1rem;
+        }
+
+        textarea {
+            width: 100%;
+            max-width: 500px;
+            height: 120px;
+            padding: 15px;
+            border: 3px solid #4fc3f7;
+            border-radius: 10px;
+            font-size: 18px;
+            margin-bottom: 20px;
+            resize: vertical;
+        }
+
+        button {
+            background-color: #039be5;
+            color: white;
+            border: none;
+            padding: 15px 50px;
+            font-size: 1.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px #0277bd;
+            transition: transform 0.1s;
+            margin: 10px;
+        }
+        button:active { transform: translateY(4px); box-shadow: 0 0 #0277bd; }
+        button.secondary { background-color: #7fb3d5; box-shadow: 0 4px #5499c7; }
+
+        /* 遊戲頂部資訊列 */
+        #top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            box-sizing: border-box;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        #target-info {
+            font-size: 1.8rem;
+            color: #d84315;
+            font-weight: bold;
+        }
+
+        #score-display {
+            font-size: 1.4rem;
+            color: #0277bd;
+            font-weight: bold;
+        }
+
+        .tag {
+            background: #ffecb3;
+            padding: 5px 15px;
+            border-radius: 20px;
+            border: 2px solid #ffca28;
+            margin-right: 10px;
+            font-size: 1.2rem;
+            vertical-align: middle;
+        }
+
+        /* 結果畫面特定樣式 */
+        #result-stats {
+            font-size: 1.5rem;
+            color: #555;
+            margin: 20px 0;
+            text-align: center;
+            background: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .stat-item { margin: 10px 0; }
+        .big-score { font-size: 3rem; color: #ff5722; font-weight: bold; display: block; margin-top: 10px;}
+
+        /* QR Code 區域 */
+        #qrcode-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 200;
+            background: white;
+            padding: 5px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+            cursor: pointer;
+            text-align: center;
+        }
+        #qrcode-container:hover { transform: scale(1.05); }
+        #qr-img { width: 40px; height: 40px; display: block; margin: 0 auto;}
+        #qr-text { font-size: 10px; color: #666; display: none; margin-top: 5px; }
+        
+        /* 展開狀態 */
+        #qrcode-container.expanded {
+            top: 50%;
+            left: 50%;
+            right: auto;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            width: 300px;
+            height: auto;
+        }
+        #qrcode-container.expanded #qr-img { width: 200px; height: 200px; }
+        #qrcode-container.expanded #qr-text { display: block; font-size: 14px; }
+        
+        /* 關閉按鈕 (僅展開時顯示) */
+        #qr-close {
+            display: none;
+            margin-top: 10px;
+            background: #888;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #qrcode-container.expanded #qr-close { display: inline-block; }
+
+    </style>
+</head>
+<body>
+
+<div class="water-bg"></div>
+
+<div id="game-container">
+    <!-- QR Code 按鈕 -->
+    <div id="qrcode-container" title="點擊顯示 QR Code 以便分享">
+        <img id="qr-img" src="" alt="QR Code">
+        <div id="qr-text">掃描此 Code 進入遊戲<br>(需先將檔案上傳至網路)</div>
+        <button id="qr-close">關閉</button>
+    </div>
+
+    <div id="top-bar" class="hidden">
+        <div id="target-info"><span class="tag">目標</span> <span id="current-target-text">Loading...</span></div>
+        <div id="score-display">分數: 100</div>
+    </div>
+    
+    <canvas id="gameCanvas"></canvas>
+    
+    <!-- 開始選單 -->
+    <div id="menu-layer" class="ui-layer">
+        <h1>🐟 依序撈魚 (完整版)</h1>
+        <div class="instruction">
+            <strong>遊戲規則：</strong><br>
+            請按照「順序」將魚撈起來！<br>
+            錯誤會扣分，請小心看清楚喔。<br>
+            移動滑鼠/手指控制網子，點擊撈魚。
+        </div>
+        <textarea id="data-input" placeholder="格式：題目,答案 (或是單純一行一個詞)">
+1,One
+2,Two
+3,Three
+4,Four
+5,Five
+6,Six
+7,Seven
+8,Eight
+9,Nine
+10,Ten</textarea>
+        <button id="start-btn">開始撈魚</button>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="result-layer" class="ui-layer hidden">
+        <h2>🎉 挑戰完成！</h2>
+        <div id="result-stats">
+            <div class="stat-item">最終得分 <span id="final-score" class="big-score">100</span></div>
+            <div class="stat-item">花費時間: <span id="final-time">00:00</span></div>
+            <div class="stat-item">錯誤次數: <span id="final-mistakes">0</span></div>
+        </div>
+        <div>
+            <button id="restart-btn">再玩一次</button>
+            <button id="edit-btn" class="secondary">修改題目</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const menuLayer = document.getElementById('menu-layer');
+const resultLayer = document.getElementById('result-layer');
+const topBar = document.getElementById('top-bar');
+const currentTargetText = document.getElementById('current-target-text');
+const scoreDisplay = document.getElementById('score-display');
+const startBtn = document.getElementById('start-btn');
+const restartBtn = document.getElementById('restart-btn');
+const editBtn = document.getElementById('edit-btn');
+const dataInput = document.getElementById('data-input');
+const container = document.getElementById('game-container');
+
+// 結果欄位
+const finalScoreEl = document.getElementById('final-score');
+const finalTimeEl = document.getElementById('final-time');
+const finalMistakesEl = document.getElementById('final-mistakes');
+
+// QR Code 相關
+const qrContainer = document.getElementById('qrcode-container');
+const qrImg = document.getElementById('qr-img');
+const qrClose = document.getElementById('qr-close');
+
+// 遊戲設定
+const CONFIG = {
+    fishBaseSpeed: 1.5,
+    fishFleeSpeed: 7, 
+    fishSize: 80,
+    netRadius: 55,
+    colors: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#F1948A'],
+};
+
+let width, height;
+let fishes = [];
+let particles = [];
+let floatingTexts = [];
+let gameData = [];
+let currentIndex = 0;
+let gameState = 'MENU';
+let mouseX = -100, mouseY = -100;
+
+// 計分與計時系統
+let currentScore = 100;
+let mistakeCount = 0;
+let startTime = 0;
+let timerInterval = null;
+
+// 初始化
+function init() {
+    resize();
+    window.addEventListener('resize', resize);
+    
+    // 綁定 Canvas 事件
+    canvas.addEventListener('mousemove', updateMousePos);
+    
+    const handleTap = (e) => {
+        if (gameState !== 'PLAYING') return;
+        if (e.type === 'touchstart') {
+             e.preventDefault();
+             updateTouchPos(e);
+        }
+        tryCatchFish(mouseX, mouseY);
+    };
+
+    canvas.addEventListener('mousedown', handleTap);
+    canvas.addEventListener('touchstart', handleTap, {passive: false});
+    canvas.addEventListener('touchmove', (e) => {
+        if (gameState === 'PLAYING') {
+            e.preventDefault();
+            updateTouchPos(e);
+        }
+    }, {passive: false});
+    
+    // 按鈕事件
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', restartGame);
+    editBtn.addEventListener('click', backToMenu);
+
+    // QR Code 事件
+    initQRCode();
+
+    requestAnimationFrame(gameLoop);
+}
+
+function updateMousePos(e) {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+}
+
+function updateTouchPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.touches[0].clientX - rect.left;
+    mouseY = e.touches[0].clientY - rect.top;
+}
+
+function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+}
+
+// QR Code 初始化
+function initQRCode() {
+    // 取得當前網址
+    const currentUrl = window.location.href;
+    // 使用公開 API 生成 QR Code
+    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(currentUrl)}`;
+    
+    // 如果是本地檔案 (file://)，提示使用者可能無法掃描
+    if (currentUrl.startsWith('file:')) {
+        qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=LocalFileCannotShare'; 
+        // 這裡可以換成一個預設的 "請上傳" 圖片，或保持原樣
+    } else {
+        qrImg.src = apiUrl;
+    }
+
+    // 點擊展開/收合
+    qrContainer.addEventListener('click', (e) => {
+        // 如果點到關閉按鈕，不要觸發
+        if (e.target === qrClose) return;
+        qrContainer.classList.add('expanded');
+    });
+
+    qrClose.addEventListener('click', (e) => {
+        e.stopPropagation(); // 防止冒泡回去又打開
+        qrContainer.classList.remove('expanded');
+    });
+}
+
+function parseData() {
+    const text = dataInput.value.trim();
+    if (!text) { alert("請輸入內容！"); return false; }
+    
+    const lines = text.split('\n');
+    gameData = [];
+    
+    lines.forEach((line, index) => {
+        const cleanLine = line.replace('，', ','); 
+        const parts = cleanLine.split(',');
+        let q, a;
+        if (parts.length >= 2) {
+            q = parts[0].trim();
+            a = parts[1].trim();
+        } else {
+            q = parts[0].trim();
+            a = parts[0].trim();
+        }
+        
+        if (q || a) {
+            gameData.push({
+                id: index,
+                q: q,
+                a: a,
+                color: CONFIG.colors[index % CONFIG.colors.length]
+            });
+        }
+    });
+    
+    if (gameData.length === 0) return false;
+    return true;
+}
+
+function startGame() {
+    if (!parseData()) return;
+    
+    // 重置遊戲變數
+    currentIndex = 0;
+    currentScore = 100;
+    mistakeCount = 0;
+    fishes = [];
+    particles = [];
+    floatingTexts = [];
+    
+    // 介面切換
+    gameState = 'PLAYING';
+    menuLayer.classList.add('hidden');
+    resultLayer.classList.add('hidden');
+    topBar.classList.remove('hidden');
+    container.style.cursor = 'none';
+    
+    // 生成魚群
+    gameData.forEach(item => spawnFish(item));
+    
+    updateUI();
+    
+    // 開始計時
+    startTime = Date.now();
+}
+
+function restartGame() {
+    // 直接使用現有數據重新開始
+    startGame();
+}
+
+function backToMenu() {
+    gameState = 'MENU';
+    resultLayer.classList.add('hidden');
+    menuLayer.classList.remove('hidden');
+    topBar.classList.add('hidden');
+    container.style.cursor = 'default';
+}
+
+function spawnFish(item) {
+    fishes.push({
+        x: Math.random() * (width - 100) + 50,
+        y: Math.random() * (height - 200) + 100,
+        vx: (Math.random() - 0.5) * CONFIG.fishBaseSpeed,
+        vy: (Math.random() - 0.5) * CONFIG.fishBaseSpeed,
+        angle: 0,
+        item: item,
+        width: CONFIG.fishSize,
+        height: CONFIG.fishSize * 0.65,
+        fleeTimer: 0,
+        wiggleOffset: Math.random() * Math.PI * 2
+    });
+}
+
+function updateUI() {
+    scoreDisplay.innerText = `分數: ${currentScore}`;
+    
+    if (currentIndex < gameData.length) {
+        const currentItem = gameData[currentIndex];
+        currentTargetText.innerText = `(${currentIndex + 1}/${gameData.length}) ${currentItem.q}`;
+    } else {
+        gameWin();
+    }
+}
+
+function tryCatchFish(cx, cy) {
+    for (let i = fishes.length - 1; i >= 0; i--) {
+        let f = fishes[i];
+        let dist = Math.hypot(cx - f.x, cy - f.y);
+        
+        if (dist < Math.max(CONFIG.fishSize, CONFIG.netRadius)) { 
+            
+            if (f.item.id === currentIndex) {
+                // Correct
+                createParticles(f.x, f.y, f.item.color);
+                createFloatingText(f.x, f.y, "Good!", "#4caf50");
+                fishes.splice(i, 1);
+                currentIndex++;
+                updateUI();
+                return;
+            } else {
+                // Wrong
+                f.fleeTimer = 60;
+                let angle = Math.atan2(f.y - cy, f.x - cx);
+                f.vx = Math.cos(angle) * CONFIG.fishFleeSpeed;
+                f.vy = Math.sin(angle) * CONFIG.fishFleeSpeed;
+                
+                // 扣分邏輯
+                currentScore = Math.max(0, currentScore - 5);
+                mistakeCount++;
+                updateUI();
+                
+                createFloatingText(f.x, f.y, "-5", "#e53935");
+                return;
+            }
+        }
+    }
+}
+
+function gameWin() {
+    gameState = 'WIN';
+    container.style.cursor = 'default';
+    
+    // 計算時間
+    const endTime = Date.now();
+    const timeDiff = endTime - startTime;
+    const seconds = Math.floor(timeDiff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+    
+    // 更新結算畫面
+    finalScoreEl.innerText = currentScore;
+    finalTimeEl.innerText = formattedTime;
+    finalMistakesEl.innerText = mistakeCount;
+    
+    // 顯示結算層
+    topBar.classList.add('hidden');
+    resultLayer.classList.remove('hidden');
+}
+
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+function update() {
+    if (gameState !== 'PLAYING') return;
+    
+    fishes.forEach(f => {
+        if (f.fleeTimer > 0) {
+            f.fleeTimer--;
+            f.vx *= 0.95;
+            f.vy *= 0.95;
+            if (Math.abs(f.vx) < 0.5 && Math.abs(f.vy) < 0.5 && f.fleeTimer < 10) {
+                 f.vx = (Math.random() - 0.5) * CONFIG.fishBaseSpeed;
+                 f.vy = (Math.random() - 0.5) * CONFIG.fishBaseSpeed;
+            }
+        } else {
+            if (Math.random() < 0.02) {
+                f.vx += (Math.random() - 0.5) * 0.5;
+                f.vy += (Math.random() - 0.5) * 0.5;
+                let speed = Math.hypot(f.vx, f.vy);
+                if (speed > CONFIG.fishBaseSpeed) {
+                    f.vx = (f.vx / speed) * CONFIG.fishBaseSpeed;
+                    f.vy = (f.vy / speed) * CONFIG.fishBaseSpeed;
+                }
+            }
+        }
+
+        f.x += f.vx;
+        f.y += f.vy;
+
+        if (f.x < CONFIG.fishSize) f.vx = Math.abs(f.vx);
+        if (f.x > width - CONFIG.fishSize) f.vx = -Math.abs(f.vx);
+        if (f.y < 100) f.vy = Math.abs(f.vy); 
+        if (f.y > height - CONFIG.fishSize) f.vy = -Math.abs(f.vy);
+
+        f.angle = Math.atan2(f.vy, f.vx);
+    });
+    
+    updateParticles();
+    updateFloatingTexts();
+}
+
+function draw() {
+    ctx.clearRect(0, 0, width, height);
+    
+    if (gameState === 'MENU' || gameState === 'WIN') return;
+
+    // 1. 畫魚
+    fishes.forEach(f => drawFish(f));
+
+    // 2. 畫特效
+    drawParticles();
+    drawFloatingTexts();
+
+    // 3. 畫網子
+    ctx.beginPath();
+    ctx.arc(mouseX, mouseY, CONFIG.netRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    // 網格
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.lineWidth = 1.5;
+    for(let i=10; i<CONFIG.netRadius*2; i+=12) {
+        if (i < CONFIG.netRadius * 2) {
+            let chord = Math.sqrt(Math.pow(CONFIG.netRadius, 2) - Math.pow(i - CONFIG.netRadius, 2));
+            ctx.moveTo(mouseX - CONFIG.netRadius + i, mouseY - chord);
+            ctx.lineTo(mouseX - CONFIG.netRadius + i, mouseY + chord);
+        }
+        let chord = Math.sqrt(Math.pow(CONFIG.netRadius, 2) - Math.pow(i - CONFIG.netRadius, 2));
+        ctx.moveTo(mouseX - chord, mouseY - CONFIG.netRadius + i);
+        ctx.lineTo(mouseX + chord, mouseY - CONFIG.netRadius + i);
+    }
+    ctx.stroke();
+}
+
+function drawFish(f) {
+    ctx.save();
+    ctx.translate(f.x, f.y);
+    
+    let drawAngle = f.angle;
+    let flipText = false;
+    
+    if (Math.abs(drawAngle) > Math.PI / 2) {
+        ctx.scale(1, -1); 
+        drawAngle = -drawAngle; 
+        flipText = true;
+    }
+    ctx.rotate(f.angle);
+    
+    let wiggle = Math.sin(Date.now() / 100 + f.wiggleOffset) * 8;
+
+    // 魚身
+    ctx.fillStyle = f.item.color;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, f.width/2, f.height/2, 0, 0, Math.PI*2);
+    ctx.fill();
+    
+    // 魚尾
+    ctx.beginPath();
+    ctx.moveTo(-f.width/2, 0);
+    ctx.lineTo(-f.width/2 - 20, -15 + wiggle);
+    ctx.lineTo(-f.width/2 - 20, 15 + wiggle);
+    ctx.fill();
+    
+    // 魚鰭
+    ctx.beginPath();
+    ctx.moveTo(8, 8);
+    ctx.quadraticCurveTo(20, 20 + wiggle/2, 8, 25);
+    ctx.fillStyle = "rgba(0,0,0,0.1)";
+    ctx.fill();
+
+    // 眼睛
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(f.width/2 - 12, -8, 6, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.arc(f.width/2 - 10, -8, 3, 0, Math.PI*2);
+    ctx.fill();
+
+    // 文字標籤
+    ctx.rotate(-f.angle); 
+    if (flipText) ctx.scale(1, -1); 
+
+    ctx.fillStyle = "white";
+    ctx.shadowColor = "rgba(0,0,0,0.7)";
+    ctx.shadowBlur = 4;
+    ctx.font = "bold 26px Arial"; 
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(f.item.a, 0, 0);
+    
+    // 顯示編號 (Badge)
+    ctx.beginPath();
+    ctx.arc(-f.width/2, -f.height/2, 14, 0, Math.PI*2);
+    ctx.fillStyle = "#ff5722"; 
+    ctx.shadowBlur = 0;
+    ctx.fill();
+    
+    ctx.fillStyle = "white";
+    ctx.font = "bold 16px Arial";
+    ctx.fillText(f.item.id + 1, -f.width/2, -f.height/2 + 1);
+
+    ctx.restore();
+}
+
+// 特效系統
+function createParticles(x, y, color) {
+    for(let i=0; i<12; i++) {
+        particles.push({
+            x: x, y: y,
+            vx: (Math.random()-0.5)*6,
+            vy: (Math.random()-0.5)*6,
+            life: 1.0,
+            color: color
+        });
+    }
+}
+function updateParticles() {
+    for(let i=particles.length-1; i>=0; i--) {
+        particles[i].x += particles[i].vx;
+        particles[i].y += particles[i].vy;
+        particles[i].life -= 0.05;
+        if(particles[i].life <= 0) particles.splice(i, 1);
+    }
+}
+function drawParticles() {
+    particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 6, 0, Math.PI*2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+}
+
+function createFloatingText(x, y, text, color) {
+    floatingTexts.push({x, y, text, color, life: 60});
+}
+function updateFloatingTexts() {
+    for(let i=floatingTexts.length-1; i>=0; i--) {
+        floatingTexts[i].y -= 1.5;
+        floatingTexts[i].life--;
+        if(floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
+    }
+}
+function drawFloatingTexts() {
+    floatingTexts.forEach(t => {
+        ctx.fillStyle = t.color;
+        ctx.font = "bold 28px Arial";
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 3;
+        ctx.strokeText(t.text, t.x, t.y);
+        ctx.fillText(t.text, t.x, t.y);
+    });
+}
+
+// 啟動
+init();
+
+</script>
+</body>
+</html>
