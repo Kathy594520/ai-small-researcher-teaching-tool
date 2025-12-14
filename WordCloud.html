@@ -1,4 +1,4 @@
-DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
@@ -139,14 +139,22 @@ DOCTYPE html>
 
     <!-- Canvas Container -->
     <div id="canvasContainer" class="relative w-full h-[400px] md:h-[600px] bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden flex items-center justify-center">
-      <div id="loadingSpinner" class="absolute flex flex-col items-center gap-2 text-orange-500 z-10">
+      <!-- Background Image (新增) -->
+      <img id="bgImage" 
+           src="https://raw.githubusercontent.com/Kathy594520/-/refs/heads/main/%E6%8A%8A%E3%80%8C%E8%A9%A9%E3%80%8D%E6%8B%BF%E6%8E%89%20(2).png" 
+           class="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none select-none"
+           alt="Background" 
+           crossorigin="anonymous">
+           
+      <div id="loadingSpinner" class="absolute flex flex-col items-center gap-2 text-orange-500 z-20">
         <svg class="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
         <span class="text-sm font-medium">載入中...</span>
       </div>
-      <canvas id="wordCloudCanvas" class="w-full h-full"></canvas>
+      <!-- Canvas 加上相對定位與層級 -->
+      <canvas id="wordCloudCanvas" class="relative z-10 w-full h-full"></canvas>
     </div>
 
   </main>
@@ -217,7 +225,7 @@ DOCTYPE html>
   </script>
 
   <script>
-    // --- 部署網址設定 (請確保這是您最新的 GAS Web App 網址) ---
+    // --- 部署網址設定 (依據您的檔案內容) ---
     const DEPLOY_URL = "https://script.google.com/macros/s/AKfycbzdL_CZvZXY8NwWhJFQqxwKvhCyQnoK2I_U4mxz0prU5FRVmrkx3NJaVAoCa9n46F3DHA/exec";
 
     // --- 全域變數 ---
@@ -437,7 +445,7 @@ DOCTYPE html>
         fontFamily: "'Noto Sans TC', sans-serif",
         fontWeight: 'bold',
         color: function() { return colors[Math.floor(Math.random() * colors.length)]; },
-        backgroundColor: '#ffffff',
+        backgroundColor: 'transparent', // [修改] 設定背景為透明，讓底圖透出來
         rotateRatio: 0.5,
         rotationSteps: 2,
         shape: 'circle',
@@ -463,15 +471,68 @@ DOCTYPE html>
       if (spinner) spinner.style.display = isLoading ? 'flex' : 'none';
     }
 
+    // [修改] 下載圖片函式：合成背景圖與文字雲
     function downloadImage() {
       const canvas = document.getElementById('wordCloudCanvas');
-      const image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
-      const link = document.createElement('a');
-      link.download = `wordcloud-${new Date().getTime()}.png`;
-      link.href = image;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const bgImg = document.getElementById('bgImage');
+      
+      // 建立一個新的合成 Canvas
+      const compositeCanvas = document.createElement('canvas');
+      compositeCanvas.width = canvas.width;
+      compositeCanvas.height = canvas.height;
+      const ctx = compositeCanvas.getContext('2d');
+      
+      try {
+          // 1. 繪製白色背景 (避免 PNG 透明造成部分瀏覽器顯示全黑)
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
+          
+          // 2. 繪製底圖 (模擬 CSS object-cover)
+          ctx.save();
+          ctx.globalAlpha = 0.2; // 配合 CSS 的透明度
+          
+          const imgRatio = bgImg.naturalWidth / bgImg.naturalHeight;
+          const canvasRatio = compositeCanvas.width / compositeCanvas.height;
+          let drawWidth, drawHeight, offsetX, offsetY;
+
+          if (imgRatio > canvasRatio) {
+            drawHeight = compositeCanvas.height;
+            drawWidth = drawHeight * imgRatio;
+            offsetY = 0;
+            offsetX = (compositeCanvas.width - drawWidth) / 2;
+          } else {
+            drawWidth = compositeCanvas.width;
+            drawHeight = drawWidth / imgRatio;
+            offsetX = 0;
+            offsetY = (compositeCanvas.height - drawHeight) / 2;
+          }
+          
+          ctx.drawImage(bgImg, offsetX, offsetY, drawWidth, drawHeight);
+          ctx.restore();
+          
+          // 3. 繪製文字雲
+          ctx.drawImage(canvas, 0, 0);
+          
+          // 4. 下載合成後的圖片
+          const image = compositeCanvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+          const link = document.createElement('a');
+          link.download = `wordcloud-${new Date().getTime()}.png`;
+          link.href = image;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+      } catch (err) {
+          console.error("合成圖片失敗 (可能是跨域問題)，改為下載純文字雲", err);
+          // 備援：如果合成失敗，只下載原本的文字雲
+          const image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+          const link = document.createElement('a');
+          link.download = `wordcloud-text-only-${new Date().getTime()}.png`;
+          link.href = image;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+      }
     }
   </script>
 </body>
