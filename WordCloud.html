@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
@@ -31,15 +31,36 @@
     input[type=range]:focus {
       outline: none; 
     }
+
+    /* Modal 動畫 */
+    .modal-enter {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    .modal-enter-active {
+      opacity: 1;
+      transform: scale(1);
+      transition: opacity 200ms, transform 200ms;
+    }
   </style>
 </head>
-<body class="flex flex-col min-h-screen text-gray-700">
+<body class="flex flex-col min-h-screen text-gray-700 relative">
 
   <!-- Header -->
   <header class="bg-orange-400 text-white shadow-md p-4">
     <div class="container mx-auto flex justify-between items-center">
-      <h1 class="text-xl md:text-2xl font-bold tracking-wide">☁️ 互動式文字雲</h1>
-      <span class="text-xs md:text-sm bg-orange-600 px-2 py-1 rounded-full opacity-90">Live Update</span>
+      <div class="flex items-center gap-2">
+         <h1 class="text-xl md:text-2xl font-bold tracking-wide">☁️ 互動式文字雲</h1>
+         <span class="text-xs bg-orange-600 px-2 py-1 rounded-full opacity-90 hidden sm:inline-block">Live</span>
+      </div>
+      
+      <!-- QR Code Button -->
+      <button onclick="toggleQrModal(true)" class="flex items-center gap-1 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition text-sm font-medium backdrop-blur-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM6 6h6v6H6V6zm12 0h-6v6h6V6zm-6 12H6v-6h6v6z" />
+        </svg>
+        <span class="hidden sm:inline">班級 QR Code</span>
+      </button>
     </div>
   </header>
 
@@ -99,101 +120,104 @@
 
   </main>
 
+  <!-- QR Code Modal -->
+  <div id="qrModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4 text-center transform transition-transform duration-200 scale-95" id="qrModalContent">
+      <h3 class="text-xl font-bold text-gray-800 mb-2">加入互動文字雲</h3>
+      <p class="text-sm text-gray-500 mb-4">請使用手機掃描下方 QR Code</p>
+      
+      <div class="bg-gray-50 p-4 rounded-xl inline-block mb-4 border border-gray-100">
+        <!-- QR Code Image PlaceHolder -->
+        <img id="qrImage" src="" alt="Class QR Code" class="w-48 h-48 object-contain">
+      </div>
+      
+      <div class="mb-4">
+        <input type="text" id="deployUrlInput" readonly class="w-full text-center text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded p-2 select-all" value="">
+      </div>
+
+      <button onclick="toggleQrModal(false)" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">
+        關閉
+      </button>
+    </div>
+  </div>
+
   <footer class="bg-gray-100 text-center p-4 text-xs text-gray-400 mt-auto">
     Created with Google Apps Script & Tailwind CSS
   </footer>
 
-  <!-- 
-    WordCloud2.js 載入邏輯 
-    1. 嘗試載入 jsDelivr (更穩定)
-    2. 如果失敗，嘗試載入 unpkg
-  -->
+  <!-- WordCloud2.js 載入邏輯：多來源備援機制 -->
   <script>
-    function loadScript(src, fallbackSrc) {
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = () => console.log(`Library loaded from ${src}`);
-      script.onerror = () => {
-        console.warn(`Failed to load from ${src}, trying fallback...`);
-        if (fallbackSrc) {
-          const fallback = document.createElement('script');
-          fallback.src = fallbackSrc;
-          fallback.onload = () => console.log(`Library loaded from fallback ${fallbackSrc}`);
-          fallback.onerror = () => console.error("All library sources failed.");
-          document.body.appendChild(fallback);
-        }
-      };
-      document.body.appendChild(script);
-    }
+    (function() {
+      // 定義 CDN 來源列表，依序嘗試
+      const sources = [
+        'https://unpkg.com/wordcloud@1.2.2/src/wordcloud2.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud.min.js',
+        'https://cdn.jsdelivr.net/gh/timdream/wordcloud2.js/src/wordcloud2.js'
+      ];
 
-    // 啟動載入
-    loadScript(
-      "https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.min.js", 
-      "https://unpkg.com/wordcloud@1.2.2/src/wordcloud2.js"
-    );
+      function loadScript(index) {
+        if (index >= sources.length) {
+          console.error("錯誤：所有 WordCloud CDN 來源皆載入失敗。");
+          const container = document.getElementById('canvasContainer');
+          if (container) {
+            container.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-red-500 gap-2"><p class="font-bold">⚠️ 元件載入失敗</p><p class="text-sm text-gray-500">請檢查網路連線或防火牆設定</p></div>';
+            const spinner = document.getElementById('loadingSpinner');
+            if (spinner) spinner.style.display = 'none';
+          }
+          return;
+        }
+
+        var script = document.createElement('script');
+        script.src = sources[index];
+        script.onload = function() { console.log("WordCloud loaded successfully from: " + sources[index]); };
+        script.onerror = function() { 
+          console.warn("載入失敗: " + sources[index] + "，嘗試下一個來源...");
+          document.body.removeChild(script);
+          loadScript(index + 1); 
+        };
+        document.body.appendChild(script);
+      }
+
+      loadScript(0);
+    })();
   </script>
 
   <script>
-    // --- MOCK Google Apps Script Environment (解決 google is not defined) ---
-    // 這段程式碼只會在「非」GAS 環境 (如預覽視窗) 執行，方便測試 UI
+    // --- 部署網址設定 (由使用者提供) ---
+    const DEPLOY_URL = "https://script.google.com/macros/s/AKfycbwUNrxL6pMtIimNcQZ1skQqbWnexfhBwKl3131Pkf4SqlWKaIUhlzPFem60AJfYpSwDvQ/exec";
+
+    // --- MOCK Google Apps Script Environment ---
     if (typeof google === 'undefined') {
       console.warn("目前處於預覽模式：已啟用 Mock Data 模擬後端行為。");
-      
-      // 預設模擬資料
-      const mockDataStore = [
-        "你好", "世界", "測試", "Google", "Apps", "Script", "文字雲", "前端", "設計", 
-        "Tailwind", "CSS", "你好", "測試", "WordCloud", "教學", "互動", "課堂", "JavaScript"
-      ];
-
+      const mockDataStore = ["你好", "世界", "測試", "Google", "Apps", "Script", "文字雲", "前端", "設計", "Tailwind", "CSS", "你好", "測試", "WordCloud", "教學", "互動", "課堂", "JavaScript"];
       window.google = {
         script: {
           run: {
-            withSuccessHandler: function(successCallback) {
-              this.success = successCallback;
-              return this;
-            },
-            withFailureHandler: function(failureCallback) {
-              this.failure = failureCallback;
-              return this;
-            },
-            // 模擬後端讀取資料
-            getDataFromSheet: function() {
-              setTimeout(() => {
-                console.log("[Mock] 讀取資料成功");
-                if (this.success) {
-                  this.success([...mockDataStore]); // 回傳資料副本
-                }
-              }, 600); // 模擬網路延遲
-            },
-            // 模擬後端存檔
-            saveToSheet: function(text) {
-              setTimeout(() => {
-                console.log(`[Mock] 儲存資料: ${text}`);
-                mockDataStore.push(text); // 寫入模擬資料庫
-                if (this.success) {
-                  this.success(true);
-                }
-              }, 600);
-            }
+            withSuccessHandler: function(successCallback) { this.success = successCallback; return this; },
+            withFailureHandler: function(failureCallback) { this.failure = failureCallback; return this; },
+            getDataFromSheet: function() { setTimeout(() => { if (this.success) this.success([...mockDataStore]); }, 600); },
+            saveToSheet: function(text) { setTimeout(() => { mockDataStore.push(text); if (this.success) this.success(true); }, 600); }
           }
         }
       };
     }
-    // --- MOCK END ---
 
     // --- 全域變數 ---
-    let cachedWordData = []; // 儲存處理後的文字權重資料
-    let sizeFactor = 8;      // 預設文字大小係數
+    let cachedWordData = []; 
+    let sizeFactor = 8;      
 
     // --- 初始化 ---
     window.onload = function() {
-      // 確保字體載入後再繪圖，避免中文消失
+      // 1. 初始化部署網址顯示
+      document.getElementById('deployUrlInput').value = DEPLOY_URL;
+      document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(DEPLOY_URL)}`;
+
+      // 2. 確保字體載入後再繪圖
       document.fonts.ready.then(function() {
-        // 給予一點時間讓 WordCloud 腳本載入
         setTimeout(fetchAndDraw, 500);
       });
       
-      // 監聽視窗大小改變，重繪 Canvas
+      // 3. 監聽視窗大小改變
       let resizeTimer;
       window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
@@ -203,6 +227,27 @@
       });
     };
 
+    // --- Modal 控制 ---
+    function toggleQrModal(show) {
+      const modal = document.getElementById('qrModal');
+      const content = document.getElementById('qrModalContent');
+      
+      if (show) {
+        modal.classList.remove('hidden');
+        // 強制重繪以觸發 transition
+        requestAnimationFrame(() => {
+          modal.classList.remove('opacity-0');
+          content.classList.remove('scale-95');
+        });
+      } else {
+        modal.classList.add('opacity-0');
+        content.classList.add('scale-95');
+        setTimeout(() => {
+          modal.classList.add('hidden');
+        }, 200); // 等待動畫結束
+      }
+    }
+
     // --- 後端互動：送出文字 ---
     function submitText() {
       const input = document.getElementById('userInput');
@@ -211,7 +256,6 @@
 
       if (!text) return;
 
-      // 鎖定 UI
       input.disabled = true;
       btn.disabled = true;
       btn.innerHTML = '<span>傳送中...</span>';
@@ -219,12 +263,11 @@
       google.script.run
         .withSuccessHandler((success) => {
           if (success) {
-            input.value = ''; // 清空輸入框
-            fetchAndDraw();   // 成功後重新讀取並繪製
+            input.value = ''; 
+            fetchAndDraw();   
           } else {
             alert("存檔失敗，請重試");
           }
-          // 解鎖 UI
           input.disabled = false;
           btn.disabled = false;
           btn.innerHTML = '<span>送出</span><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>';
@@ -238,7 +281,6 @@
         .saveToSheet(text);
     }
 
-    // 按下 Enter 鍵送出
     function handleKeyPress(e) {
       if (e.key === 'Enter') submitText();
     }
@@ -266,17 +308,11 @@
         return;
       }
 
-      // 1. 合併所有資料
       const fullText = rawDataArray.join(' ');
-
-      // 2. 切割字串
-      // 使用 Regex: 換行、空白、常見中英文標點符號
       const splitRegex = /[ \n\r\t.,;!?'"()\[\]{}<>:，。、！？；：「」『』《》（）~-]+/;
       const words = fullText.split(splitRegex);
 
-      // 3. 統計詞頻
       const counts = {};
-      // 過濾規則：只保留包含 中文、英文、數字 的詞，且長度 > 0
       const validWordRegex = /[a-zA-Z0-9\u4e00-\u9fa5]+/;
 
       words.forEach(word => {
@@ -286,10 +322,7 @@
         }
       });
 
-      // 4. 轉換為 WordCloud2 需要的格式 [[word, weight], ...]
-      // 根據詞頻排序 (高到低)
-      cachedWordData = Object.entries(counts)
-        .sort((a, b) => b[1] - a[1]);
+      cachedWordData = Object.entries(counts).sort((a, b) => b[1] - a[1]);
 
       if (cachedWordData.length === 0) {
          cachedWordData = [['無有效文字', 10]];
@@ -300,72 +333,40 @@
 
     // --- 繪製文字雲 ---
     function drawWordCloud(list) {
-      // 安全檢查：確認函式庫已載入
       if (typeof WordCloud === 'undefined') {
-        console.warn("WordCloud library not ready, retrying...");
-        // 若尚未載入，稍後重試一次
-        setTimeout(() => {
-          if (typeof WordCloud !== 'undefined') {
-             drawWordCloud(list);
-          } else {
+        if (!window.retryCount) window.retryCount = 0;
+        if (window.retryCount < 10) {
+          window.retryCount++;
+          setTimeout(() => drawWordCloud(list), 500);
+        } else {
              const container = document.getElementById('canvasContainer');
-             container.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-red-500 gap-2"><p>⚠️ 文字雲元件載入失敗</p><p class="text-sm text-gray-500">請嘗試重新整理頁面</p></div>';
+             container.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-red-500"><p>⚠️ 文字雲元件載入逾時</p></div>';
              showLoading(false);
-          }
-        }, 1500); // 增加等待時間
+        }
         return;
       }
 
       const container = document.getElementById('canvasContainer');
-      // 如果 container 內顯示錯誤訊息，則重建 canvas
-      if (!container.querySelector('canvas')) {
-         container.innerHTML = '';
-         const loadingDiv = document.createElement('div');
-         loadingDiv.id = 'loadingSpinner';
-         loadingDiv.className = 'absolute flex flex-col items-center gap-2 text-orange-500 z-10';
-         loadingDiv.innerHTML = '<svg class="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span class="text-sm font-medium">載入中...</span>';
-         
-         const newCanvas = document.createElement('canvas');
-         newCanvas.id = 'wordCloudCanvas';
-         newCanvas.className = 'w-full h-full';
-         
-         container.appendChild(loadingDiv);
-         container.appendChild(newCanvas);
-      }
-
       const canvas = document.getElementById('wordCloudCanvas');
-      if(!canvas) return; // double check
-
-      // 設定 Canvas 實際像素大小 (解決模糊問題)
+      
       canvas.width = container.offsetWidth;
       canvas.height = container.offsetHeight;
 
-      // 顏色庫：橘、紅、藍、綠、紫、深灰
-      const colors = [
-        '#f97316', // Orange 500
-        '#ea580c', // Orange 600
-        '#dc2626', // Red 600
-        '#2563eb', // Blue 600
-        '#059669', // Emerald 600
-        '#7c3aed', // Violet 600
-        '#374151'  // Gray 700
-      ];
+      const colors = ['#f97316', '#ea580c', '#dc2626', '#2563eb', '#059669', '#7c3aed', '#374151'];
 
       const options = {
         list: list,
-        gridSize: 8,            // 網格大小，越小越密
-        weightFactor: sizeFactor, // 字體大小係數
+        gridSize: 8,
+        weightFactor: sizeFactor,
         fontFamily: "'Noto Sans TC', sans-serif",
         fontWeight: 'bold',
-        color: function() {
-          return colors[Math.floor(Math.random() * colors.length)];
-        },
-        backgroundColor: '#ffffff', // 設定背景色以便下載
-        rotateRatio: 0.5,       // 文字旋轉機率
-        rotationSteps: 2,       // 旋轉角度 (0, 90度)
+        color: function() { return colors[Math.floor(Math.random() * colors.length)]; },
+        backgroundColor: '#ffffff',
+        rotateRatio: 0.5,
+        rotationSteps: 2,
         shape: 'circle',
-        drawOutOfBound: false,  // 超出範圍不繪製
-        shuffle: true           // 隨機排列
+        drawOutOfBound: false,
+        shuffle: true
       };
 
       try {
@@ -375,14 +376,10 @@
       }
     }
 
-    // --- UI 控制 ---
     function updateSizeFactor(val) {
       sizeFactor = parseInt(val);
       document.getElementById('sizeValue').innerText = val;
-      // 使用防抖動稍微延遲重繪
-      if(cachedWordData.length > 0) {
-         drawWordCloud(cachedWordData);
-      }
+      if(cachedWordData.length > 0) drawWordCloud(cachedWordData);
     }
 
     function showLoading(isLoading) {
@@ -392,12 +389,7 @@
 
     function downloadImage() {
       const canvas = document.getElementById('wordCloudCanvas');
-      if (!canvas) return;
-      
-      // 將 Canvas 轉為圖片 URL
       const image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
-      
-      // 建立臨時連結下載
       const link = document.createElement('a');
       link.download = `wordcloud-${new Date().getTime()}.png`;
       link.href = image;
