@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>依序撈魚教育遊戲 (完整版)</title>
+    <title>依序撈魚教育遊戲</title>
     <style>
         /* CSS 樣式區 */
         body {
@@ -204,6 +204,51 @@
         }
         #qrcode-container.expanded #qr-close { display: inline-block; }
 
+        /* 版權宣告 */
+        #copyright {
+            position: absolute;
+            bottom: 5px;
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            color: #01579b;
+            opacity: 0.6;
+            pointer-events: none;
+            z-index: 90;
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+        }
+
+        /* 精緻浮動連結 */
+        #floating-link {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            padding: 10px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 30px;
+            color: #fff;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(118, 75, 162, 0.4);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 2px solid rgba(255,255,255,0.3);
+            font-size: 14px;
+            cursor: pointer;
+        }
+        #floating-link:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(118, 75, 162, 0.6);
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+        #floating-link::before {
+            content: '🚀';
+            font-size: 1.2em;
+        }
+
     </style>
 </head>
 <body>
@@ -214,9 +259,15 @@
     <!-- QR Code 按鈕 -->
     <div id="qrcode-container" title="點擊顯示 QR Code 以便分享">
         <img id="qr-img" src="" alt="QR Code">
-        <div id="qr-text">掃描此 Code 進入遊戲<br>(需先將檔案上傳至網路)</div>
+        <div id="qr-text">掃描此 Code 進入遊戲<br></div>
         <button id="qr-close">關閉</button>
     </div>
+
+    <!-- 浮動連結 -->
+    <a href="https://kathy594520.github.io/new.github.io/AI/AI" target="_blank" id="floating-link">仙姑凱西設計</a>
+
+    <!-- 版權宣告 -->
+    <div id="copyright">© 2025 Kathy's Fishing Order. Built with Gemini AI.</div>
 
     <div id="top-bar" class="hidden">
         <div id="target-info"><span class="tag">目標</span> <span id="current-target-text">Loading...</span></div>
@@ -369,18 +420,12 @@ function resize() {
 
 // QR Code 初始化
 function initQRCode() {
-    // 取得當前網址
-    const currentUrl = window.location.href;
+    // 固定目標網址
+    const targetUrl = "https://kathy594520.github.io/edu.github.io/fish";
     // 使用公開 API 生成 QR Code
-    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(currentUrl)}`;
+    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(targetUrl)}`;
     
-    // 如果是本地檔案 (file://)，提示使用者可能無法掃描
-    if (currentUrl.startsWith('file:')) {
-        qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=LocalFileCannotShare'; 
-        // 這裡可以換成一個預設的 "請上傳" 圖片，或保持原樣
-    } else {
-        qrImg.src = apiUrl;
-    }
+    qrImg.src = apiUrl;
 
     // 點擊展開/收合
     qrContainer.addEventListener('click', (e) => {
