@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>班級互動文字雲</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* 強制字體設定 */
+    body {
+      font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+      background-color: #FDFBF7; /* 米白色背景 */
+    }
+    
+    /* 自定義滑桿樣式 (暖橘色) */
+    input[type=range] {
+      -webkit-appearance: none; 
+      background: transparent; 
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+    }
+    input[type=range]:focus {
+      outline: none; 
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen text-gray-700">
+
+  <!-- Header -->
+  <header class="bg-orange-400 text-white shadow-md p-4">
+    <div class="container mx-auto flex justify-between items-center">
+      <h1 class="text-xl md:text-2xl font-bold tracking-wide">☁️ 互動式文字雲</h1>
+      <span class="text-xs md:text-sm bg-orange-600 px-2 py-1 rounded-full opacity-90">Live Update</span>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-grow container mx-auto p-4 md:p-6 space-y-6">
+    
+    <!-- Input Section -->
+    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-orange-400 flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+      <input type="text" id="userInput" 
+        class="flex-grow border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-300 transition text-lg" 
+        placeholder="輸入想法或關鍵字..." 
+        onkeypress="handleKeyPress(event)">
+      
+      <button onclick="submitText()" id="submitBtn"
+        class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg shadow transition transform active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap">
+        <span>送出</span>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex flex-wrap items-center justify-between gap-4 bg-orange-50 p-3 rounded-lg text-sm text-gray-600">
+      <div class="flex items-center gap-2 w-full md:w-auto">
+        <label for="sizeSlider" class="font-medium whitespace-nowrap">文字大小:</label>
+        <input type="range" id="sizeSlider" min="2" max="20" value="8" step="1" 
+          class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
+          oninput="updateSizeFactor(this.value)">
+        <span id="sizeValue" class="w-6 text-center">8</span>
+      </div>
+      
+      <div class="flex gap-2 w-full md:w-auto justify-end">
+        <button onclick="fetchAndDraw()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded-md text-sm transition shadow-sm">
+          強制重繪
+        </button>
+        <button onclick="downloadImage()" class="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1.5 rounded-md text-sm transition shadow-sm flex items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          下載圖片
+        </button>
+      </div>
+    </div>
+
+    <!-- Canvas Container -->
+    <div id="canvasContainer" class="relative w-full h-[400px] md:h-[600px] bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden flex items-center justify-center">
+      <div id="loadingSpinner" class="absolute flex flex-col items-center gap-2 text-orange-500 z-10">
+        <svg class="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="text-sm font-medium">載入中...</span>
+      </div>
+      <canvas id="wordCloudCanvas" class="w-full h-full"></canvas>
+    </div>
+
+  </main>
+
+  <footer class="bg-gray-100 text-center p-4 text-xs text-gray-400 mt-auto">
+    Created with Google Apps Script & Tailwind CSS
+  </footer>
+
+  <!-- 
+    WordCloud2.js 載入邏輯 
+    1. 嘗試載入 jsDelivr (更穩定)
+    2. 如果失敗，嘗試載入 unpkg
+  -->
+  <script>
+    function loadScript(src, fallbackSrc) {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => console.log(`Library loaded from ${src}`);
+      script.onerror = () => {
+        console.warn(`Failed to load from ${src}, trying fallback...`);
+        if (fallbackSrc) {
+          const fallback = document.createElement('script');
+          fallback.src = fallbackSrc;
+          fallback.onload = () => console.log(`Library loaded from fallback ${fallbackSrc}`);
+          fallback.onerror = () => console.error("All library sources failed.");
+          document.body.appendChild(fallback);
+        }
+      };
+      document.body.appendChild(script);
+    }
+
+    // 啟動載入
+    loadScript(
+      "https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.min.js", 
+      "https://unpkg.com/wordcloud@1.2.2/src/wordcloud2.js"
+    );
+  </script>
+
+  <script>
+    // --- MOCK Google Apps Script Environment (解決 google is not defined) ---
+    // 這段程式碼只會在「非」GAS 環境 (如預覽視窗) 執行，方便測試 UI
+    if (typeof google === 'undefined') {
+      console.warn("目前處於預覽模式：已啟用 Mock Data 模擬後端行為。");
+      
+      // 預設模擬資料
+      const mockDataStore = [
+        "你好", "世界", "測試", "Google", "Apps", "Script", "文字雲", "前端", "設計", 
+        "Tailwind", "CSS", "你好", "測試", "WordCloud", "教學", "互動", "課堂", "JavaScript"
+      ];
+
+      window.google = {
+        script: {
+          run: {
+            withSuccessHandler: function(successCallback) {
+              this.success = successCallback;
+              return this;
+            },
+            withFailureHandler: function(failureCallback) {
+              this.failure = failureCallback;
+              return this;
+            },
+            // 模擬後端讀取資料
+            getDataFromSheet: function() {
+              setTimeout(() => {
+                console.log("[Mock] 讀取資料成功");
+                if (this.success) {
+                  this.success([...mockDataStore]); // 回傳資料副本
+                }
+              }, 600); // 模擬網路延遲
+            },
+            // 模擬後端存檔
+            saveToSheet: function(text) {
+              setTimeout(() => {
+                console.log(`[Mock] 儲存資料: ${text}`);
+                mockDataStore.push(text); // 寫入模擬資料庫
+                if (this.success) {
+                  this.success(true);
+                }
+              }, 600);
+            }
+          }
+        }
+      };
+    }
+    // --- MOCK END ---
+
+    // --- 全域變數 ---
+    let cachedWordData = []; // 儲存處理後的文字權重資料
+    let sizeFactor = 8;      // 預設文字大小係數
+
+    // --- 初始化 ---
+    window.onload = function() {
+      // 確保字體載入後再繪圖，避免中文消失
+      document.fonts.ready.then(function() {
+        // 給予一點時間讓 WordCloud 腳本載入
+        setTimeout(fetchAndDraw, 500);
+      });
+      
+      // 監聽視窗大小改變，重繪 Canvas
+      let resizeTimer;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          if(cachedWordData.length > 0) drawWordCloud(cachedWordData);
+        }, 300);
+      });
+    };
+
+    // --- 後端互動：送出文字 ---
+    function submitText() {
+      const input = document.getElementById('userInput');
+      const btn = document.getElementById('submitBtn');
+      const text = input.value.trim();
+
+      if (!text) return;
+
+      // 鎖定 UI
+      input.disabled = true;
+      btn.disabled = true;
+      btn.innerHTML = '<span>傳送中...</span>';
+
+      google.script.run
+        .withSuccessHandler((success) => {
+          if (success) {
+            input.value = ''; // 清空輸入框
+            fetchAndDraw();   // 成功後重新讀取並繪製
+          } else {
+            alert("存檔失敗，請重試");
+          }
+          // 解鎖 UI
+          input.disabled = false;
+          btn.disabled = false;
+          btn.innerHTML = '<span>送出</span><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>';
+          input.focus();
+        })
+        .withFailureHandler((err) => {
+          alert("發生錯誤: " + err);
+          input.disabled = false;
+          btn.disabled = false;
+        })
+        .saveToSheet(text);
+    }
+
+    // 按下 Enter 鍵送出
+    function handleKeyPress(e) {
+      if (e.key === 'Enter') submitText();
+    }
+
+    // --- 後端互動：讀取資料並處理 ---
+    function fetchAndDraw() {
+      showLoading(true);
+      google.script.run
+        .withSuccessHandler((data) => {
+          processData(data);
+          showLoading(false);
+        })
+        .withFailureHandler((err) => {
+          console.error(err);
+          showLoading(false);
+        })
+        .getDataFromSheet();
+    }
+
+    // --- 資料處理邏輯 (Regex 分詞) ---
+    function processData(rawDataArray) {
+      if (!rawDataArray || rawDataArray.length === 0) {
+        cachedWordData = [['尚未有資料', 10]];
+        drawWordCloud(cachedWordData);
+        return;
+      }
+
+      // 1. 合併所有資料
+      const fullText = rawDataArray.join(' ');
+
+      // 2. 切割字串
+      // 使用 Regex: 換行、空白、常見中英文標點符號
+      const splitRegex = /[ \n\r\t.,;!?'"()\[\]{}<>:，。、！？；：「」『』《》（）~-]+/;
+      const words = fullText.split(splitRegex);
+
+      // 3. 統計詞頻
+      const counts = {};
+      // 過濾規則：只保留包含 中文、英文、數字 的詞，且長度 > 0
+      const validWordRegex = /[a-zA-Z0-9\u4e00-\u9fa5]+/;
+
+      words.forEach(word => {
+        const cleanWord = word.trim();
+        if (cleanWord.length > 0 && validWordRegex.test(cleanWord)) {
+          counts[cleanWord] = (counts[cleanWord] || 0) + 1;
+        }
+      });
+
+      // 4. 轉換為 WordCloud2 需要的格式 [[word, weight], ...]
+      // 根據詞頻排序 (高到低)
+      cachedWordData = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1]);
+
+      if (cachedWordData.length === 0) {
+         cachedWordData = [['無有效文字', 10]];
+      }
+
+      drawWordCloud(cachedWordData);
+    }
+
+    // --- 繪製文字雲 ---
+    function drawWordCloud(list) {
+      // 安全檢查：確認函式庫已載入
+      if (typeof WordCloud === 'undefined') {
+        console.warn("WordCloud library not ready, retrying...");
+        // 若尚未載入，稍後重試一次
+        setTimeout(() => {
+          if (typeof WordCloud !== 'undefined') {
+             drawWordCloud(list);
+          } else {
+             const container = document.getElementById('canvasContainer');
+             container.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-red-500 gap-2"><p>⚠️ 文字雲元件載入失敗</p><p class="text-sm text-gray-500">請嘗試重新整理頁面</p></div>';
+             showLoading(false);
+          }
+        }, 1500); // 增加等待時間
+        return;
+      }
+
+      const container = document.getElementById('canvasContainer');
+      // 如果 container 內顯示錯誤訊息，則重建 canvas
+      if (!container.querySelector('canvas')) {
+         container.innerHTML = '';
+         const loadingDiv = document.createElement('div');
+         loadingDiv.id = 'loadingSpinner';
+         loadingDiv.className = 'absolute flex flex-col items-center gap-2 text-orange-500 z-10';
+         loadingDiv.innerHTML = '<svg class="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span class="text-sm font-medium">載入中...</span>';
+         
+         const newCanvas = document.createElement('canvas');
+         newCanvas.id = 'wordCloudCanvas';
+         newCanvas.className = 'w-full h-full';
+         
+         container.appendChild(loadingDiv);
+         container.appendChild(newCanvas);
+      }
+
+      const canvas = document.getElementById('wordCloudCanvas');
+      if(!canvas) return; // double check
+
+      // 設定 Canvas 實際像素大小 (解決模糊問題)
+      canvas.width = container.offsetWidth;
+      canvas.height = container.offsetHeight;
+
+      // 顏色庫：橘、紅、藍、綠、紫、深灰
+      const colors = [
+        '#f97316', // Orange 500
+        '#ea580c', // Orange 600
+        '#dc2626', // Red 600
+        '#2563eb', // Blue 600
+        '#059669', // Emerald 600
+        '#7c3aed', // Violet 600
+        '#374151'  // Gray 700
+      ];
+
+      const options = {
+        list: list,
+        gridSize: 8,            // 網格大小，越小越密
+        weightFactor: sizeFactor, // 字體大小係數
+        fontFamily: "'Noto Sans TC', sans-serif",
+        fontWeight: 'bold',
+        color: function() {
+          return colors[Math.floor(Math.random() * colors.length)];
+        },
+        backgroundColor: '#ffffff', // 設定背景色以便下載
+        rotateRatio: 0.5,       // 文字旋轉機率
+        rotationSteps: 2,       // 旋轉角度 (0, 90度)
+        shape: 'circle',
+        drawOutOfBound: false,  // 超出範圍不繪製
+        shuffle: true           // 隨機排列
+      };
+
+      try {
+        WordCloud(canvas, options);
+      } catch (e) {
+        console.error("Error executing WordCloud:", e);
+      }
+    }
+
+    // --- UI 控制 ---
+    function updateSizeFactor(val) {
+      sizeFactor = parseInt(val);
+      document.getElementById('sizeValue').innerText = val;
+      // 使用防抖動稍微延遲重繪
+      if(cachedWordData.length > 0) {
+         drawWordCloud(cachedWordData);
+      }
+    }
+
+    function showLoading(isLoading) {
+      const spinner = document.getElementById('loadingSpinner');
+      if (spinner) spinner.style.display = isLoading ? 'flex' : 'none';
+    }
+
+    function downloadImage() {
+      const canvas = document.getElementById('wordCloudCanvas');
+      if (!canvas) return;
+      
+      // 將 Canvas 轉為圖片 URL
+      const image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+      
+      // 建立臨時連結下載
+      const link = document.createElement('a');
+      link.download = `wordcloud-${new Date().getTime()}.png`;
+      link.href = image;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>
