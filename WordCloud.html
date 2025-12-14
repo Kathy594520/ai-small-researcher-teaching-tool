@@ -1,4 +1,4 @@
-
+DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
@@ -42,6 +42,37 @@
       transform: scale(1);
       transition: opacity 200ms, transform 200ms;
     }
+
+    /* Toast 通知樣式 */
+    #toast-container {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 60;
+      display: flex;
+      flex-col: column;
+      gap: 10px;
+    }
+    .toast {
+      background-color: #333;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toast.show {
+      opacity: 1;
+    }
+    .toast-error { background-color: #ef4444; }
+    .toast-success { background-color: #10b981; }
+    .toast-warning { background-color: #f59e0b; color: #fff; }
   </style>
 </head>
 <body class="flex flex-col min-h-screen text-gray-700 relative">
@@ -141,6 +172,9 @@
     </div>
   </div>
 
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
   <footer class="bg-gray-100 text-center p-4 text-xs text-gray-400 mt-auto">
     Created with Google Apps Script & Tailwind CSS
   </footer>
@@ -183,28 +217,20 @@
   </script>
 
   <script>
-    // --- 部署網址設定 (由使用者提供) ---
-    const DEPLOY_URL = "https://script.google.com/macros/s/AKfycbwUNrxL6pMtIimNcQZ1skQqbWnexfhBwKl3131Pkf4SqlWKaIUhlzPFem60AJfYpSwDvQ/exec";
-
-    // --- MOCK Google Apps Script Environment ---
-    if (typeof google === 'undefined') {
-      console.warn("目前處於預覽模式：已啟用 Mock Data 模擬後端行為。");
-      const mockDataStore = ["你好", "世界", "測試", "Google", "Apps", "Script", "文字雲", "前端", "設計", "Tailwind", "CSS", "你好", "測試", "WordCloud", "教學", "互動", "課堂", "JavaScript"];
-      window.google = {
-        script: {
-          run: {
-            withSuccessHandler: function(successCallback) { this.success = successCallback; return this; },
-            withFailureHandler: function(failureCallback) { this.failure = failureCallback; return this; },
-            getDataFromSheet: function() { setTimeout(() => { if (this.success) this.success([...mockDataStore]); }, 600); },
-            saveToSheet: function(text) { setTimeout(() => { mockDataStore.push(text); if (this.success) this.success(true); }, 600); }
-          }
-        }
-      };
-    }
+    // --- 部署網址設定 (請確保這是您最新的 GAS Web App 網址) ---
+    const DEPLOY_URL = "https://script.google.com/macros/s/AKfycbzdL_CZvZXY8NwWhJFQqxwKvhCyQnoK2I_U4mxz0prU5FRVmrkx3NJaVAoCa9n46F3DHA/exec";
 
     // --- 全域變數 ---
     let cachedWordData = []; 
-    let sizeFactor = 8;      
+    let sizeFactor = 8;
+    
+    // --- 本地模擬資料庫 (Fallback Data) ---
+    // 當無法連接 GAS 後端時，使用此資料讓使用者體驗不中斷
+    let localMockData = [
+      "你好", "世界", "測試", "Google", "Apps", "Script", "文字雲", "前端", "設計", 
+      "Tailwind", "CSS", "你好", "測試", "WordCloud", "教學", "互動", "課堂", "JavaScript",
+      "成功", "備援", "模式", "體驗"
+    ];
 
     // --- 初始化 ---
     window.onload = function() {
@@ -234,7 +260,6 @@
       
       if (show) {
         modal.classList.remove('hidden');
-        // 強制重繪以觸發 transition
         requestAnimationFrame(() => {
           modal.classList.remove('opacity-0');
           content.classList.remove('scale-95');
@@ -244,11 +269,39 @@
         content.classList.add('scale-95');
         setTimeout(() => {
           modal.classList.add('hidden');
-        }, 200); // 等待動畫結束
+        }, 200); 
       }
     }
 
-    // --- 後端互動：送出文字 ---
+    // --- Toast 提示控制 ---
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      
+      let icon = '';
+      if (type === 'error') icon = '⚠️ ';
+      if (type === 'success') icon = '✅ ';
+      if (type === 'warning') icon = '📡 ';
+      
+      toast.innerHTML = `<span>${icon}${message}</span>`;
+      container.appendChild(toast);
+      
+      // 觸發重繪以顯示動畫
+      requestAnimationFrame(() => {
+        toast.classList.add('show');
+      });
+
+      // 3秒後消失
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+          container.removeChild(toast);
+        }, 300);
+      }, 3000);
+    }
+
+    // --- 後端互動：送出文字 (包含錯誤備援) ---
     function submitText() {
       const input = document.getElementById('userInput');
       const btn = document.getElementById('submitBtn');
@@ -260,44 +313,67 @@
       btn.disabled = true;
       btn.innerHTML = '<span>傳送中...</span>';
 
-      google.script.run
-        .withSuccessHandler((success) => {
-          if (success) {
-            input.value = ''; 
-            fetchAndDraw();   
-          } else {
-            alert("存檔失敗，請重試");
-          }
-          input.disabled = false;
-          btn.disabled = false;
-          btn.innerHTML = '<span>送出</span><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>';
-          input.focus();
-        })
-        .withFailureHandler((err) => {
-          alert("發生錯誤: " + err);
-          input.disabled = false;
-          btn.disabled = false;
-        })
-        .saveToSheet(text);
+      // 使用 fetch 發送 POST 請求
+      fetch(DEPLOY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify({ text: text })
+      })
+      .then(response => {
+        if (!response.ok) throw new Error("Network response was not ok");
+        return response.json();
+      })
+      .then(data => {
+        if (data.result === 'success') {
+          input.value = ''; 
+          showToast('傳送成功', 'success');
+          fetchAndDraw(); 
+        } else {
+          throw new Error(data.message || "未知錯誤");
+        }
+      })
+      .catch(err => {
+        console.warn("Submit Error (Switched to Mock):", err);
+        // --- 錯誤處理：切換到本地模擬模式 ---
+        localMockData.push(text); // 將資料暫存於本地
+        input.value = '';
+        showToast('連線失敗，僅更新本地預覽', 'warning');
+        processData(localMockData); // 使用本地資料重繪
+      })
+      .finally(() => {
+        input.disabled = false;
+        btn.disabled = false;
+        btn.innerHTML = '<span>送出</span><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>';
+        input.focus();
+      });
     }
 
     function handleKeyPress(e) {
       if (e.key === 'Enter') submitText();
     }
 
-    // --- 後端互動：讀取資料並處理 ---
+    // --- 後端互動：讀取資料 (包含錯誤備援) ---
     function fetchAndDraw() {
       showLoading(true);
-      google.script.run
-        .withSuccessHandler((data) => {
+      
+      fetch(DEPLOY_URL)
+        .then(response => {
+          if (!response.ok) throw new Error("Network response was not ok");
+          return response.json();
+        })
+        .then(data => {
           processData(data);
           showLoading(false);
         })
-        .withFailureHandler((err) => {
-          console.error(err);
+        .catch(err => {
+          console.warn("Fetch Error (Switched to Mock):", err);
           showLoading(false);
-        })
-        .getDataFromSheet();
+          // --- 錯誤處理：切換到本地模擬模式 ---
+          showToast('無法連接資料庫，已切換至預覽模式', 'warning');
+          processData(localMockData); // 使用本地資料繪製
+        });
     }
 
     // --- 資料處理邏輯 (Regex 分詞) ---
