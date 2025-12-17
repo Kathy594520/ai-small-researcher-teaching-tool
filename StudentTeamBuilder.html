@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>異質性分組工作表</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- SheetJS for Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        @media print {
+            @page { 
+                margin: 1.5cm; /* 增加邊距以容納瀏覽器預設頁碼 */
+                size: A4; 
+            }
+            body { 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+                background-color: white;
+            }
+            
+            /* 隱藏元素 */
+            .print-hidden { display: none !important; }
+            .print-block { display: block !important; }
+            
+            /* 格線系統 */
+            .print-grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+            
+            /* 邊框與顏色 */
+            .print-border-2 { border-width: 2px !important; }
+            .print-border-gray-800 { border-color: #1f2937 !important; }
+            .print-bg-gray-100 { background-color: #f3f4f6 !important; }
+            .print-text-black { color: black !important; }
+            .print-mt-6 { margin-top: 1.5rem !important; }
+            
+            /* 強制元素不可跨頁列印 (用於卡片) */
+            .print-break-inside-avoid { 
+                break-inside: avoid; 
+                page-break-inside: avoid; 
+            }
+
+            /* --- 關鍵：模擬表格結構讓表頭重複出現 --- */
+            .print-table { 
+                display: table; 
+                width: 100%; 
+                border-collapse: collapse;
+            }
+            .print-header-group { 
+                display: table-header-group; 
+            }
+            .print-footer-group { 
+                display: table-footer-group; 
+            }
+            .print-row-group { 
+                display: table-row-group; 
+            }
+            .print-row { 
+                display: table-row; 
+            }
+            .print-cell { 
+                display: table-cell; 
+                padding-bottom: 10px; /* 行距 */
+            }
+
+            /* 修正 React Root 高度以免影響分頁 */
+            #root { height: auto; overflow: visible; }
+            
+            /* Hide scrollbars in print */
+            ::-webkit-scrollbar { display: none; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons Components (SVG) ---
+        const Icon = ({ path, size = 24, className = "", fill = "none" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+
+        const Icons = {
+            Users: (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />,
+            Printer: (props) => <Icon {...props} path={<><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></>} />,
+            FileSpreadsheet: (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></>} />,
+            Upload: (props) => <Icon {...props} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>} />,
+            Plus: (props) => <Icon {...props} path={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} />,
+            X: (props) => <Icon {...props} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />,
+            Trash2: (props) => <Icon {...props} path={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>} />,
+            RefreshCw: (props) => <Icon {...props} path={<><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>} />,
+            Settings: (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></>} />,
+            User: (props) => <Icon {...props} path={<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>} />,
+            Edit3: (props) => <Icon {...props} path={<><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></>} />,
+            Check: (props) => <Icon {...props} path={<><polyline points="20 6 9 17 4 12"/></>} />,
+            Trophy: (props) => <Icon {...props} path={<><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10"/><path d="M17 4v6a5 5 0 1 1-10 0V4"/><path d="M5 9v1a10 10 0 1 0 20 0V9"/></>} />,
+            MinusCircle: (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></>} />,
+            PlusCircle: (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></>} />,
+            RotateCcw: (props) => <Icon {...props} path={<><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></>} />,
+            Award: (props) => <Icon {...props} path={<><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></>} />,
+            Medal: (props) => <Icon {...props} path={<><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></>} />, 
+        };
+
+        // Simplified Medal Icon to prevent rendering crashes
+        const MedalIconLarge = ({ size = 100, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className={className}>
+               <circle cx="12" cy="8" r="7" />
+               <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+            </svg>
+        );
+
+        const DEFAULT_ROLES = [
+            { id: 'leader', name: '組長', color: 'bg-red-100 text-red-800 border-red-200', desc: '主持討論、分配工作、確認進度' },
+            { id: 'recorder', name: '記錄', color: 'bg-blue-100 text-blue-800 border-blue-200', desc: '記錄討論重點、填寫學習單' },
+            { id: 'reporter', name: '發表', color: 'bg-green-100 text-green-800 border-green-200', desc: '上台報告、統整小組意見' },
+            { id: 'timekeeper', name: '計時', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', desc: '控制時間、管理音量、維持秩序' },
+            { id: 'material', name: '器材', color: 'bg-purple-100 text-purple-800 border-purple-200', desc: '領取/歸還教具、維護環境整潔' },
+            { id: 'member', name: '組員', color: 'bg-gray-100 text-gray-800 border-gray-200', desc: '積極參與討論、協助完成任務' },
+        ];
+
+        const DEFAULT_RULES = `1. 尊重發言：別人說話時，眼睛注視對方，安靜聆聽不插嘴。
+2. 輕聲細語：討論時控制音量，僅讓同組組員聽見即可。
+3. 積極參與：每個人都要貢獻想法，沒有人是局外人。
+4. 分工合作：各司其職，互相協助，共同完成小組任務。
+5. 勇於發表：報告時聲音宏亮，大方展現小組成果。`;
+
+        const App = () => {
+            const [students, setStudents] = useState([]);
+            // Initialize states with functions to avoid undefined on first render
+            const [groups, setGroups] = useState(() => {
+                const initial = {};
+                for (let i = 1; i <= 12; i++) initial[i] = Array(6).fill(null);
+                return initial;
+            });
+            const [groupScores, setGroupScores] = useState(() => {
+                const initial = {};
+                for (let i = 1; i <= 12; i++) initial[i] = 0;
+                return initial;
+            });
+            const [completedGroups, setCompletedGroups] = useState(() => {
+                const initial = {};
+                for (let i = 1; i <= 12; i++) initial[i] = false;
+                return initial;
+            });
+            const [roles, setRoles] = useState(DEFAULT_ROLES);
+            const [numGroups, setNumGroups] = useState(6);
+            const [subject, setSubject] = useState('');
+            const [topic, setTopic] = useState('');
+            const [className, setClassName] = useState(''); 
+            const [date, setDate] = useState('');           
+            const [rules, setRules] = useState(DEFAULT_RULES);
+            const [draggedStudent, setDraggedStudent] = useState(null);
+            const [manualInput, setManualInput] = useState('');
+            const [showInputModal, setShowInputModal] = useState(false);
+            const [isEditingStudents, setIsEditingStudents] = useState(false);
+            const [editingText, setEditingText] = useState('');
+
+            // --- Handlers ---
+
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (window.XLSX) {
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        const bstr = evt.target.result;
+                        const wb = window.XLSX.read(bstr, { type: 'binary' });
+                        const wsname = wb.SheetNames[0];
+                        const ws = wb.Sheets[wsname];
+                        const data = window.XLSX.utils.sheet_to_json(ws, { header: 1 });
+                        
+                        const newStudents = data.flat().filter(item => item && (typeof item === 'string' || typeof item === 'number')).map(String);
+                        addStudentsToPool(newStudents);
+                    };
+                    reader.readAsBinaryString(file);
+                } else {
+                    alert("Excel 解析功能載入中，請稍後再試。");
+                }
+            };
+
+            const addStudentsToPool = (newNames) => {
+                const newStudentObjects = newNames.map((name, index) => ({
+                    id: `s-${Date.now()}-${index}`,
+                    name: name.trim()
+                })).filter(s => s.name);
+                
+                setStudents(prev => [...prev, ...newStudentObjects]);
+                setShowInputModal(false);
+                setManualInput('');
+            };
+
+            const handleManualSubmit = () => {
+                const names = manualInput.split(/[\n,、]+/).map(s => s.trim()).filter(s => s);
+                addStudentsToPool(names);
+            };
+
+            const toggleStudentEdit = () => {
+                if (isEditingStudents) {
+                    const names = editingText.split(/[\n,、]+/).map(s => s.trim()).filter(s => s);
+                    const newStudents = names.map((name, index) => ({
+                        id: `s-${Date.now()}-${index}`,
+                        name: name
+                    }));
+                    setStudents(newStudents);
+                    setIsEditingStudents(false);
+                } else {
+                    setEditingText(students.map(s => s.name).join('\n'));
+                    setIsEditingStudents(true);
+                }
+            };
+
+            const handleDragStart = (e, student, fromGroupIndex = null, fromSlotIndex = null) => {
+                setDraggedStudent({ ...student, fromGroupIndex, fromSlotIndex });
+                e.dataTransfer.effectAllowed = 'move';
+            };
+
+            const handleDrop = (e, groupIndex, slotIndex) => {
+                e.preventDefault();
+                if (!draggedStudent) return;
+
+                setGroups(prevGroups => {
+                    const newGroups = { ...prevGroups };
+                    
+                    if (draggedStudent.fromGroupIndex !== null) {
+                        newGroups[draggedStudent.fromGroupIndex] = [...prevGroups[draggedStudent.fromGroupIndex]];
+                    }
+                    newGroups[groupIndex] = [...(newGroups[groupIndex] || prevGroups[groupIndex])]; 
+
+                    const currentOccupant = newGroups[groupIndex][slotIndex];
+
+                    if (draggedStudent.fromGroupIndex !== null) {
+                        newGroups[draggedStudent.fromGroupIndex][draggedStudent.fromSlotIndex] = null;
+                    }
+
+                    if (currentOccupant) {
+                        if (draggedStudent.fromGroupIndex !== null) {
+                            newGroups[draggedStudent.fromGroupIndex][draggedStudent.fromSlotIndex] = currentOccupant;
+                        } else {
+                            setStudents(prev => [...prev, currentOccupant]);
+                        }
+                    }
+
+                    newGroups[groupIndex][slotIndex] = { id: draggedStudent.id, name: draggedStudent.name };
+                    return newGroups;
+                });
+
+                if (draggedStudent.fromGroupIndex === null) {
+                    setStudents(prev => prev.filter(s => s.id !== draggedStudent.id));
+                }
+
+                setDraggedStudent(null);
+            };
+
+            const handleUnassignedDrop = (e) => {
+                e.preventDefault();
+                if (!draggedStudent || draggedStudent.fromGroupIndex === null) return;
+
+                setGroups(prevGroups => {
+                    const newGroups = { ...prevGroups };
+                    const sourceGroup = [...newGroups[draggedStudent.fromGroupIndex]]; 
+                    sourceGroup[draggedStudent.fromSlotIndex] = null;
+                    newGroups[draggedStudent.fromGroupIndex] = sourceGroup;
+                    return newGroups;
+                });
+
+                setStudents(prev => [...prev, { id: draggedStudent.id, name: draggedStudent.name }]);
+                setDraggedStudent(null);
+            };
+
+            const removeStudent = (e, studentId) => {
+                e.stopPropagation();
+                if (confirm('確定要從名單中刪除此學生嗎？')) {
+                    setStudents(prev => prev.filter(s => s.id !== studentId));
+                }
+            };
+
+            const unassignStudent = (e, groupIndex, slotIndex) => {
+                e.stopPropagation();
+                const student = groups[groupIndex][slotIndex];
+                if (!student) return;
+
+                setGroups(prevGroups => {
+                    const newGroups = { ...prevGroups };
+                    const targetGroup = [...newGroups[groupIndex]];
+                    targetGroup[slotIndex] = null;
+                    newGroups[groupIndex] = targetGroup;
+                    return newGroups;
+                });
+
+                setStudents(prev => [...prev, student]);
+            };
+
+            const autoAssign = () => {
+                const unassigned = [...students];
+                let studentIdx = 0;
+                
+                setGroups(prevGroups => {
+                    const newGroups = { ...prevGroups };
+                    for (let g = 1; g <= numGroups; g++) {
+                        let groupModified = false;
+                        const currentGroup = [...(newGroups[g] || Array(6).fill(null))];
+                        
+                        for (let s = 0; s < 6; s++) { 
+                            if (!currentGroup[s] && studentIdx < unassigned.length) {
+                                currentGroup[s] = unassigned[studentIdx];
+                                studentIdx++;
+                                groupModified = true;
+                            }
+                        }
+                        if (groupModified) newGroups[g] = currentGroup;
+                    }
+                    return newGroups;
+                });
+
+                setStudents(unassigned.slice(studentIdx));
+            };
+
+            const clearAll = () => {
+                if(!confirm('確定要清空所有分組嗎？學生將回到未分組名單。')) return;
+                
+                const studentsInGroups = [];
+                Object.values(groups).forEach(group => {
+                    if (Array.isArray(group)) {
+                        group.forEach(student => {
+                            if (student) studentsInGroups.push(student);
+                        });
+                    }
+                });
+
+                const uniqueStudents = new Map();
+                [...students, ...studentsInGroups].forEach(s => {
+                    if(s && s.id) uniqueStudents.set(s.id, s);
+                });
+
+                const allStudents = Array.from(uniqueStudents.values());
+                
+                const initialGroups = {};
+                const initialScores = {};
+                const initialCompleted = {};
+                for (let i = 1; i <= 12; i++) {
+                    initialGroups[i] = Array(6).fill(null);
+                    initialScores[i] = 0;
+                    initialCompleted[i] = false;
+                }
+                
+                setGroups(initialGroups);
+                setGroupScores(initialScores);
+                setCompletedGroups(initialCompleted);
+                setStudents(allStudents);
+            };
+
+            const autoFillSlot = (student) => {
+                let targetG = -1, targetS = -1;
+                for (let g = 1; g <= numGroups; g++) {
+                    for (let s = 0; s < 6; s++) {
+                        if (!groups[g][s]) {
+                            targetG = g;
+                            targetS = s;
+                            break;
+                        }
+                    }
+                    if (targetG !== -1) break;
+                }
+
+                if (targetG !== -1) {
+                    setGroups(prevGroups => {
+                        const newGroups = { ...prevGroups };
+                        const newGroup = [...newGroups[targetG]];
+                        newGroup[targetS] = student;
+                        newGroups[targetG] = newGroup;
+                        return newGroups;
+                    });
+                    setStudents(prev => prev.filter(p => p.id !== student.id));
+                } else {
+                    alert("所有組別已滿！");
+                }
+            };
+
+            const handleRoleUpdate = (index, field, value) => {
+                const newRoles = [...roles];
+                newRoles[index] = { ...newRoles[index], [field]: value };
+                setRoles(newRoles);
+            };
+
+            const adjustScore = (groupId, delta) => {
+                setGroupScores(prev => ({
+                    ...prev,
+                    [groupId]: Math.max(0, (prev[groupId] || 0) + delta)
+                }));
+            };
+
+            const adjustAllScores = (delta) => {
+                setGroupScores(prev => {
+                    const next = { ...prev };
+                    for(let i=1; i<=numGroups; i++) {
+                        next[i] = Math.max(0, (next[i] || 0) + delta);
+                    }
+                    return next;
+                });
+            };
+
+            const resetScores = () => {
+                if(!confirm("確定要重置所有組別分數為 0 嗎？")) return;
+                const initialScores = {};
+                for(let i=1; i<=12; i++) initialScores[i] = 0;
+                setGroupScores(initialScores);
+            };
+
+            const toggleCertificate = (groupId) => {
+                setCompletedGroups(prev => ({
+                    ...prev,
+                    [groupId]: !prev[groupId]
+                }));
+            };
+
+            const getRole = (index) => roles[index] || roles[5];
+
+            return (
+                <div className="min-h-screen bg-gray-50 font-sans text-gray-800 print:bg-white relative pb-20">
+                    {/* Top Navigation */}
+                    <div className="bg-white shadow-sm border-b p-3 print-hidden sticky top-0 z-20">
+                        <div className="max-w-7xl mx-auto space-y-3">
+                            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="bg-blue-600 text-white p-2 rounded-lg">
+                                        <Icons.Users size={24} />
+                                    </div>
+                                    <h1 className="text-xl font-bold text-gray-800">異質性分組工作表</h1>
+                                </div>
+
+                                <div className="flex flex-wrap gap-3 items-center justify-center flex-1">
+                                    <div className="flex flex-col">
+                                        <label className="text-[10px] text-gray-500 font-medium">班級</label>
+                                        <input type="text" placeholder="例如：601" className="border rounded px-2 py-1 text-sm w-20 focus:ring-2 focus:ring-blue-500 outline-none" value={className} onChange={e => setClassName(e.target.value)} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <label className="text-[10px] text-gray-500 font-medium">日期</label>
+                                        <input type="text" placeholder="例如：2023/10/20" className="border rounded px-2 py-1 text-sm w-28 focus:ring-2 focus:ring-blue-500 outline-none" value={date} onChange={e => setDate(e.target.value)} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <label className="text-[10px] text-gray-500 font-medium">學科 / 領域</label>
+                                        <input type="text" placeholder="例如：國語文" className="border rounded px-2 py-1 text-sm w-28 focus:ring-2 focus:ring-blue-500 outline-none" value={subject} onChange={e => setSubject(e.target.value)} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <label className="text-[10px] text-gray-500 font-medium">單元主題</label>
+                                        <input type="text" placeholder="例如：第三課 觀察與發現" className="border rounded px-2 py-1 text-sm w-40 focus:ring-2 focus:ring-blue-500 outline-none" value={topic} onChange={e => setTopic(e.target.value)} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <label className="text-[10px] text-gray-500 font-medium">組數設定</label>
+                                        <select className="border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={numGroups} onChange={(e) => setNumGroups(Number(e.target.value))}>
+                                            {[...Array(12).keys()].map(i => <option key={i+1} value={i+1}>{i+1} 組</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <button onClick={() => setShowInputModal(true)} className="flex items-center gap-1 bg-green-50 px-3 py-2 rounded text-green-700 hover:bg-green-100 transition border border-green-200 text-sm font-medium">
+                                        <Icons.FileSpreadsheet size={16} /> 匯入名單
+                                    </button>
+                                    <button onClick={() => window.print()} className="flex items-center gap-1 bg-blue-600 px-3 py-2 rounded text-white hover:bg-blue-700 transition shadow-sm text-sm font-medium">
+                                        <Icons.Printer size={16} /> 列印 / 預覽
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 py-1 border-t pt-2">
+                                <div className="flex items-center gap-2 text-gray-600 text-sm font-bold bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200">
+                                    <Icons.Trophy size={16} className="text-yellow-600" />
+                                    <span>全班計分控制：</span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => adjustAllScores(1)} className="flex items-center gap-1 px-3 py-1 bg-white border hover:bg-green-50 text-green-700 rounded text-xs font-bold transition shadow-sm active:scale-95">
+                                        <Icons.PlusCircle size={14} /> 全體加分
+                                    </button>
+                                    <button onClick={() => adjustAllScores(-1)} className="flex items-center gap-1 px-3 py-1 bg-white border hover:bg-red-50 text-red-700 rounded text-xs font-bold transition shadow-sm active:scale-95">
+                                        <Icons.MinusCircle size={14} /> 全體扣分
+                                    </button>
+                                    <div className="w-px h-6 bg-gray-300 mx-2"></div>
+                                    <button onClick={resetScores} className="flex items-center gap-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-xs font-medium transition shadow-sm">
+                                        <Icons.RotateCcw size={14} /> 分數歸零
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="max-w-7xl mx-auto p-4 flex flex-col md:flex-row gap-6">
+                        
+                        {/* Sidebar */}
+                        <div className="w-full md:w-64 flex-shrink-0 flex flex-col gap-3 print-hidden" onDragOver={(e) => e.preventDefault()} onDrop={handleUnassignedDrop}>
+                            <div className="bg-white rounded-xl shadow-sm border p-4 flex-1 flex flex-col">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h2 className="font-bold text-gray-700 flex items-center gap-2">
+                                        <Icons.User size={18} /> 未分組名單 
+                                        <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">{students.length}</span>
+                                    </h2>
+                                    <button onClick={toggleStudentEdit} className={`p-1.5 rounded-md transition border ${isEditingStudents ? 'text-green-600 bg-green-50 border-green-200' : 'text-gray-400 border-transparent hover:bg-gray-100'}`} title={isEditingStudents ? "完成編輯" : "直接編輯名單"}>
+                                        {isEditingStudents ? <Icons.Check size={18} /> : <Icons.Edit3 size={18} />}
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 overflow-hidden flex flex-col min-h-[200px] max-h-[calc(100vh-250px)]">
+                                    {isEditingStudents ? (
+                                        <textarea className="w-full h-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-yellow-50" value={editingText} onChange={(e) => setEditingText(e.target.value)} placeholder="在此直接輸入或貼上名單，每行一個名字..." autoFocus />
+                                    ) : (
+                                        <div className="space-y-2 overflow-y-auto h-full p-1">
+                                            {students.length === 0 && (
+                                                <div className="text-center text-gray-400 py-8 text-sm">
+                                                    目前無學生<br/>
+                                                    <span className="text-xs">點擊右上方筆型按鈕<br/>即可直接貼上名單</span>
+                                                </div>
+                                            )}
+                                            {students.map((student) => (
+                                                <div key={student.id} draggable onDragStart={(e) => handleDragStart(e, student)} onClick={() => autoFillSlot(student)} className="bg-white border border-gray-200 p-2 rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:bg-blue-50 hover:border-blue-300 transition group flex justify-between items-center relative pr-8">
+                                                    <span className="font-medium text-gray-700">{student.name}</span>
+                                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
+                                                        <button onClick={(e) => removeStudent(e, student.id)} className="p-1 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition" title="刪除學生">
+                                                            <Icons.X size={16} />
+                                                        </button>
+                                                        <Icons.Plus size={16} className="text-gray-300 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition" />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-4 pt-4 border-t flex flex-col gap-2">
+                                    <button onClick={autoAssign} disabled={students.length === 0 || isEditingStudents} className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50">
+                                        <Icons.RefreshCw size={14} /> 自動填入空缺
+                                    </button>
+                                    <button onClick={clearAll} disabled={isEditingStudents} className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50">
+                                        <Icons.Trash2 size={14} /> 重置所有分組
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-white rounded-xl shadow-sm border p-4">
+                                <div className="flex justify-between items-center mb-2">
+                                    <h3 className="font-bold text-sm text-gray-700">職務說明設定</h3>
+                                    <Icons.Edit3 size={14} className="text-gray-400" />
+                                </div>
+                                <div className="space-y-3">
+                                    {roles.slice(0, 6).map((role, index) => (
+                                        <div key={role.id || index} className="flex flex-col gap-1 text-xs">
+                                            <div className="flex gap-2 items-center">
+                                                <input type="text" value={role.name} onChange={(e) => handleRoleUpdate(index, 'name', e.target.value)} className={`w-14 px-1 py-1 rounded border text-center font-bold ${role.color} focus:ring-2 focus:ring-blue-500 outline-none`} title="編輯職務名稱" />
+                                                <input type="text" value={role.desc} onChange={(e) => handleRoleUpdate(index, 'desc', e.target.value)} className="flex-1 border-b border-gray-200 focus:border-blue-500 outline-none bg-transparent py-1" placeholder="輸入職務說明..." title="編輯職務說明" />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="text-[10px] text-gray-400 mt-2 text-right">
+                                    *此處修改將同步至右側表格
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Main Grid: Modified to support repeated headers in print */}
+                        <div className="flex-1">
+                            <div className="print-table">
+                                {/* Print Header Group: Repeats on every page */}
+                                <div className="print-header-group hidden print-block">
+                                    <div className="print-row">
+                                        <div className="print-cell">
+                                            <div className="text-center mb-6 pt-4">
+                                                <h1 className="text-2xl font-bold mb-4">異質性分組工作表</h1>
+                                                <div className="flex flex-col gap-2 text-sm text-gray-600 font-medium">
+                                                    <div className="flex justify-center gap-8">
+                                                        <span>學科 / 領域：{subject || '__________'}</span>
+                                                        <span>單元主題：{topic || '__________'}</span>
+                                                    </div>
+                                                    <div className="flex justify-center gap-8">
+                                                        <span>班級：{className || '__________'}</span>
+                                                        <span>日期：{date || '__________'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Print Body Group: Content */}
+                                <div className="print-row-group">
+                                    <div className="print-row">
+                                        <div className="print-cell">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 print-grid-cols-2 print-gap-6">
+                                                {[...Array(numGroups)].map((_, i) => {
+                                                    const groupIndex = i + 1;
+                                                    const groupData = groups[groupIndex] || Array(6).fill(null);
+                                                    const score = groupScores[groupIndex] || 0;
+                                                    const isCompleted = completedGroups[groupIndex];
+
+                                                    return (
+                                                        <div key={groupIndex} className="bg-white rounded-xl shadow-sm border print-border-2 print-border-gray-800 overflow-hidden flex flex-col relative print-break-inside-avoid">
+                                                            {isCompleted && (
+                                                                <div className="absolute top-12 right-2 z-0 pointer-events-none opacity-20 print-opacity-30 print-block">
+                                                                    <MedalIconLarge size={100} className="text-yellow-600" />
+                                                                </div>
+                                                            )}
+                                                            {isCompleted && <div className="absolute inset-0 border-4 border-yellow-400 rounded-xl pointer-events-none z-10 print-border-4 print-border-yellow-600"></div>}
+
+                                                            <div className="bg-gray-800 text-white py-2 px-3 font-bold flex justify-between items-center print-bg-gray-100 print-text-black print-border-b print-border-gray-800 z-10 relative">
+                                                                <span className="flex-1 flex items-center gap-2">
+                                                                    第 {groupIndex} 組
+                                                                    {isCompleted && <Icons.Award size={16} className="text-yellow-400 print-text-yellow-600" fill="currentColor" />}
+                                                                </span>
+                                                                
+                                                                <div className="flex items-center gap-2 print-hidden">
+                                                                    <button onClick={() => toggleCertificate(groupIndex)} className={`p-1 rounded transition hover:bg-gray-600 ${isCompleted ? 'text-yellow-400' : 'text-gray-400'}`} title={isCompleted ? "取消證書" : "頒發證書"}>
+                                                                        <Icons.Award size={18} fill={isCompleted ? "currentColor" : "none"} />
+                                                                    </button>
+                                                                    <div className="w-px h-4 bg-gray-600 mx-1"></div>
+                                                                    <button onClick={() => adjustScore(groupIndex, -1)} className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 transition text-red-300"><Icons.MinusCircle size={16} /></button>
+                                                                    <div className="bg-white text-gray-800 px-2 py-0.5 rounded min-w-[32px] text-center text-sm font-bold">{score}</div>
+                                                                    <button onClick={() => adjustScore(groupIndex, 1)} className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 transition text-green-300"><Icons.PlusCircle size={16} /></button>
+                                                                </div>
+
+                                                                <div className="hidden print-block flex items-center gap-3" style={{display: 'none'}}>
+                                                                    <div className="flex items-center gap-3">
+                                                                        {isCompleted && <span className="text-xs font-bold text-yellow-700 border border-yellow-600 px-1 rounded">榮譽小組</span>}
+                                                                        <div className="text-sm border border-gray-400 px-2 rounded">得分：{score}</div>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="hidden print-block float-right text-sm">
+                                                                    {isCompleted ? "★ " : ""}得分：{score}
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="p-3 space-y-2 flex-1 z-10 relative bg-transparent">
+                                                                {groupData.map((student, slotIndex) => {
+                                                                    const role = getRole(slotIndex);
+                                                                    return (
+                                                                        <div key={slotIndex} onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, groupIndex, slotIndex)} className={`flex items-center gap-2 p-1 rounded border border-dashed transition-colors relative group ${student ? 'border-solid border-gray-300 bg-white/90' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'}`}>
+                                                                            <div className={`w-16 flex-shrink-0 text-center text-xs font-bold py-1.5 px-1 rounded border overflow-hidden whitespace-nowrap text-ellipsis ${role.color}`}>{role.name}</div>
+                                                                            <div className="flex-1 min-h-[28px] flex items-center px-2">
+                                                                                {student ? (
+                                                                                    <>
+                                                                                        <div draggable onDragStart={(e) => handleDragStart(e, student, groupIndex, slotIndex)} className="flex-1 font-medium text-gray-800 cursor-grab active:cursor-grabbing text-center">{student.name}</div>
+                                                                                        <button onClick={(e) => unassignStudent(e, groupIndex, slotIndex)} className="absolute top-0 right-0 p-1 text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition print-hidden" title="移出組別"><Icons.X size={14} /></button>
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <div className="flex-1 text-gray-300 text-xs text-center select-none pointer-events-none">(拖曳至此)</div>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            <div className="hidden print-block border-t border-gray-800 p-2 text-[10px] text-gray-600 z-10 relative bg-white">
+                                                                {roles.slice(0,4).map(r => `${r.name}:${r.desc.split('、')[0]}`).join(' / ')}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <div className="mt-8 bg-white rounded-xl shadow-sm border p-6 print-border-2 print-border-gray-800 print-mt-6 print-break-inside-avoid">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <Icons.Settings className="text-gray-400 print-hidden" size={20} />
+                                                    <h3 className="text-lg font-bold text-gray-800">班級公約 / 課堂守則</h3>
+                                                </div>
+                                                <textarea className="w-full h-32 p-3 border rounded-lg text-gray-700 leading-relaxed focus:ring-2 focus:ring-blue-500 outline-none resize-none print-hidden" value={rules} onChange={(e) => setRules(e.target.value)} />
+                                                <div className="hidden print-block whitespace-pre-wrap text-sm leading-7">{rules}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Print Footer Spacer Group: Reserves space for fixed footer */}
+                                <div className="print-footer-group hidden print-block">
+                                    <div className="print-row">
+                                        <div className="print-cell h-16"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Footer - Web Only (Print Hidden) */}
+                    <footer className="mt-12 py-6 text-center text-gray-400 text-xs print-hidden">
+                        <p>© 2025 Kathy's StudentTeamBuilder Created with Google Apps Script & Tailwind CSS</p>
+                    </footer>
+
+                    {/* Floating FAB - Web Only (Print Hidden) */}
+                    <a
+                      href="https://kathy594520.github.io/new.github.io/AI/AI"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="fixed bottom-4 right-4 z-50 bg-white/90 backdrop-blur-sm border border-pink-100 shadow-lg hover:shadow-xl rounded-full px-4 py-2 flex items-center gap-2 text-sm font-bold text-pink-600 hover:text-pink-700 hover:scale-105 transition-all duration-300 print-hidden group"
+                    >
+                      <span className="bg-pink-100 p-1.5 rounded-full group-hover:bg-pink-200 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg>
+                      </span>
+                      仙姑凱西設計
+                    </a>
+
+                    {/* Input Modal */}
+                    {showInputModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+                                <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
+                                    <h3 className="font-bold text-gray-800">匯入名單</h3>
+                                    <button onClick={() => setShowInputModal(false)} className="text-gray-400 hover:text-gray-600"><Icons.Plus className="rotate-45" /></button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">方式一：上傳 Excel / CSV</label>
+                                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 transition relative">
+                                            <input type="file" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                            <Icons.Upload className="mx-auto text-gray-400 mb-2" />
+                                            <p className="text-sm text-gray-500">點擊或拖放檔案至此</p>
+                                        </div>
+                                    </div>
+                                    <div className="relative flex py-2 items-center">
+                                        <div className="flex-grow border-t border-gray-200"></div>
+                                        <span className="flex-shrink-0 mx-4 text-gray-400 text-xs">或</span>
+                                        <div className="flex-grow border-t border-gray-200"></div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">方式二：手動輸入 / 貼上</label>
+                                        <textarea placeholder="請輸入學生姓名，以換行、逗號或頓號分隔..." className="w-full h-32 p-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={manualInput} onChange={(e) => setManualInput(e.target.value)}></textarea>
+                                    </div>
+                                </div>
+                                <div className="bg-gray-50 px-6 py-4 flex justify-end gap-2">
+                                    <button onClick={() => setShowInputModal(false)} className="px-4 py-2 text-gray-600 text-sm hover:bg-gray-100 rounded">取消</button>
+                                    <button onClick={handleManualSubmit} className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">確認新增</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
