@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -78,10 +78,19 @@
             font-size: 1.1rem;
         }
 
+        /* 強調誘答說明 */
+        .highlight {
+            color: #d84315;
+            font-weight: bold;
+            background: #ffecb3;
+            padding: 0 5px;
+            border-radius: 4px;
+        }
+
         textarea {
             width: 100%;
             max-width: 500px;
-            height: 120px;
+            height: 150px;
             padding: 15px;
             border: 3px solid #4fc3f7;
             border-radius: 10px;
@@ -259,12 +268,12 @@
     <!-- QR Code 按鈕 -->
     <div id="qrcode-container" title="點擊顯示 QR Code 以便分享">
         <img id="qr-img" src="" alt="QR Code">
-        <div id="qr-text">掃描此 Code 進入遊戲<br></div>
+        <div id="qr-text">掃描此 Code 進入遊戲<br>(連結至 GitHub Page)</div>
         <button id="qr-close">關閉</button>
     </div>
 
     <!-- 浮動連結 -->
-    <a href="https://kathy594520.github.io/new.github.io/AI/AI" target="_blank" id="floating-link">仙姑凱西設計</a>
+    <a href="https://kathy594520.github.io/new.github.io/AI/AI" target="_blank" id="floating-link">更多 AI 資源</a>
 
     <!-- 版權宣告 -->
     <div id="copyright">© 2025 Kathy's Fishing Order. Built with Gemini AI.</div>
@@ -278,14 +287,19 @@
     
     <!-- 開始選單 -->
     <div id="menu-layer" class="ui-layer">
-        <h1>🐟 依序撈魚 (完整版)</h1>
+        <h1>🐟 依序撈魚 (進階版)</h1>
         <div class="instruction">
             <strong>遊戲規則：</strong><br>
             請按照「順序」將魚撈起來！<br>
-            錯誤會扣分，請小心看清楚喔。<br>
+            <span class="highlight"># 井號開頭的行為「誘答魚」</span>，點到會扣分喔！<br>
             移動滑鼠/手指控制網子，點擊撈魚。
         </div>
-        <textarea id="data-input" placeholder="格式：題目,答案 (或是單純一行一個詞)">
+        <textarea id="data-input" placeholder="格式：題目,答案 或 #誘答文字
+1,One
+2,Two
+#Three
+#Four
+3,Three">
 1,One
 2,Two
 3,Three
@@ -295,7 +309,12 @@
 7,Seven
 8,Eight
 9,Nine
-10,Ten</textarea>
+10,Ten
+#Shark
+#Octopus
+#Crab
+#Wrong
+#Oops</textarea>
         <button id="start-btn">開始撈魚</button>
     </div>
 
@@ -345,13 +364,15 @@ const CONFIG = {
     fishSize: 80,
     netRadius: 55,
     colors: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#F1948A'],
+    distractorColor: '#bdc3c7' // 誘答魚預設顏色 (如果不指定)
 };
 
 let width, height;
 let fishes = [];
 let particles = [];
 let floatingTexts = [];
-let gameData = [];
+let gameData = []; // 正確答案
+let distractors = []; // 誘答魚資料
 let currentIndex = 0;
 let gameState = 'MENU';
 let mouseX = -100, mouseY = -100;
@@ -420,22 +441,18 @@ function resize() {
 
 // QR Code 初始化
 function initQRCode() {
-    // 固定目標網址
     const targetUrl = "https://kathy594520.github.io/edu.github.io/fish";
-    // 使用公開 API 生成 QR Code
     const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(targetUrl)}`;
     
     qrImg.src = apiUrl;
 
-    // 點擊展開/收合
     qrContainer.addEventListener('click', (e) => {
-        // 如果點到關閉按鈕，不要觸發
         if (e.target === qrClose) return;
         qrContainer.classList.add('expanded');
     });
 
     qrClose.addEventListener('click', (e) => {
-        e.stopPropagation(); // 防止冒泡回去又打開
+        e.stopPropagation(); 
         qrContainer.classList.remove('expanded');
     });
 }
@@ -446,30 +463,53 @@ function parseData() {
     
     const lines = text.split('\n');
     gameData = [];
+    distractors = [];
     
     lines.forEach((line, index) => {
-        const cleanLine = line.replace('，', ','); 
-        const parts = cleanLine.split(',');
-        let q, a;
-        if (parts.length >= 2) {
-            q = parts[0].trim();
-            a = parts[1].trim();
+        const cleanLine = line.trim().replace('，', ',');
+        if(!cleanLine) return;
+
+        // 檢查是否為誘答魚 (以 # 開頭)
+        if (cleanLine.startsWith('#')) {
+            const rawText = cleanLine.substring(1).trim(); // 移除 #
+            // 允許誘答魚也有 題目,答案 格式，或者單純文字
+            const parts = rawText.split(',');
+            let dText = (parts.length >= 2) ? parts[1].trim() : parts[0].trim();
+            
+            if(dText) {
+                distractors.push({
+                    text: dText,
+                    isDistractor: true
+                });
+            }
         } else {
-            q = parts[0].trim();
-            a = parts[0].trim();
-        }
-        
-        if (q || a) {
-            gameData.push({
-                id: index,
-                q: q,
-                a: a,
-                color: CONFIG.colors[index % CONFIG.colors.length]
-            });
+            // 一般題目
+            const parts = cleanLine.split(',');
+            let q, a;
+            if (parts.length >= 2) {
+                q = parts[0].trim();
+                a = parts[1].trim();
+            } else {
+                q = parts[0].trim();
+                a = parts[0].trim();
+            }
+            
+            if (q || a) {
+                gameData.push({
+                    id: gameData.length, // 重新計算 ID，確保連續
+                    q: q,
+                    a: a,
+                    color: CONFIG.colors[gameData.length % CONFIG.colors.length],
+                    isDistractor: false
+                });
+            }
         }
     });
     
-    if (gameData.length === 0) return false;
+    if (gameData.length === 0) {
+        alert("請至少輸入一個非誘答的題目！");
+        return false;
+    }
     return true;
 }
 
@@ -491,8 +531,16 @@ function startGame() {
     topBar.classList.remove('hidden');
     container.style.cursor = 'none';
     
-    // 生成魚群
+    // 生成正確魚群
     gameData.forEach(item => spawnFish(item));
+
+    // 生成誘答魚群
+    distractors.forEach(item => {
+        // 隨機分配顏色，或者給定特定顏色
+        const randomColor = CONFIG.colors[Math.floor(Math.random() * CONFIG.colors.length)];
+        item.color = randomColor; 
+        spawnFish(item);
+    });
     
     updateUI();
     
@@ -501,7 +549,6 @@ function startGame() {
 }
 
 function restartGame() {
-    // 直接使用現有數據重新開始
     startGame();
 }
 
@@ -520,7 +567,7 @@ function spawnFish(item) {
         vx: (Math.random() - 0.5) * CONFIG.fishBaseSpeed,
         vy: (Math.random() - 0.5) * CONFIG.fishBaseSpeed,
         angle: 0,
-        item: item,
+        item: item, // 包含文字、ID(若有)、isDistractor
         width: CONFIG.fishSize,
         height: CONFIG.fishSize * 0.65,
         fleeTimer: 0,
@@ -546,8 +593,13 @@ function tryCatchFish(cx, cy) {
         
         if (dist < Math.max(CONFIG.fishSize, CONFIG.netRadius)) { 
             
-            if (f.item.id === currentIndex) {
-                // Correct
+            // 判斷邏輯
+            if (f.item.isDistractor) {
+                // 點到誘答魚 -> 錯誤
+                triggerWrong(f, "誘餌!");
+                return;
+            } else if (f.item.id === currentIndex) {
+                // 點到正確順序 -> 正確
                 createParticles(f.x, f.y, f.item.color);
                 createFloatingText(f.x, f.y, "Good!", "#4caf50");
                 fishes.splice(i, 1);
@@ -555,22 +607,26 @@ function tryCatchFish(cx, cy) {
                 updateUI();
                 return;
             } else {
-                // Wrong
-                f.fleeTimer = 60;
-                let angle = Math.atan2(f.y - cy, f.x - cx);
-                f.vx = Math.cos(angle) * CONFIG.fishFleeSpeed;
-                f.vy = Math.sin(angle) * CONFIG.fishFleeSpeed;
-                
-                // 扣分邏輯
-                currentScore = Math.max(0, currentScore - 5);
-                mistakeCount++;
-                updateUI();
-                
-                createFloatingText(f.x, f.y, "-5", "#e53935");
+                // 點到錯誤順序 -> 錯誤
+                triggerWrong(f, "順序錯了!");
                 return;
             }
         }
     }
+}
+
+function triggerWrong(f, msg) {
+    f.fleeTimer = 60;
+    let angle = Math.atan2(f.y - mouseY, f.x - mouseX);
+    f.vx = Math.cos(angle) * CONFIG.fishFleeSpeed;
+    f.vy = Math.sin(angle) * CONFIG.fishFleeSpeed;
+    
+    // 扣分邏輯
+    currentScore = Math.max(0, currentScore - 5);
+    mistakeCount++;
+    updateUI();
+    
+    createFloatingText(f.x, f.y, "-5 " + msg, "#e53935");
 }
 
 function gameWin() {
@@ -730,19 +786,14 @@ function drawFish(f) {
     ctx.font = "bold 26px Arial"; 
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(f.item.a, 0, 0);
     
-    // 顯示編號 (Badge)
-    ctx.beginPath();
-    ctx.arc(-f.width/2, -f.height/2, 14, 0, Math.PI*2);
-    ctx.fillStyle = "#ff5722"; 
-    ctx.shadowBlur = 0;
-    ctx.fill();
+    // 顯示文字 (如果是誘答魚，顯示它的文字；正確魚顯示它的答案)
+    let displayText = f.item.isDistractor ? f.item.text : f.item.a;
+    ctx.fillText(displayText, 0, 0);
     
-    ctx.fillStyle = "white";
-    ctx.font = "bold 16px Arial";
-    ctx.fillText(f.item.id + 1, -f.width/2, -f.height/2 + 1);
-
+    // --- 已移除圓形編號繪製程式碼 ---
+    // 原本這裡會繪製 ctx.arc(...) 和 ctx.fillText(f.item.id + 1)
+    
     ctx.restore();
 }
 
