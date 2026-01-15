@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>硬筆字練習生成器</title>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        /* 1. 字型設定 */
+        @font-face {
+            font-family: 'CustomUpload';
+            src: local('Checking...');
+        }
+
+        body { 
+            font-family: 'CustomUpload', '教育部標準楷書', 'MOESongUN', 'TW-Kai', 'BiauKai', 'DFKai-SB', 'KaiTi', serif; 
+            background-color: #525252; 
+        }
+        
+        /* A4 Page Styling */
+        .a4-page {
+            width: 210mm; 
+            height: 296mm; 
+            background: white;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5); 
+            margin: 20px auto; 
+            padding: 15mm; 
+            box-sizing: border-box;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+            justify-content: center; 
+            position: relative;
+        }
+
+        /* 直式書寫排版容器 */
+        .vertical-grid-container {
+            display: grid;
+            width: 100%;
+            writing-mode: vertical-rl; 
+            gap: 2mm;
+            align-content: center; 
+            justify-content: center; 
+        }
+
+        /* PRINT SETTINGS */
+        @media print {
+            @page { 
+                size: A4 portrait; 
+                margin: 0; 
+            }
+            body { margin: 0; background: white; }
+            
+            .no-print { display: none !important; }
+            
+            .print-container { 
+                background: white !important; 
+                margin: 0 !important;
+                display: block !important;
+                width: 100% !important;
+                overflow: visible !important;
+            }
+            .a4-page { 
+                box-shadow: none; 
+                margin: 0 auto !important;
+                width: 210mm;
+                height: 296mm;
+                padding: 15mm;
+                break-after: always; 
+                page-break-after: always; 
+            }
+            ::-webkit-scrollbar { display: none; }
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex text-slate-800">
+
+    <div id="root" class="w-full h-full flex"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- Icons ---
+        const Icon = ({ path }) => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{path}</svg>;
+        const Icons = {
+            FileText: <Icon path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></>} />,
+            Printer: <Icon path={<><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></>} />,
+            FileUp: <Icon path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/></>} />,
+            Settings: <Icon path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>} />,
+            Eraser: <Icon path={<><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></>} />,
+            Upload: <Icon path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></>} />,
+            Move: <Icon path={<><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="19 9 22 12 19 15"/><polyline points="15 19 12 22 9 19"/><line x1="12" x2="12" y1="2" y2="22"/><line x1="2" x2="22" y1="12" y2="12"/></>} />,
+            Eye: <Icon path={<><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></>} />,
+            X: <Icon path={<><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></>} />,
+            Grid: <Icon path={<><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></>} />
+        };
+
+        const GRID_ROWS = 10; 
+        const GRID_COLS = 8; 
+        const CHARS_PER_PAGE = GRID_ROWS * GRID_COLS;
+
+        // --- Grid Cell ---
+        const GridCell = ({ char, config }) => {
+            // V3.7 顏色優化：均勻、柔和、不搶眼
+            // gray: #d1d5db (Gray-300) - 經典作業簿灰
+            // red:  #fca5a5 (Red-300)  - 柔和粉紅
+            // green:#86efac (Green-300)- 柔和嫩綠
+            const stroke = { 
+                'red': '#fca5a5',   
+                'green': '#86efac', 
+                'gray': '#d1d5db'   
+            }[config.gridColor] || '#d1d5db';
+            
+            const textC = config.traceMode ? '#d1d5db' : '#000000';
+            const fontFamily = 'CustomUpload, "教育部標準楷書", "MOESongUN", "TW-Kai", "BiauKai", "DFKai-SB", "KaiTi", serif';
+            const fontSizePercent = config.fontScale * 10; 
+
+            return (
+                <div 
+                    className="relative flex items-center justify-center" 
+                    style={{ 
+                        width: '100%', 
+                        aspectRatio: '1 / 1' 
+                    }}
+                >
+                    <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none">
+                        {/* 外框 (1.5) */}
+                        <rect x="0" y="0" width="100" height="100" fill="none" stroke={stroke} strokeWidth="1.5" />
+                        
+                        {/* 十字線 (0.6 - 均勻細線) */}
+                        {config.gridType !== 'square' && (
+                            <>
+                                <line x1="50" y1="0" x2="50" y2="100" stroke={stroke} strokeWidth="0.6" strokeDasharray={config.gridType === 'mi' ? "4 2" : "none"} />
+                                <line x1="0" y1="50" x2="100" y2="50" stroke={stroke} strokeWidth="0.6" strokeDasharray={config.gridType === 'mi' ? "4 2" : "none"} />
+                            </>
+                        )}
+                        
+                        {/* 米字對角線 (0.6 - 與十字線完全均勻，無透明度差異) */}
+                        {config.gridType === 'mi' && (
+                            <>
+                                <line x1="0" y1="0" x2="100" y2="100" stroke={stroke} strokeWidth="0.6" strokeDasharray="4 2" />
+                                <line x1="100" y1="0" x2="0" y2="100" stroke={stroke} strokeWidth="0.6" strokeDasharray="4 2" />
+                            </>
+                        )}
+                    </svg>
+                    {char && (
+                        <span style={{ 
+                            fontSize: `${fontSizePercent}%`, 
+                            fontFamily: fontFamily, 
+                            color: textC, 
+                            zIndex: 1, 
+                            lineHeight: 1,
+                            position: 'relative',
+                            top: '0%' 
+                        }}>
+                            {char}
+                        </span>
+                    )}
+                </div>
+            );
+        };
+
+        const Page = ({ chars, config, pNum, total, offset }) => {
+            const gridCells = [...chars];
+            while (gridCells.length < CHARS_PER_PAGE) gridCells.push("");
+            
+            const printStyle = {
+                position: 'relative',
+                left: `${offset.x}mm`,
+                top: `${offset.y}mm`
+            };
+
+            const gridStyle = {
+                gridTemplateColumns: `repeat(${config.gridCols}, 1fr)`, 
+                gridTemplateRows: `repeat(${config.gridRows}, 1fr)` 
+            };
+
+            return (
+                <div className="a4-page" style={printStyle}>
+                    {/* Header */}
+                    <div className="w-full flex justify-between text-xs text-gray-400 mb-4 font-sans">
+                        <span>日期：__________</span>
+                        <span>第 {pNum} 頁 / 共 {total} 頁</span>
+                        <span>姓名：__________</span>
+                    </div>
+                    
+                    <div className="vertical-grid-container" style={gridStyle}>
+                        {gridCells.map((c, i) => <GridCell key={i} char={c} config={config} />)}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="mt-auto pt-2 text-[10px] text-gray-300 w-full text-center font-sans no-print">
+                        © 2026 Kathy's 硬筆字練習生成器 Created with Google Apps Script & Tailwind CSS
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [mode, setMode] = useState('content');
+            const [text, setText] = useState("人之初，性本善。性相近，習相遠。苟不教，性乃遷。教之道，貴以專。");
+            const [bPages, setBPages] = useState(1);
+            
+            const [config, setConfig] = useState(() => JSON.parse(localStorage.getItem('hw_cfg_v18')) || { 
+                gridType: 'mi', 
+                gridColor: 'gray', 
+                fontScale: 50, 
+                traceMode: true,
+                practiceMode: 'normal',
+                gridCols: 10,
+                gridRows: 8   
+            });
+            const [offset, setOffset] = useState(() => JSON.parse(localStorage.getItem('hw_offset')) || { x: 0, y: 0 });
+            const [fontLoaded, setFontLoaded] = useState(false);
+            const [isPreview, setIsPreview] = useState(false);
+
+            useEffect(() => localStorage.setItem('hw_cfg_v18', JSON.stringify(config)), [config]);
+            useEffect(() => localStorage.setItem('hw_offset', JSON.stringify(offset)), [offset]);
+
+            const handleFile = (e, type) => {
+                const f = e.target.files[0]; if (!f) return;
+                const r = new FileReader();
+                r.onload = (evt) => {
+                    if (type === 'excel') {
+                        const wb = XLSX.read(evt.target.result, { type: 'binary' });
+                        setText(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 }).flat().filter(Boolean).join(''));
+                        setMode('content');
+                    } else {
+                        const s = document.createElement('style');
+                        s.innerHTML = `@font-face { font-family: 'CustomUpload'; src: url('${evt.target.result}'); }`;
+                        document.head.appendChild(s); 
+                        setFontLoaded(true);
+                        setConfig(p => ({...p})); 
+                        alert("自訂字體已載入！");
+                    }
+                };
+                type === 'excel' ? r.readAsBinaryString(f) : r.readAsDataURL(f);
+            };
+
+            const pages = useMemo(() => {
+                if (mode === 'blank') return Array(bPages).fill([]);
+                
+                const cleanChars = text.replace(/[\r\n]/g, '').split('');
+                let processedChars = [];
+                
+                cleanChars.forEach(char => {
+                    processedChars.push(char); 
+                    if (config.practiceMode === '1:1') {
+                        processedChars.push(""); 
+                    } else if (config.practiceMode === '1:4') {
+                        processedChars.push("", "", "", ""); 
+                    }
+                });
+
+                const chunks = [];
+                for (let i = 0; i < processedChars.length; i += CHARS_PER_PAGE) {
+                    chunks.push(processedChars.slice(i, i + CHARS_PER_PAGE));
+                }
+                return chunks.length ? chunks : [[]];
+            }, [mode, text, bPages, config.practiceMode]);
+
+            return (
+                <>
+                    <aside className={`w-[320px] bg-slate-50 border-r flex flex-col h-full no-print overflow-y-auto shrink-0 z-20 shadow-lg transition-all duration-300 ${isPreview ? '-ml-[320px]' : 'ml-0'}`}>
+                        <div className="p-5 border-b bg-white flex justify-between items-center">
+                            <div>
+                                <h1 className="text-xl font-bold text-slate-700 flex gap-2 items-center">{Icons.FileText} 硬筆字練習生成器</h1>
+                                <p className="text-[10px] text-slate-400 mt-1">© 2026 Kathy's Design</p>
+                            </div>
+                            <button onClick={()=>setIsPreview(true)} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-full" title="全螢幕預覽">
+                                {Icons.Eye}
+                            </button>
+                        </div>
+                        <div className="p-5 space-y-6 flex-1">
+                            <section>
+                                <div className="flex bg-slate-200 p-1 rounded-lg mb-3">
+                                    {['content', 'blank'].map(m => <button key={m} onClick={() => setMode(m)} className={`flex-1 py-1.5 text-sm rounded-md ${mode === m ? 'bg-white shadow-sm text-indigo-600' : ''}`}>{m==='content'?'內容模式':'空白頁'}</button>)}
+                                </div>
+                                {mode === 'content' ? <><textarea value={text} onChange={e=>setText(e.target.value)} className="w-full h-32 p-3 text-sm border rounded mb-3"/><label className="flex items-center justify-center gap-2 w-full py-2 bg-green-50 text-green-700 border border-green-200 rounded cursor-pointer text-sm font-medium hover:bg-green-100">{Icons.FileUp} 匯入 Excel<input type="file" accept=".xlsx,.xls" hidden onChange={e=>handleFile(e,'excel')}/></label></> : <input type="number" min="1" value={bPages} onChange={e=>setBPages(+e.target.value)} className="w-full p-2 border rounded"/>}
+                            </section>
+                            
+                            <section className="space-y-4">
+                                <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">{Icons.Settings} 樣式與練習</h3>
+                                
+                                <div className="bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                                    <label className="text-xs text-indigo-800 font-bold mb-2 block flex gap-2 items-center">{Icons.Grid} 練習模式</label>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        <button onClick={()=>setConfig({...config, practiceMode: 'normal'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === 'normal' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 連續書寫</button>
+                                        <button onClick={()=>setConfig({...config, practiceMode: '1:1'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === '1:1' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 1 : 1 (下方留 1 格)</button>
+                                        <button onClick={()=>setConfig({...config, practiceMode: '1:4'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === '1:4' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 1 : 4 (下方留 4 格)</button>
+                                    </div>
+                                </div>
+
+                                {/* 格線類型選擇 (已恢復) */}
+                                <div>
+                                    <label className="text-xs text-slate-500 mb-1.5 block">格線類型</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {['mi', 'tian', 'square'].map(type => (
+                                            <button 
+                                                key={type}
+                                                onClick={() => setConfig({...config, gridType: type})}
+                                                className={`py-2 text-xs border rounded-md capitalize ${config.gridType === type ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-white border-slate-200 text-slate-600'}`}
+                                            >
+                                                {{'mi': '米字格', 'tian': '田字格', 'square': '方格'}[type]}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div><label className="text-xs text-slate-500">格線顏色</label><div className="flex gap-3 mt-1">{['red','green','gray'].map(c=><button key={c} onClick={()=>setConfig({...config,gridColor:c})} className={`w-6 h-6 rounded-full bg-${c==='gray'?'gray-300':c+'-400'} ${config.gridColor===c?'ring-2 ring-indigo-500':''}`}/>)}</div></div>
+                                
+                                <div>
+                                    <div className="flex justify-between text-xs text-slate-500"><span>字體大小 ({config.fontScale})</span><span>{config.fontScale * 10}%</span></div>
+                                    <input type="range" min="0" max="100" step="1" value={config.fontScale} onChange={e=>setConfig({...config,fontScale:+e.target.value})} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"/>
+                                </div>
+                                
+                                <div className="flex justify-between items-center"><span className="text-sm flex gap-2 items-center">{Icons.Eraser} 描紅模式</span><button onClick={()=>setConfig({...config,traceMode:!config.traceMode})} className={`w-11 h-6 rounded-full relative transition-colors ${config.traceMode?'bg-indigo-600':'bg-slate-300'}`}><span className={`block w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${config.traceMode?'left-6':'left-1'}`}/></button></div>
+                                <div className="p-3 bg-slate-100 rounded text-xs text-slate-600">當前字體：<span className="font-bold text-indigo-600 block mt-1">{fontLoaded ? "自訂上傳字體" : "教育部標準楷書 (預設)"}</span></div>
+                                <label className="flex items-center justify-center gap-2 w-full py-2 bg-white text-slate-600 border rounded cursor-pointer text-sm font-medium hover:bg-slate-50">{Icons.Upload} 上傳字體 (.ttf)<input type="file" accept=".ttf,.otf" hidden onChange={e=>handleFile(e,'font')}/></label>
+                            </section>
+
+                            <section className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                                <h3 className="text-sm font-bold text-orange-800 flex items-center gap-2 mb-2">{Icons.Move} 列印偏移修正 (mm)</h3>
+                                <div className="flex gap-2">
+                                    <div className="flex-1"><label className="text-[10px] text-orange-700 block mb-1">左右 (X)</label><input type="number" value={offset.x} onChange={e=>setOffset({...offset, x: +e.target.value})} className="w-full p-1 text-xs border border-orange-300 rounded text-center"/></div>
+                                    <div className="flex-1"><label className="text-[10px] text-orange-700 block mb-1">上下 (Y)</label><input type="number" value={offset.y} onChange={e=>setOffset({...offset, y: +e.target.value})} className="w-full p-1 text-xs border border-orange-300 rounded text-center"/></div>
+                                </div>
+                            </section>
+                        </div>
+                        <div className="p-5 border-t bg-white"><button onClick={()=>window.print()} className="w-full py-3 bg-indigo-600 text-white rounded font-bold flex justify-center items-center gap-2 hover:bg-indigo-700 shadow-md">{Icons.Printer} 列印 PDF</button></div>
+                    </aside>
+                    
+                    <main className="flex-1 overflow-y-auto print-container relative" style={{backgroundColor: '#525252'}}>
+                        {isPreview && (
+                            <button 
+                                onClick={() => setIsPreview(false)}
+                                className="fixed top-6 right-6 z-50 bg-slate-800 text-white p-3 rounded-full shadow-lg hover:bg-slate-700 transition-all flex items-center gap-2 no-print"
+                            >
+                                {Icons.X} <span className="text-sm font-bold">退出預覽</span>
+                            </button>
+                        )}
+
+                        <div className="min-h-full py-10 flex flex-col items-center">
+                            {pages.map((c,i)=><Page key={i} chars={c} config={config} offset={offset} pNum={i+1} total={pages.length}/>)}
+                        </div>
+                    </main>
+
+                    <a 
+                        href="https://kathy594520.github.io/new.github.io/AI/AI" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="fixed bottom-6 right-6 z-40 no-print group"
+                    >
+                        <div className="bg-white border-2 border-indigo-50 text-indigo-600 px-5 py-2.5 rounded-full shadow-lg hover:shadow-indigo-200 hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 text-sm font-bold tracking-wide cursor-pointer">
+                            <span className="text-lg animate-pulse">✨</span>
+                            <span>仙姑凱西設計</span>
+                        </div>
+                    </a>
+                </>
+            );
+        };
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
