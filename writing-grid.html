@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>硬筆字練習生成器</title>
+    <title>硬筆字練習生成器V3含低年級虛線版</title>
     
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -106,20 +106,23 @@
         const CHARS_PER_PAGE = GRID_ROWS * GRID_COLS;
 
         // --- Grid Cell ---
-        const GridCell = ({ char, config }) => {
-            // V3.7 顏色優化：均勻、柔和、不搶眼
-            // gray: #d1d5db (Gray-300) - 經典作業簿灰
-            // red:  #fca5a5 (Red-300)  - 柔和粉紅
-            // green:#86efac (Green-300)- 柔和嫩綠
+        const GridCell = ({ cellData, config }) => {
+            // V3.7: 均勻柔和色
             const stroke = { 
                 'red': '#fca5a5',   
                 'green': '#86efac', 
                 'gray': '#d1d5db'   
             }[config.gridColor] || '#d1d5db';
             
-            const textC = config.traceMode ? '#d1d5db' : '#000000';
             const fontFamily = 'CustomUpload, "教育部標準楷書", "MOESongUN", "TW-Kai", "BiauKai", "DFKai-SB", "KaiTi", serif';
             const fontSizePercent = config.fontScale * 10; 
+
+            // 解析單元格資料 (可能是物件或字串)
+            const char = typeof cellData === 'object' ? cellData.val : cellData;
+            const isDotted = typeof cellData === 'object' && cellData.type === 'dotted';
+            
+            // 決定文字顏色 (描紅模式或一般黑)
+            const textC = config.traceMode ? '#d1d5db' : '#000000';
 
             return (
                 <div 
@@ -130,10 +133,8 @@
                     }}
                 >
                     <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none">
-                        {/* 外框 (1.5) */}
                         <rect x="0" y="0" width="100" height="100" fill="none" stroke={stroke} strokeWidth="1.5" />
                         
-                        {/* 十字線 (0.6 - 均勻細線) */}
                         {config.gridType !== 'square' && (
                             <>
                                 <line x1="50" y1="0" x2="50" y2="100" stroke={stroke} strokeWidth="0.6" strokeDasharray={config.gridType === 'mi' ? "4 2" : "none"} />
@@ -141,15 +142,35 @@
                             </>
                         )}
                         
-                        {/* 米字對角線 (0.6 - 與十字線完全均勻，無透明度差異) */}
                         {config.gridType === 'mi' && (
                             <>
                                 <line x1="0" y1="0" x2="100" y2="100" stroke={stroke} strokeWidth="0.6" strokeDasharray="4 2" />
                                 <line x1="100" y1="0" x2="0" y2="100" stroke={stroke} strokeWidth="0.6" strokeDasharray="4 2" />
                             </>
                         )}
+
+                        {/* V3.8: 虛線字體渲染層 (僅在虛線模式顯示) */}
+                        {isDotted && char && (
+                            <text 
+                                x="50" y="50" 
+                                textAnchor="middle" 
+                                dominantBaseline="central"
+                                fill="none"
+                                stroke="#a3a3a3"
+                                strokeWidth="0.8"
+                                strokeDasharray="3,3"
+                                style={{
+                                    fontFamily: fontFamily,
+                                    fontSize: `${config.fontScale * 1.5}px` // 概略換算 SVG 字體大小
+                                }}
+                            >
+                                {char}
+                            </text>
+                        )}
                     </svg>
-                    {char && (
+
+                    {/* 實心字體 (非虛線時顯示) */}
+                    {char && !isDotted && (
                         <span style={{ 
                             fontSize: `${fontSizePercent}%`, 
                             fontFamily: fontFamily, 
@@ -183,7 +204,6 @@
 
             return (
                 <div className="a4-page" style={printStyle}>
-                    {/* Header */}
                     <div className="w-full flex justify-between text-xs text-gray-400 mb-4 font-sans">
                         <span>日期：__________</span>
                         <span>第 {pNum} 頁 / 共 {total} 頁</span>
@@ -191,10 +211,9 @@
                     </div>
                     
                     <div className="vertical-grid-container" style={gridStyle}>
-                        {gridCells.map((c, i) => <GridCell key={i} char={c} config={config} />)}
+                        {gridCells.map((c, i) => <GridCell key={i} cellData={c} config={config} />)}
                     </div>
 
-                    {/* Footer */}
                     <div className="mt-auto pt-2 text-[10px] text-gray-300 w-full text-center font-sans no-print">
                         © 2026 Kathy's 硬筆字練習生成器 Created with Google Apps Script & Tailwind CSS
                     </div>
@@ -207,7 +226,8 @@
             const [text, setText] = useState("人之初，性本善。性相近，習相遠。苟不教，性乃遷。教之道，貴以專。");
             const [bPages, setBPages] = useState(1);
             
-            const [config, setConfig] = useState(() => JSON.parse(localStorage.getItem('hw_cfg_v18')) || { 
+            // 設定狀態
+            const [config, setConfig] = useState(() => JSON.parse(localStorage.getItem('hw_cfg_v19')) || { 
                 gridType: 'mi', 
                 gridColor: 'gray', 
                 fontScale: 50, 
@@ -220,7 +240,7 @@
             const [fontLoaded, setFontLoaded] = useState(false);
             const [isPreview, setIsPreview] = useState(false);
 
-            useEffect(() => localStorage.setItem('hw_cfg_v18', JSON.stringify(config)), [config]);
+            useEffect(() => localStorage.setItem('hw_cfg_v19', JSON.stringify(config)), [config]);
             useEffect(() => localStorage.setItem('hw_offset', JSON.stringify(offset)), [offset]);
 
             const handleFile = (e, type) => {
@@ -249,12 +269,23 @@
                 const cleanChars = text.replace(/[\r\n]/g, '').split('');
                 let processedChars = [];
                 
+                // V3.8: 處理複雜的練習模式邏輯
                 cleanChars.forEach(char => {
-                    processedChars.push(char); 
+                    // 加入主文字 (實心)
+                    processedChars.push({ val: char, type: 'solid' }); 
+                    
                     if (config.practiceMode === '1:1') {
                         processedChars.push(""); 
                     } else if (config.practiceMode === '1:4') {
                         processedChars.push("", "", "", ""); 
+                    } else if (config.practiceMode === '1:4_dotted') {
+                        // V3.8 新增: 1:4 虛線模式 (加入4個虛線屬性的物件)
+                        processedChars.push(
+                            { val: char, type: 'dotted' },
+                            { val: char, type: 'dotted' },
+                            { val: char, type: 'dotted' },
+                            { val: char, type: 'dotted' }
+                        );
                     }
                 });
 
@@ -294,10 +325,11 @@
                                         <button onClick={()=>setConfig({...config, practiceMode: 'normal'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === 'normal' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 連續書寫</button>
                                         <button onClick={()=>setConfig({...config, practiceMode: '1:1'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === '1:1' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 1 : 1 (下方留 1 格)</button>
                                         <button onClick={()=>setConfig({...config, practiceMode: '1:4'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === '1:4' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 1 : 4 (下方留 4 格)</button>
+                                        {/* V3.8 新增按鈕 */}
+                                        <button onClick={()=>setConfig({...config, practiceMode: '1:4_dotted'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === '1:4_dotted' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 1 : 4 (下方 4 格虛線)</button>
                                     </div>
                                 </div>
 
-                                {/* 格線類型選擇 (已恢復) */}
                                 <div>
                                     <label className="text-xs text-slate-500 mb-1.5 block">格線類型</label>
                                     <div className="grid grid-cols-3 gap-2">
