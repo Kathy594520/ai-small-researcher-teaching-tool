@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>硬筆字練習生成器V3含低年級虛線版</title>
+    <title>硬筆字練習生成器V4(含圓點虛線選項)</title>
     
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -107,7 +107,6 @@
 
         // --- Grid Cell ---
         const GridCell = ({ cellData, config }) => {
-            // V3.7: 均勻柔和色
             const stroke = { 
                 'red': '#fca5a5',   
                 'green': '#86efac', 
@@ -117,13 +116,20 @@
             const fontFamily = 'CustomUpload, "教育部標準楷書", "MOESongUN", "TW-Kai", "BiauKai", "DFKai-SB", "KaiTi", serif';
             const fontSizePercent = config.fontScale * 10; 
 
-            // 解析單元格資料 (可能是物件或字串)
+            // 解析單元格資料
             const char = typeof cellData === 'object' ? cellData.val : cellData;
-            const isDotted = typeof cellData === 'object' && cellData.type === 'dotted';
             
-            // 決定文字顏色 (描紅模式或一般黑)
-            const textC = config.traceMode ? '#d1d5db' : '#000000';
+            // 判斷類型
+            const isDotted = typeof cellData === 'object' && cellData.type === 'dotted';       // 一般虛線 (方頭/短線)
+            const isRoundDot = typeof cellData === 'object' && cellData.type === 'round_dot';  // V4.1: 圓點虛線 (圓頭/圓珠)
+            const isGray = typeof cellData === 'object' && cellData.type === 'gray';           // 實心淺灰
+            const isDotFill = typeof cellData === 'object' && cellData.type === 'dot_fill';    // 點點實心填充
 
+            // 決定文字顏色
+            // gray 模式強制淺灰，或是 traceMode 開啟則淺灰 (其餘特殊模式由 SVG fill/stroke 控制)
+            let textC = '#000000';
+            if (isGray || config.traceMode) textC = '#d1d5db';
+            
             return (
                 <div 
                     className="relative flex items-center justify-center" 
@@ -149,7 +155,7 @@
                             </>
                         )}
 
-                        {/* V3.8: 虛線字體渲染層 (僅在虛線模式顯示) */}
+                        {/* 一般虛線 (Dashed) */}
                         {isDotted && char && (
                             <text 
                                 x="50" y="50" 
@@ -161,7 +167,44 @@
                                 strokeDasharray="3,3"
                                 style={{
                                     fontFamily: fontFamily,
-                                    fontSize: `${config.fontScale * 1.5}px` // 概略換算 SVG 字體大小
+                                    fontSize: `${config.fontScale * 1.5}px` 
+                                }}
+                            >
+                                {char}
+                            </text>
+                        )}
+
+                        {/* V4.1: 圓點虛線 (Round Dot) */}
+                        {isRoundDot && char && (
+                            <text 
+                                x="50" y="50" 
+                                textAnchor="middle" 
+                                dominantBaseline="central"
+                                fill="none"
+                                stroke="#a3a3a3"
+                                strokeWidth="1.5"
+                                strokeLinecap="round" 
+                                strokeDasharray="0, 5" 
+                                style={{
+                                    fontFamily: fontFamily,
+                                    fontSize: `${config.fontScale * 1.5}px` 
+                                }}
+                            >
+                                {char}
+                            </text>
+                        )}
+
+                        {/* 點點實心填充 (Dot Fill) */}
+                        {isDotFill && char && (
+                            <text 
+                                x="50" y="50" 
+                                textAnchor="middle" 
+                                dominantBaseline="central"
+                                fill="url(#dot-fill-pattern)"
+                                stroke="none"
+                                style={{
+                                    fontFamily: fontFamily,
+                                    fontSize: `${config.fontScale * 1.5}px` 
                                 }}
                             >
                                 {char}
@@ -169,8 +212,8 @@
                         )}
                     </svg>
 
-                    {/* 實心字體 (非虛線時顯示) */}
-                    {char && !isDotted && (
+                    {/* 實心字體 (非特殊模式時顯示) */}
+                    {char && !isDotted && !isDotFill && !isRoundDot && (
                         <span style={{ 
                             fontSize: `${fontSizePercent}%`, 
                             fontFamily: fontFamily, 
@@ -269,9 +312,9 @@
                 const cleanChars = text.replace(/[\r\n]/g, '').split('');
                 let processedChars = [];
                 
-                // V3.8: 處理複雜的練習模式邏輯
+                // V4.1: 練習模式邏輯 (含圓點虛線獨立選項)
                 cleanChars.forEach(char => {
-                    // 加入主文字 (實心)
+                    // 加入主文字 (實心, 顏色由 traceMode 決定)
                     processedChars.push({ val: char, type: 'solid' }); 
                     
                     if (config.practiceMode === '1:1') {
@@ -279,12 +322,36 @@
                     } else if (config.practiceMode === '1:4') {
                         processedChars.push("", "", "", ""); 
                     } else if (config.practiceMode === '1:4_dotted') {
-                        // V3.8 新增: 1:4 虛線模式 (加入4個虛線屬性的物件)
+                        // 1:4 一般虛線 (短線段)
                         processedChars.push(
                             { val: char, type: 'dotted' },
                             { val: char, type: 'dotted' },
                             { val: char, type: 'dotted' },
                             { val: char, type: 'dotted' }
+                        );
+                    } else if (config.practiceMode === '1:4_round_dot') {
+                        // V4.1 新增: 1:4 圓點虛線 (圓珠狀)
+                        processedChars.push(
+                            { val: char, type: 'round_dot' },
+                            { val: char, type: 'round_dot' },
+                            { val: char, type: 'round_dot' },
+                            { val: char, type: 'round_dot' }
+                        );
+                    } else if (config.practiceMode === '1:4_gray') {
+                        // 1:4 實心淺灰
+                        processedChars.push(
+                            { val: char, type: 'gray' },
+                            { val: char, type: 'gray' },
+                            { val: char, type: 'gray' },
+                            { val: char, type: 'gray' }
+                        );
+                    } else if (config.practiceMode === '1:4_dot_fill') {
+                        // 1:4 點點實心填充
+                        processedChars.push(
+                            { val: char, type: 'dot_fill' },
+                            { val: char, type: 'dot_fill' },
+                            { val: char, type: 'dot_fill' },
+                            { val: char, type: 'dot_fill' }
                         );
                     }
                 });
@@ -298,6 +365,15 @@
 
             return (
                 <>
+                    {/* SVG Defs for Dot Pattern (for dot_fill mode) */}
+                    <svg height="0" width="0" style={{position:'absolute'}}>
+                        <defs>
+                            <pattern id="dot-fill-pattern" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+                                <circle cx="2" cy="2" r="1.2" fill="#d1d5db" />
+                            </pattern>
+                        </defs>
+                    </svg>
+
                     <aside className={`w-[320px] bg-slate-50 border-r flex flex-col h-full no-print overflow-y-auto shrink-0 z-20 shadow-lg transition-all duration-300 ${isPreview ? '-ml-[320px]' : 'ml-0'}`}>
                         <div className="p-5 border-b bg-white flex justify-between items-center">
                             <div>
@@ -325,8 +401,13 @@
                                         <button onClick={()=>setConfig({...config, practiceMode: 'normal'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === 'normal' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 連續書寫</button>
                                         <button onClick={()=>setConfig({...config, practiceMode: '1:1'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === '1:1' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 1 : 1 (下方留 1 格)</button>
                                         <button onClick={()=>setConfig({...config, practiceMode: '1:4'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === '1:4' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 1 : 4 (下方留 4 格)</button>
-                                        {/* V3.8 新增按鈕 */}
-                                        <button onClick={()=>setConfig({...config, practiceMode: '1:4_dotted'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === '1:4_dotted' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 1 : 4 (下方 4 格虛線)</button>
+                                        <button onClick={()=>setConfig({...config, practiceMode: '1:4_dotted'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === '1:4_dotted' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 1 : 4 (一般虛線)</button>
+                                        
+                                        {/* V4.1 新增按鈕: 圓點虛線 */}
+                                        <button onClick={()=>setConfig({...config, practiceMode: '1:4_round_dot'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === '1:4_round_dot' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 1 : 4 (圓點虛線)</button>
+                                        
+                                        <button onClick={()=>setConfig({...config, practiceMode: '1:4_gray'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === '1:4_gray' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 1 : 4 (淺灰實心)</button>
+                                        <button onClick={()=>setConfig({...config, practiceMode: '1:4_dot_fill'})} className={`text-left px-3 py-2 text-xs rounded border transition-colors ${config.practiceMode === '1:4_dot_fill' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-indigo-200 hover:bg-indigo-50'}`}>● 1 : 4 (點點實心)</button>
                                     </div>
                                 </div>
 
@@ -352,7 +433,7 @@
                                     <input type="range" min="0" max="100" step="1" value={config.fontScale} onChange={e=>setConfig({...config,fontScale:+e.target.value})} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"/>
                                 </div>
                                 
-                                <div className="flex justify-between items-center"><span className="text-sm flex gap-2 items-center">{Icons.Eraser} 描紅模式</span><button onClick={()=>setConfig({...config,traceMode:!config.traceMode})} className={`w-11 h-6 rounded-full relative transition-colors ${config.traceMode?'bg-indigo-600':'bg-slate-300'}`}><span className={`block w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${config.traceMode?'left-6':'left-1'}`}/></button></div>
+                                <div className="flex justify-between items-center"><span className="text-sm flex gap-2 items-center">{Icons.Eraser} 描紅模式 (全頁)</span><button onClick={()=>setConfig({...config,traceMode:!config.traceMode})} className={`w-11 h-6 rounded-full relative transition-colors ${config.traceMode?'bg-indigo-600':'bg-slate-300'}`}><span className={`block w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${config.traceMode?'left-6':'left-1'}`}/></button></div>
                                 <div className="p-3 bg-slate-100 rounded text-xs text-slate-600">當前字體：<span className="font-bold text-indigo-600 block mt-1">{fontLoaded ? "自訂上傳字體" : "教育部標準楷書 (預設)"}</span></div>
                                 <label className="flex items-center justify-center gap-2 w-full py-2 bg-white text-slate-600 border rounded cursor-pointer text-sm font-medium hover:bg-slate-50">{Icons.Upload} 上傳字體 (.ttf)<input type="file" accept=".ttf,.otf" hidden onChange={e=>handleFile(e,'font')}/></label>
                             </section>
