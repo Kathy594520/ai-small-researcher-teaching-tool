@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -23,7 +23,7 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             margin: 0 auto;
             background-color: white;
-            transform-origin: top center; /* 縮放基準點 */
+            transform-origin: top center;
         }
 
         /* 互動層 */
@@ -49,24 +49,30 @@
             z-index: 100;
         }
 
-        /* 編輯框 (遮罩) */
+        /* 編輯框 (遮罩) - 改用 Flexbox 實現垂直對齊 */
         .editable-box {
             position: absolute;
-            border: 1px dashed #9ca3af; /* 預設虛線框，表示編輯中 */
-            padding: 2px;
+            border: 1px dashed #9ca3af;
+            padding: 0; /* 移除預設 padding，由 flex 控制 */
             cursor: move;
             z-index: 50;
             overflow: hidden;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             transition: border 0.2s;
+            display: flex; /* 關鍵：啟用 Flexbox */
+            flex-direction: column;
+            /* 預設垂直置中，解決文字偏上問題 */
+            justify-content: center; 
         }
         .editable-box.active {
-            border: 2px solid #2563eb; /* 選中時藍框 */
+            border: 2px solid #2563eb;
             z-index: 60;
         }
         .editable-box textarea {
             width: 100%;
-            height: 100%;
+            /* 關鍵：高度設為 auto 或 max-height，讓它能被 flex container 置中 */
+            height: auto; 
+            max-height: 100%;
             border: none;
             outline: none;
             resize: none;
@@ -74,6 +80,9 @@
             font-family: inherit;
             overflow: hidden;
             white-space: pre-wrap;
+            margin: 0;
+            padding: 4px; /* 文字內邊距 */
+            line-height: 1.2; /* 緊湊一點的行高 */
         }
 
         /* 浮動工具列 */
@@ -163,7 +172,7 @@
     <!-- 主工作區 -->
     <div class="flex flex-1 overflow-hidden w-full relative">
         
-        <!-- 左側縮圖 (固定寬度，不縮放) -->
+        <!-- 左側縮圖 -->
         <div class="w-64 bg-gray-50 border-r border-gray-200 flex flex-col flex-shrink-0 z-10">
             <div class="p-4 border-b border-gray-200 font-medium text-gray-600 text-sm flex justify-between">
                 <span>投影片預覽</span>
@@ -177,21 +186,19 @@
         <!-- 中間畫布 -->
         <div class="flex-1 bg-gray-200 overflow-auto p-8 flex justify-center relative min-w-0" id="workspace">
             
-            <!-- 編輯區域容器 -->
             <div id="editor-area" class="relative hidden shadow-lg transition-all duration-200">
                 <canvas id="pdf-canvas" class="canvas-container block"></canvas>
                 <div id="interaction-layer" class="cursor-crosshair"></div>
                 <div id="selection-rect"></div>
-                <!-- 這裡會動態插入 editable-box -->
+                <!-- editable-box -->
             </div>
 
-            <!-- 空狀態 -->
             <div id="empty-state" class="flex flex-col items-center justify-center text-gray-400 h-full">
                 <i class="fas fa-arrow-up text-4xl mb-4 animate-bounce"></i>
                 <p class="text-lg">上傳 PDF 或圖片開始修復</p>
             </div>
 
-            <!-- 浮動屬性工具列 (當選中文字框時顯示) -->
+            <!-- 浮動屬性工具列 -->
             <div id="floating-toolbar" class="hidden">
                 <!-- 吸管工具 -->
                 <button id="btn-dropper" class="p-2 hover:bg-gray-100 rounded text-gray-600 tooltip" title="吸取背景顏色">
@@ -219,6 +226,13 @@
 
                 <div class="w-px h-6 bg-gray-300 mx-1"></div>
 
+                <!-- 垂直對齊按鈕 -->
+                <button id="btn-valign" class="p-2 hover:bg-gray-100 rounded text-gray-600 tooltip w-8 text-center" title="切換垂直對齊 (置中/上/下)">
+                    <i class="fas fa-align-center" id="icon-valign"></i>
+                </button>
+
+                <div class="w-px h-6 bg-gray-300 mx-1"></div>
+
                 <!-- 刪除 -->
                 <button id="btn-delete-box" class="p-2 hover:bg-red-50 text-red-500 rounded tooltip" title="刪除此區塊">
                     <i class="fas fa-trash-alt"></i>
@@ -232,10 +246,9 @@
 
         </div>
 
-        <!-- 右側狀態與說明 (固定寬度，不縮放) -->
+        <!-- 右側狀態與說明 -->
         <div class="w-72 bg-white border-l border-gray-200 p-4 hidden flex-shrink-0 overflow-y-auto z-10" id="properties-panel">
             <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">修復工具箱</h3>
-            
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">OCR 辨識語言</label>
                 <select id="ocr-lang" class="w-full border border-gray-300 rounded p-2 text-sm">
@@ -244,18 +257,17 @@
                     <option value="chi_tra+eng">中英混合</option>
                 </select>
             </div>
-
             <div class="p-4 bg-indigo-50 rounded-lg text-sm text-indigo-900 border border-indigo-100 space-y-2">
                 <p class="font-bold"><i class="fas fa-magic"></i> 修復流程：</p>
                 <ol class="list-decimal pl-4 space-y-1">
                     <li>框選錯誤文字區域 (OCR 自動辨識)</li>
                     <li><strong>使用吸管工具</strong>點擊背景，讓白框消失</li>
                     <li>調整字體大小與顏色</li>
+                    <li><strong>調整垂直對齊</strong>(預設置中)</li>
                     <li>點擊「確認」保存修改</li>
                     <li>最後點擊<strong>匯出</strong></li>
                 </ol>
             </div>
-            
             <div id="ocr-status" class="mt-4 hidden">
                 <div class="flex justify-between text-xs mb-1">
                     <span>AI 辨識中...</span>
@@ -273,11 +285,11 @@
         <p>© 2026 Kathy's OCR Slide Editor Created with Google Apps Script & Tailwind CSS</p>
     </footer>
 
-    <!-- 仙姑凱西設計浮動標籤 -->
+    <!-- 仙姑凱西設計浮動標籤 (顏色優化版) -->
     <a href="https://kathy594520.github.io/new.github.io/AI/AI" target="_blank" 
-       class="kathy-badge fixed bottom-16 right-6 z-50 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center gap-2 group border-2 border-white/30 backdrop-blur-sm">
-       <i class="fas fa-wand-magic-sparkles text-yellow-300 group-hover:rotate-12 transition-transform"></i>
-       <span class="font-bold tracking-wide text-sm">仙姑凱西設計</span>
+       class="kathy-badge fixed bottom-16 right-6 z-50 bg-white/90 text-slate-600 px-4 py-2 rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 flex items-center gap-2 group border border-slate-200 backdrop-blur-sm hover:bg-white hover:text-indigo-600">
+       <i class="fas fa-wand-magic-sparkles text-indigo-400 group-hover:rotate-12 transition-transform group-hover:text-indigo-500"></i>
+       <span class="font-medium tracking-wide text-sm">仙姑凱西設計</span>
     </a>
 
     <!-- Loading 遮罩 -->
@@ -287,7 +299,6 @@
     </div>
 
     <script>
-        // 設定 PDF.js Worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         // 狀態管理
@@ -295,18 +306,17 @@
             pdfDoc: null,
             currentPage: 1,
             scale: 1.5,
-            pageData: [], // { pageIndex: [{x,y,w,h,text, styles...}] }
+            pageData: [], 
             isSelecting: false,
             isDropperMode: false,
             startX: 0, startY: 0,
-            activeBoxId: null // 當前選中的 Box ID
+            activeBoxId: null
         };
 
-        // DOM 元素
         const fileInput = document.getElementById('file-input');
         const zoomSelect = document.getElementById('zoom-select');
         const pdfCanvas = document.getElementById('pdf-canvas');
-        const ctx = pdfCanvas.getContext('2d', { willReadFrequently: true }); // 優化 getImageData
+        const ctx = pdfCanvas.getContext('2d', { willReadFrequently: true });
         const editorArea = document.getElementById('editor-area');
         const interactionLayer = document.getElementById('interaction-layer');
         const selectionRect = document.getElementById('selection-rect');
@@ -314,15 +324,15 @@
         const exportFormatSelect = document.getElementById('export-format');
         const optImage = document.getElementById('opt-image');
         
-        // 工具列控制項
         const btnDropper = document.getElementById('btn-dropper');
         const inputBgColor = document.getElementById('input-bg-color');
         const inputTextColor = document.getElementById('input-text-color');
         const inputFontSize = document.getElementById('input-font-size');
         const btnDeleteBox = document.getElementById('btn-delete-box');
         const btnConfirmBox = document.getElementById('btn-confirm-box');
+        const btnValign = document.getElementById('btn-valign');
+        const iconValign = document.getElementById('icon-valign');
 
-        // 初始化 Tesseract
         let tesseractWorker = null;
         async function initTesseract() {
             if (!tesseractWorker) {
@@ -342,70 +352,45 @@
             }
         }
 
-        // 縮放功能
         zoomSelect.addEventListener('change', async (e) => {
             if (!state.pdfDoc) return;
-            
             const newScale = parseFloat(e.target.value);
             const oldScale = state.scale;
-            
             if (newScale === oldScale) return;
-
-            // 計算縮放比例
             const ratio = newScale / oldScale;
-
-            // 1. 更新所有頁面的 Box 數據 (座標和字體大小)
             state.pageData.forEach(pageBoxes => {
                 pageBoxes.forEach(box => {
-                    box.x *= ratio;
-                    box.y *= ratio;
-                    box.w *= ratio;
-                    box.h *= ratio;
-                    box.fontSize *= ratio;
+                    box.x *= ratio; box.y *= ratio; box.w *= ratio; box.h *= ratio; box.fontSize *= ratio;
                 });
             });
-
-            // 2. 更新 State
             state.scale = newScale;
-
-            // 3. 重新渲染當前頁面
             await loadPage(state.currentPage);
         });
 
-        // 檔案處理
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
             showLoader('讀取檔案中...');
-            
             try {
                 if (file.type === 'application/pdf') {
                     const ab = await file.arrayBuffer();
                     state.pdfDoc = await pdfjsLib.getDocument(ab).promise;
-                    // PDF 預設不開啟匯出圖片選項 (通常是多頁)
                     optImage.disabled = true;
                     exportFormatSelect.value = 'pptx';
                 } else if (file.type.startsWith('image/')) {
                     const img = await loadImage(URL.createObjectURL(file));
                     state.pdfDoc = { numPages: 1, isImage: true, image: img, fileType: file.type };
-                    // 圖片檔開啟匯出圖片選項
                     optImage.disabled = false;
-                    exportFormatSelect.value = 'pptx'; // 預設仍可維持 PPTX，或依需求改為 image
+                    exportFormatSelect.value = 'pptx';
                 }
-
-                // 初始化數據
                 state.pageData = Array(state.pdfDoc.numPages).fill().map(() => []);
                 document.getElementById('page-count').innerText = `${state.pdfDoc.numPages} 頁`;
-                
-                // UI 切換 - 強制移除 hidden
                 document.getElementById('empty-state').classList.add('hidden');
                 document.getElementById('editor-area').classList.remove('hidden');
                 document.getElementById('properties-panel').classList.remove('hidden');
-                
                 await generateThumbnails();
                 await loadPage(1);
                 initTesseract().catch(console.error);
-
             } catch (err) {
                 console.error(err);
                 alert('開啟失敗: ' + err.message);
@@ -414,21 +399,15 @@
             }
         });
 
-        // 載入頁面
         async function loadPage(pageNum) {
-            // 切換前取消選取
             deselectActiveBox();
-            
             state.currentPage = pageNum;
             showLoader('渲染頁面...');
-
-            // 更新縮圖 UI
             document.querySelectorAll('.thumbnail').forEach((el, idx) => {
                 el.classList.toggle('active', idx + 1 === pageNum);
                 el.classList.toggle('border-blue-500', idx + 1 === pageNum);
                 el.classList.toggle('border-transparent', idx + 1 !== pageNum);
             });
-
             if (state.pdfDoc.isImage) {
                 renderToCanvas(state.pdfDoc.image);
             } else {
@@ -440,24 +419,17 @@
                 editorArea.style.height = `${viewport.height}px`;
                 await page.render({ canvasContext: ctx, viewport: viewport }).promise;
             }
-            
-            // 重新繪製已存的 Box
             renderBoxes();
             hideLoader();
         }
 
         function renderToCanvas(img) {
-            // 圖片模式下的縮放處理
             const scaledWidth = img.width * state.scale;
             const scaledHeight = img.height * state.scale;
-
             pdfCanvas.width = scaledWidth;
             pdfCanvas.height = scaledHeight;
-            
             editorArea.style.width = `${scaledWidth}px`;
             editorArea.style.height = `${scaledHeight}px`;
-            
-            // 繪製縮放後的圖片
             ctx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
         }
 
@@ -469,12 +441,8 @@
             });
         }
 
-        // --- Box 管理邏輯 ---
-
         function renderBoxes() {
-            // 清除舊 DOM
             document.querySelectorAll('.editable-box').forEach(el => el.remove());
-            
             const boxes = state.pageData[state.currentPage - 1];
             boxes.forEach((boxData, index) => {
                 createBoxDOM(boxData, index);
@@ -489,23 +457,30 @@
             box.style.top = `${data.y}px`;
             box.style.width = `${data.w}px`;
             box.style.height = `${data.h}px`;
-            box.style.backgroundColor = data.bgColor; // 套用底色 (遮罩)
+            box.style.backgroundColor = data.bgColor;
+            
+            // 根據 vAlign 設定 CSS (Flexbox)
+            const vAlign = data.vAlign || 'middle'; // 預設 middle
+            if (vAlign === 'middle') box.style.justifyContent = 'center';
+            else if (vAlign === 'top') box.style.justifyContent = 'flex-start';
+            else if (vAlign === 'bottom') box.style.justifyContent = 'flex-end';
             
             const textarea = document.createElement('textarea');
             textarea.value = data.text;
             textarea.style.color = data.textColor;
             textarea.style.fontSize = `${data.fontSize}px`;
             
-            // 雙向綁定：打字時更新 state
             textarea.addEventListener('input', (e) => {
                 state.pageData[state.currentPage - 1][index].text = e.target.value;
             });
 
-            // 點擊選中 Box
+            // 讓點擊 Box 任何地方都能聚焦到 Textarea
             box.addEventListener('mousedown', (e) => {
-                e.stopPropagation(); // 阻止觸發畫布的框選
-                if (state.isDropperMode) return; // 吸管模式不選取
+                e.stopPropagation();
+                if (state.isDropperMode) return;
                 selectBox(index);
+                // 延遲聚焦，避免與 selectBox 衝突
+                setTimeout(() => textarea.focus(), 0);
             });
 
             box.appendChild(textarea);
@@ -514,31 +489,25 @@
 
         function selectBox(index) {
             state.activeBoxId = index;
-            
-            // UI 更新
             document.querySelectorAll('.editable-box').forEach(el => el.classList.remove('active'));
             const activeEl = document.getElementById(`box-${index}`);
             if (activeEl) {
                 activeEl.classList.add('active');
-                
-                // 定位 Toolbar
                 const rect = activeEl.getBoundingClientRect();
-                
-                // 設定 Toolbar 位置 (在 Box 上方)
                 floatingToolbar.style.display = 'flex';
-                // 簡單定位邏輯
                 let top = parseFloat(activeEl.style.top) - 50;
                 let left = parseFloat(activeEl.style.left);
                 if (top < 0) top = parseFloat(activeEl.style.top) + parseFloat(activeEl.style.height) + 10;
-                
                 floatingToolbar.style.top = `${top}px`;
                 floatingToolbar.style.left = `${left}px`;
 
-                // 同步 Toolbar 數值
                 const data = state.pageData[state.currentPage - 1][index];
                 inputBgColor.value = data.bgColor;
                 inputTextColor.value = data.textColor;
                 inputFontSize.value = Math.round(data.fontSize);
+                
+                // 更新 Alignment 按鈕圖示
+                updateValignIcon(data.vAlign || 'middle');
             }
         }
 
@@ -548,9 +517,39 @@
             floatingToolbar.style.display = 'none';
         }
 
-        // --- 互動與吸管邏輯 ---
+        // --- 垂直對齊控制 ---
+        
+        btnValign.addEventListener('click', () => {
+            if (state.activeBoxId === null) return;
+            const currentData = state.pageData[state.currentPage - 1][state.activeBoxId];
+            const currentValign = currentData.vAlign || 'middle';
+            
+            // 循環切換: middle -> top -> bottom -> middle
+            let newValign = 'top';
+            if (currentValign === 'middle') newValign = 'top';
+            else if (currentValign === 'top') newValign = 'bottom';
+            else if (currentValign === 'bottom') newValign = 'middle';
+            
+            // 更新狀態
+            state.pageData[state.currentPage - 1][state.activeBoxId].vAlign = newValign;
+            
+            // 更新 UI
+            const boxEl = document.getElementById(`box-${state.activeBoxId}`);
+            if (newValign === 'middle') boxEl.style.justifyContent = 'center';
+            else if (newValign === 'top') boxEl.style.justifyContent = 'flex-start';
+            else if (newValign === 'bottom') boxEl.style.justifyContent = 'flex-end';
+            
+            updateValignIcon(newValign);
+        });
 
-        // 啟動吸管
+        function updateValignIcon(valign) {
+            iconValign.className = 'fas';
+            if (valign === 'middle') iconValign.classList.add('fa-align-center'); // 借用 align-center 示意垂直居中
+            else if (valign === 'top') iconValign.classList.add('fa-arrow-up'); // 簡單用箭頭示意
+            else if (valign === 'bottom') iconValign.classList.add('fa-arrow-down');
+        }
+
+        // --- 互動與吸管 ---
         btnDropper.addEventListener('click', () => {
             state.isDropperMode = !state.isDropperMode;
             if (state.isDropperMode) {
@@ -573,19 +572,12 @@
             const rect = interactionLayer.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-
-            // 模式 1: 吸管取色
             if (state.isDropperMode) {
                 if (state.activeBoxId !== null) {
-                    // 取得像素顏色
                     const pixel = ctx.getImageData(x, y, 1, 1).data;
                     const hex = "#" + ((1 << 24) + (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]).toString(16).slice(1);
-                    
-                    // 更新當前 Box
                     updateActiveBoxStyle('bgColor', hex);
-                    inputBgColor.value = hex; // 更新 UI
-                    
-                    // 吸取完畢，自動退出吸管模式 (優化體驗)
+                    inputBgColor.value = hex;
                     exitDropperMode();
                 } else {
                     alert('請先選擇一個文字框，再使用吸管工具');
@@ -593,11 +585,7 @@
                 }
                 return;
             }
-
-            // 模式 2: 點擊空白處，取消選取
             deselectActiveBox();
-
-            // 模式 3: 開始框選
             state.isSelecting = true;
             state.startX = x;
             state.startY = y;
@@ -613,10 +601,8 @@
             const rect = interactionLayer.getBoundingClientRect();
             const currentX = e.clientX - rect.left;
             const currentY = e.clientY - rect.top;
-            
             const w = currentX - state.startX;
             const h = currentY - state.startY;
-            
             selectionRect.style.width = `${Math.abs(w)}px`;
             selectionRect.style.height = `${Math.abs(h)}px`;
             selectionRect.style.left = `${w < 0 ? currentX : state.startX}px`;
@@ -627,22 +613,17 @@
             if (!state.isSelecting) return;
             state.isSelecting = false;
             selectionRect.style.display = 'none';
-
             const rect = interactionLayer.getBoundingClientRect();
             const endX = e.clientX - rect.left;
             const endY = e.clientY - rect.top;
-            
             const w = Math.abs(endX - state.startX);
             const h = Math.abs(endY - state.startY);
             const x = Math.min(state.startX, endX);
             const y = Math.min(state.startY, endY);
-
             if (w > 10 && h > 10) {
                 await performOCR(x, y, w, h);
             }
         });
-
-        // --- Toolbar 功能綁定 ---
         
         inputBgColor.addEventListener('input', (e) => updateActiveBoxStyle('bgColor', e.target.value));
         inputTextColor.addEventListener('input', (e) => updateActiveBoxStyle('textColor', e.target.value));
@@ -651,67 +632,46 @@
         btnDeleteBox.addEventListener('click', () => {
             if (state.activeBoxId !== null) {
                 state.pageData[state.currentPage - 1].splice(state.activeBoxId, 1);
-                renderBoxes(); // 重新渲染列表
+                renderBoxes();
                 deselectActiveBox();
             }
         });
 
-        btnConfirmBox.addEventListener('click', () => {
-            deselectActiveBox(); // 確認就是取消選取狀態，保留在畫面上
-        });
+        btnConfirmBox.addEventListener('click', () => deselectActiveBox());
 
         function updateActiveBoxStyle(prop, value) {
             if (state.activeBoxId === null) return;
-            
-            // 更新 State
             state.pageData[state.currentPage - 1][state.activeBoxId][prop] = value;
-            
-            // 更新 DOM 視覺
             const boxEl = document.getElementById(`box-${state.activeBoxId}`);
             if (prop === 'bgColor') boxEl.style.backgroundColor = value;
             if (prop === 'textColor') boxEl.querySelector('textarea').style.color = value;
             if (prop === 'fontSize') boxEl.querySelector('textarea').style.fontSize = `${value}px`;
         }
 
-        // --- OCR ---
-
         async function performOCR(x, y, w, h) {
             document.getElementById('ocr-status').classList.remove('hidden');
-            
-            // 1. 擷取圖片
             const imgData = ctx.getImageData(x, y, w, h);
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = w;
             tempCanvas.height = h;
             tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
-            
             try {
                 if (!tesseractWorker) await initTesseract();
                 const lang = document.getElementById('ocr-lang').value;
-                
-                // 2. 辨識
                 const { data: { text } } = await tesseractWorker.recognize(tempCanvas.toDataURL(), lang);
-                
-                // 3. 新增 Box 到 State
                 const newBox = {
-                    x: x, 
-                    y: y, 
-                    w: w, 
-                    h: h,
-                    text: text.trim().replace(/\n/g, ''), // 簡易清理
-                    bgColor: '#ffffff', // 預設白底
+                    x: x, y: y, w: w, h: h,
+                    text: text.trim().replace(/\n/g, ''),
+                    bgColor: '#ffffff',
                     textColor: '#000000',
-                    fontSize: Math.max(12, Math.floor(h * 0.6)) // 智能推測字體大小
+                    fontSize: Math.max(12, Math.floor(h * 0.6)),
+                    vAlign: 'middle' // 預設置中
                 };
-                
                 const currentPageBoxes = state.pageData[state.currentPage - 1];
                 currentPageBoxes.push(newBox);
                 const newIndex = currentPageBoxes.length - 1;
-
-                // 4. 渲染並選中
                 renderBoxes();
                 selectBox(newIndex);
-
             } catch (err) {
                 console.error(err);
                 alert('OCR 失敗');
@@ -720,28 +680,18 @@
             }
         }
 
-        // --- 匯出功能總管 ---
-        
         function handleExport() {
             const format = document.getElementById('export-format').value;
-            if (format === 'pptx') {
-                exportToPPTX();
-            } else if (format === 'image') {
-                exportToImage();
-            }
+            if (format === 'pptx') exportToPPTX();
+            else if (format === 'image') exportToImage();
         }
-
-        // --- 匯出圖片 ---
 
         function exportToImage() {
             if (!state.pdfDoc || !state.pdfDoc.isImage) {
                 alert('僅支援圖片檔匯出為圖片');
                 return;
             }
-
             showLoader('正在合成圖片...');
-
-            // 使用 setTimeout 讓 UI 有時間顯示 loading
             setTimeout(() => {
                 try {
                     const originalImg = state.pdfDoc.image;
@@ -749,42 +699,40 @@
                     canvas.width = originalImg.width;
                     canvas.height = originalImg.height;
                     const context = canvas.getContext('2d');
-
-                    // 1. 繪製底圖
                     context.drawImage(originalImg, 0, 0);
-
-                    // 2. 繪製遮罩與文字
                     const boxes = state.pageData[state.currentPage - 1] || [];
-                    // 縮放因子：因為 pageData 是基於當前顯示比例的，要還原到原始圖片尺寸
                     const scaleFactor = 1 / state.scale; 
-
                     boxes.forEach(box => {
-                        // 還原座標
                         const x = box.x * scaleFactor;
                         const y = box.y * scaleFactor;
                         const w = box.w * scaleFactor;
                         const h = box.h * scaleFactor;
                         const fontSize = box.fontSize * scaleFactor;
-
-                        // 繪製遮罩
                         context.fillStyle = box.bgColor;
                         context.fillRect(x, y, w, h);
-
-                        // 繪製文字
                         context.fillStyle = box.textColor;
                         context.font = `${fontSize}px "Noto Sans TC", sans-serif`;
-                        context.textBaseline = 'top';
-
-                        // 簡單的文字換行邏輯
-                        wrapText(context, box.text, x, y, w, fontSize * 1.2); 
+                        
+                        // 根據 vAlign 調整圖片繪製文字的基準
+                        const vAlign = box.vAlign || 'middle';
+                        let textY = y;
+                        if (vAlign === 'middle') {
+                            context.textBaseline = 'middle';
+                            textY = y + h / 2;
+                        } else if (vAlign === 'bottom') {
+                            context.textBaseline = 'bottom';
+                            textY = y + h;
+                        } else {
+                            context.textBaseline = 'top';
+                            textY = y;
+                        }
+                        
+                        wrapText(context, box.text, x, textY, w, fontSize * 1.2, vAlign); 
                     });
-
-                    // 3. 下載
                     const link = document.createElement('a');
                     link.download = 'edited_image.png';
                     link.href = canvas.toDataURL('image/png');
                     link.click();
-
                 } catch (err) {
                     console.error(err);
                     alert('圖片匯出失敗');
@@ -794,17 +742,21 @@
             }, 100);
         }
 
-        // Canvas 文字換行 Helper
-        function wrapText(context, text, x, y, maxWidth, lineHeight) {
-            const words = text.split(''); // 中文逐字斷行
+        function wrapText(context, text, x, y, maxWidth, lineHeight, vAlign) {
+            // 簡易單行繪製，若要完整支援多行垂直置中需要複雜計算
+            // 這裡假設 OCR 修正通常是單行或少數行
+            const words = text.split('');
             let line = '';
+            // 目前僅支援單行置中優化，多行會從起始點往下畫
+            if (vAlign === 'middle') {
+                 context.fillText(text, x, y);
+                 return;
+            }
             let currentY = y;
-
             for(let n = 0; n < words.length; n++) {
                 const testLine = line + words[n];
                 const metrics = context.measureText(testLine);
                 const testWidth = metrics.width;
-                
                 if (testWidth > maxWidth && n > 0) {
                     context.fillText(line, x, currentY);
                     line = words[n];
@@ -816,43 +768,28 @@
             context.fillText(line, x, currentY);
         }
 
-        // --- 匯出 PPTX ---
-
         async function exportToPPTX() {
             if (!state.pdfDoc) return alert('無檔案');
             showLoader('正在合成 PPTX...');
-
             try {
                 const pptx = new PptxGenJS();
-                
-                // 如果是圖片模式，設定 PPTX 投影片尺寸為圖片原始比例
                 if (state.pdfDoc.isImage) {
                     const imgW = state.pdfDoc.image.width;
                     const imgH = state.pdfDoc.image.height;
-                    // 將 px 轉為 inches (假設 96dpi) 或單純維持比例
-                    // PPTXGenJS 支援自訂 width/height
-                    // 我們設定一個基準寬度 (例如 10英吋)，並算出對應高度
                     const pptWidth = 10;
                     const pptHeight = (imgH / imgW) * pptWidth;
-                    
                     pptx.defineLayout({ name:'CUSTOM_IMG', width: pptWidth, height: pptHeight });
                     pptx.layout = 'CUSTOM_IMG';
                 } else {
-                    pptx.layout = 'LAYOUT_16x9'; // PDF 預設
+                    pptx.layout = 'LAYOUT_16x9';
                 }
-
                 const numPages = state.pdfDoc.isImage ? 1 : state.pdfDoc.numPages;
-
                 for (let i = 1; i <= numPages; i++) {
                     const slide = pptx.addSlide();
-                    
-                    // 1. 產生背景圖
                     let dataUrl;
                     if (state.pdfDoc.isImage) {
-                         // 圖片處理
                          dataUrl = pdfCanvas.toDataURL('image/jpeg', 0.8);
                     } else {
-                        // PDF 處理
                         const page = await state.pdfDoc.getPage(i);
                         const viewport = page.getViewport({ scale: 2.0 });
                         const canvas = document.createElement('canvas');
@@ -861,35 +798,29 @@
                         await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
                         dataUrl = canvas.toDataURL('image/jpeg', 0.8);
                     }
-                    
-                    // 設定 Slide 背景
                     slide.background = { data: dataUrl };
-
-                    // 2. 疊加修復的文字方塊 (Mask)
                     const boxes = state.pageData[i - 1];
                     boxes.forEach(box => {
                         const wRatio = box.w / pdfCanvas.width;
                         const hRatio = box.h / pdfCanvas.height;
                         const xRatio = box.x / pdfCanvas.width;
                         const yRatio = box.y / pdfCanvas.height;
-
+                        
                         slide.addText(box.text, {
                             x: `${xRatio * 100}%`,
                             y: `${yRatio * 100}%`,
                             w: `${wRatio * 100}%`,
                             h: `${hRatio * 100}%`,
-                            fill: { color: box.bgColor.replace('#', '') }, // 關鍵：遮罩底色
+                            fill: { color: box.bgColor.replace('#', '') },
                             color: box.textColor.replace('#', ''),
-                            fontSize: box.fontSize * 0.75, // PPT 點數與 px 換算約略值 (0.75)
-                            valign: 'top',
+                            fontSize: box.fontSize * 0.75,
+                            valign: box.vAlign || 'middle', // 使用設定的垂直對齊
                             align: 'left',
                             wrap: true
                         });
                     });
                 }
-
                 await pptx.writeFile({ fileName: "修復後的簡報.pptx" });
-
             } catch (err) {
                 console.error(err);
                 alert('匯出錯誤: ' + err.message);
@@ -898,11 +829,9 @@
             }
         }
 
-        // 生成縮圖 (已恢復 Canvas 渲染)
         async function generateThumbnails() {
             const container = document.getElementById('thumbnails-container');
             container.innerHTML = '';
-            
             if (state.pdfDoc.isImage) {
                 const div = document.createElement('div');
                 div.className = `thumbnail p-2 mb-2 rounded bg-white border border-blue-500 cursor-pointer active`;
@@ -917,30 +846,23 @@
                 container.appendChild(div);
                 return;
             }
-
             for(let i=1; i<=state.pdfDoc.numPages; i++) {
                 const page = await state.pdfDoc.getPage(i);
-                // 使用小比例渲染縮圖
                 const viewport = page.getViewport({ scale: 0.2 });
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
-
                 await page.render({ canvasContext: context, viewport: viewport }).promise;
-
                 const div = document.createElement('div');
                 div.className = `thumbnail p-2 mb-2 rounded bg-white border cursor-pointer border-transparent`;
                 div.onclick = () => loadPage(i);
-                
                 const img = document.createElement('img');
                 img.src = canvas.toDataURL();
                 img.className = "w-full border border-gray-200";
-                
                 const label = document.createElement('div');
                 label.className = "text-center text-xs text-gray-500 mt-1";
                 label.innerText = `第 ${i} 頁`;
-                
                 div.appendChild(img);
                 div.appendChild(label);
                 container.appendChild(div);
@@ -949,7 +871,6 @@
 
         function showLoader(text) { document.getElementById('loader').classList.remove('hidden'); document.getElementById('loader-text').innerText = text; }
         function hideLoader() { document.getElementById('loader').classList.add('hidden'); }
-
     </script>
 </body>
 </html>
