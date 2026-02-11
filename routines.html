@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班級自治圖鑑</title>
+    <title>班級自治小黑板</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -139,7 +139,7 @@
             const [students, setStudents] = useState([]);
             const [currentTime, setCurrentTime] = useState(new Date());
             const [lateThreshold, setLateThreshold] = useState(DEFAULT_LATE_TIME);
-            const [classNameTitle, setClassNameTitle] = useState(() => localStorage.getItem('class_title') || "班級自治圖鑑");
+            const [classNameTitle, setClassNameTitle] = useState(() => localStorage.getItem('class_title') || "班級自治小黑板");
             
             // UI 狀態
             const [showSettings, setShowSettings] = useState(false);
@@ -313,7 +313,7 @@
                 e.stopPropagation();
                 setConfirmConfig({
                 show: true,
-                title: "移除學籍",
+                title: "移除學生",
                 message: `確定要將座號 ${id} 從名冊中移除嗎？此操作不可逆。`,
                 type: "danger",
                 action: () => { setStudents(prev => prev.filter(s => s.id !== id)); }
@@ -823,7 +823,7 @@
 
                 {/* Footer 區塊更新：顯示版權聲明 */}
                 <div className="bg-[#5d4037] py-1 text-center text-[10px] text-[#d7ccc8] font-mono shrink-0 border-t border-[#3e2723] z-50 relative">
-                    © 2026 Kathy's Classroom routines, Created with Google Apps Script & Tailwind CSS
+                    Classroom routines Created with Google Apps Script & Tailwind CSS
                 </div>
 
                 </div>
@@ -946,3 +946,4 @@
     </script>
 </body>
 </html>
+
