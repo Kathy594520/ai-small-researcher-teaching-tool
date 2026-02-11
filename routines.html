@@ -1,9 +1,8 @@
-
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班級自治小黑板</title>
+    <title>班級自治圖鑑</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -21,27 +20,103 @@
     <!-- Babel Standalone -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        retro: {
+                            bg: '#f0e6d2',      /* 泛黃紙張背景 */
+                            paper: '#fffbf0',   /* 亮一點的紙 */
+                            ink: '#2c2c2c',     /* 墨色 */
+                            red: '#c0392b',     /* 印泥紅 */
+                            blue: '#2980b9',    /* 鋼筆藍 */
+                            green: '#27ae60',   /* 復古綠 */
+                            board: '#2d3436',   /* 黑板深灰 */
+                            wood: '#8e44ad',    /* 這裡用紫色系代替木頭色做強調，或改用 #795548 */
+                            line: '#bdc3c7'     /* 筆記本線條 */
+                        }
+                    },
+                    boxShadow: {
+                        'hard': '4px 4px 0px 0px rgba(0,0,0,1)',
+                        'hard-sm': '2px 2px 0px 0px rgba(0,0,0,1)',
+                        'inner-hard': 'inset 2px 2px 0px 0px rgba(0,0,0,0.1)'
+                    },
+                    fontFamily: {
+                        serif: ['"Noto Serif TC"', '"Songti TC"', 'serif'],
+                        mono: ['"Courier New"', 'monospace'],
+                        sans: ['"Noto Sans TC"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        /* 隱藏捲軸 */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap');
+
+        body {
+            background-color: #f0e6d2;
+            background-image: 
+                linear-gradient(#e5dcc5 1px, transparent 1px),
+                linear-gradient(90deg, #e5dcc5 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: #2c2c2c;
         }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+
+        /* 復古捲軸 */
+        .retro-scrollbar::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
         }
-        /* 淡入動畫 */
-        @keyframes fade-in {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
+        .retro-scrollbar::-webkit-scrollbar-track {
+            background: #e0d0b0;
+            border-left: 2px solid #2c2c2c;
         }
-        .animate-fade-in {
-            animation: fade-in 0.3s ease-out forwards;
+        .retro-scrollbar::-webkit-scrollbar-thumb {
+            background: #2c2c2c;
+            border: 2px solid #e0d0b0;
+        }
+        
+        /* 筆記本紋理 */
+        .notebook-lines {
+            background-image: linear-gradient(#a8d8ea 1px, transparent 1px);
+            background-size: 100% 2rem;
+            line-height: 2rem;
+        }
+
+        /* 旋轉動畫 */
+        @keyframes stamp-in {
+            0% { opacity: 0; transform: scale(1.5) rotate(15deg); }
+            100% { opacity: 1; transform: scale(1) rotate(-5deg); }
+        }
+        .animate-stamp {
+            animation: stamp-in 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        /* 雜訊濾鏡效果 */
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+        
+        /* 修正文字垂直排版 */
+        .writing-vertical {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
         }
     </style>
 </head>
 <body>
     <div id="root"></div>
+    <div class="noise-overlay"></div>
 
     <!-- 主程式邏輯 -->
     <script type="text/babel" data-type="module">
@@ -51,19 +126,20 @@
             Users, AlertCircle, Settings, RotateCcw, FileSpreadsheet, Star, Heart, 
             Plus, Minus, ChevronLeft, ChevronRight, Check, Edit3, Trash2, 
             Sparkles, Utensils, Award, Eraser, ClipboardList, X, Save, 
-            AlignVerticalJustifyStart, AlignHorizontalJustifyStart, AlertTriangle, BookOpen 
+            AlignVerticalJustifyStart, AlignHorizontalJustifyStart, AlertTriangle, BookOpen,
+            Clock, Calendar, PenTool, ExternalLink
         } from 'lucide-react';
 
         const App = () => {
             // ---------------------------------------------------------------------------
-            // 狀態設定
+            // 狀態設定 (保持原邏輯不變)
             // ---------------------------------------------------------------------------
             const DEFAULT_LATE_TIME = "07:50";
 
             const [students, setStudents] = useState([]);
             const [currentTime, setCurrentTime] = useState(new Date());
             const [lateThreshold, setLateThreshold] = useState(DEFAULT_LATE_TIME);
-            const [classNameTitle, setClassNameTitle] = useState(() => localStorage.getItem('class_title') || "班級自治小黑板");
+            const [classNameTitle, setClassNameTitle] = useState(() => localStorage.getItem('class_title') || "班級自治圖鑑");
             
             // UI 狀態
             const [showSettings, setShowSettings] = useState(false);
@@ -103,32 +179,31 @@
             const splitContainerRef = useRef(null);
 
             // ---------------------------------------------------------------------------
-            // 字體與樣式系統
+            // 字體與樣式系統 (保留邏輯，但樣式名稱微調)
             // ---------------------------------------------------------------------------
             const getFontFamily = (type) => {
                 switch (type) {
                 case 'kai': return "'標楷體', 'DFKai-SB', 'KaiTi', 'BiauKai', serif";
                 case 'rounded': return "'Varela Round', 'M PLUS Rounded 1c', 'Microsoft JhengHei', '微軟正黑體', sans-serif";
-                case 'sans': default: return "'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', ui-sans-serif, system-ui, sans-serif";
+                case 'sans': default: return "'Noto Sans TC', sans-serif";
                 }
             };
             const currentFontFamily = getFontFamily(fontType);
 
-            // 標準時鐘樣式
+            // 標準時鐘樣式 (邏輯保留，但UI渲染時會忽視顏色class，改用復古風格)
             const CLOCK_STYLES = [
-                { id: 'simple', name: '簡約白', text: 'text-slate-800' },
-                { id: 'orange', name: '活力橘', text: 'text-orange-600' },
-                { id: 'blue', name: '天空藍', text: 'text-sky-600' },
-                { id: 'purple', name: '優雅紫', text: 'text-purple-600' },
-                { id: 'dark', name: '科技黑', text: 'text-emerald-600' }
+                { id: 'simple', name: '簡約白', text: 'text-retro-ink' },
+                { id: 'orange', name: '活力橘', text: 'text-retro-red' },
+                { id: 'blue', name: '天空藍', text: 'text-retro-blue' },
+                { id: 'purple', name: '優雅紫', text: 'text-retro-wood' },
+                { id: 'dark', name: '科技黑', text: 'text-retro-green' }
             ];
             const currentClockStyle = CLOCK_STYLES[clockStyleIndex % CLOCK_STYLES.length];
 
             // ---------------------------------------------------------------------------
-            // 邏輯處理
+            // 邏輯處理 (完全保留)
             // ---------------------------------------------------------------------------
 
-            // 初始化與數據讀取
             useEffect(() => {
                 const savedStudents = localStorage.getItem('class_students_v2'); 
                 if (savedStudents) {
@@ -149,11 +224,7 @@
                 }
             }, []);
 
-            // 儲存資料
-            useEffect(() => { 
-                localStorage.setItem('class_students_v2', JSON.stringify(students)); 
-            }, [students]);
-            
+            useEffect(() => { localStorage.setItem('class_students_v2', JSON.stringify(students)); }, [students]);
             useEffect(() => { localStorage.setItem('class_title', classNameTitle); }, [classNameTitle]);
             useEffect(() => { localStorage.setItem('class_notes_data', JSON.stringify(notesData)); }, [notesData]);
             useEffect(() => { localStorage.setItem('class_note_writing_mode', writingMode); }, [writingMode]);
@@ -162,7 +233,6 @@
             useEffect(() => { localStorage.setItem('class_font_type', fontType); }, [fontType]);
             useEffect(() => { localStorage.setItem('class_clock_style', clockStyleIndex); }, [clockStyleIndex]);
 
-            // 時間與遲到檢測
             useEffect(() => {
                 const timer = setInterval(() => {
                 const now = new Date();
@@ -232,40 +302,31 @@
                 });
             };
 
-            // 確認視窗邏輯
             const executeConfirmAction = () => {
-                if (confirmConfig.action) {
-                confirmConfig.action();
-                }
+                if (confirmConfig.action) { confirmConfig.action(); }
                 setConfirmConfig({ ...confirmConfig, show: false });
             };
 
-            const cancelConfirmAction = () => {
-                setConfirmConfig({ ...confirmConfig, show: false });
-            };
+            const cancelConfirmAction = () => { setConfirmConfig({ ...confirmConfig, show: false }); };
 
             const confirmRemoveStudent = (e, id) => {
                 e.stopPropagation();
                 setConfirmConfig({
                 show: true,
-                title: "刪除學生",
-                message: `確定要刪除座號 ${id} 嗎？此操作無法復原。`,
+                title: "移除學籍",
+                message: `確定要將座號 ${id} 從名冊中移除嗎？此操作不可逆。`,
                 type: "danger",
-                action: () => {
-                    setStudents(prev => prev.filter(s => s.id !== id));
-                }
+                action: () => { setStudents(prev => prev.filter(s => s.id !== id)); }
                 });
             };
 
             const confirmClearNote = () => {
                 setConfirmConfig({
                 show: true,
-                title: "擦黑板",
-                message: "確定要清空目前的聯絡簿內容嗎？",
+                title: "黑板擦",
+                message: "確定要擦掉所有板書嗎？",
                 type: "warning",
-                action: () => {
-                    updateCurrentNote("\n\n\n\n\n"); 
-                }
+                action: () => { updateCurrentNote("\n\n\n\n\n"); }
                 });
             };
 
@@ -273,7 +334,7 @@
                 setConfirmConfig({
                 show: true,
                 title: `重置${getModeName(checkInMode)}`,
-                message: `確定要重置所有學生的「${getModeName(checkInMode)}」狀態嗎？`,
+                message: `確定要重置所有學生的「${getModeName(checkInMode)}」紀錄嗎？`,
                 type: "warning",
                 action: () => {
                     setStudents(prev => prev.map(s => {
@@ -290,9 +351,6 @@
                 });
             };
 
-            // ---------------------------------------------------------------------------
-            // 批次編輯功能
-            // ---------------------------------------------------------------------------
             const openBatchEdit = () => {
                 const textList = students.map(s => `${s.id} ${s.name}`).join('\n');
                 setBatchInput(textList);
@@ -311,9 +369,7 @@
                     if (match) {
                         id = parseInt(match[1], 10);
                         name = match[2].trim();
-                    } else {
-                        return; 
-                    }
+                    } else { return; }
 
                     if (!isNaN(id) && id > 0 && name) {
                         if (usedIds.has(id)) {
@@ -321,8 +377,7 @@
                             if (index !== -1) newStudents[index].name = name;
                         } else {
                             newStudents.push({
-                                id: id,
-                                name: name,
+                                id: id, name: name,
                                 status: 'idle', arrivalTime: null, brushing: false, lunch: false, isDuty: false, correction: false
                             });
                             usedIds.add(id);
@@ -332,7 +387,6 @@
 
                 if (newStudents.length > 0) {
                     newStudents.sort((a, b) => a.id - b.id);
-                    
                     setStudents(prev => {
                         const prevMap = new Map(prev.map(s => [s.id, s]));
                         return newStudents.map(newS => {
@@ -341,10 +395,9 @@
                             return newS;
                         });
                     });
-                    
                     setShowBatchEdit(false);
                 } else {
-                    alert("格式無法識別。\n請使用：[座號] [姓名]\n例如：1 王小明");
+                    alert("名冊格式錯誤。\n請使用：[座號] [姓名]\n例如：1 王小明");
                 }
             };
 
@@ -352,8 +405,7 @@
                 setStudents(prev => {
                     const maxId = prev.length > 0 ? Math.max(...prev.map(s => s.id)) : 0;
                     return [...prev, { 
-                        id: maxId + 1, 
-                        name: "", 
+                        id: maxId + 1, name: "", 
                         status: 'idle', arrivalTime: null, brushing: false, lunch: false, isDuty: false, correction: false
                     }].sort((a, b) => a.id - b.id);
                 });
@@ -361,10 +413,10 @@
 
             const getModeName = (mode) => {
                 const map = { 
-                attendance: '上學打卡', 
-                brushing: '潔牙紀錄', 
-                lunch: '午餐整理', 
-                duty: '值日生',
+                attendance: '出勤點名', 
+                brushing: '潔牙檢查', 
+                lunch: '午餐整潔', 
+                duty: '值日輪值',
                 correction: '作業訂正'
                 };
                 return map[mode];
@@ -383,7 +435,7 @@
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");
                 link.href = URL.createObjectURL(blob);
-                link.download = `班級紀錄表_${dateStr.replace(/\//g, '-')}.csv`;
+                link.download = `班級紀錄_${dateStr.replace(/\//g, '-')}.csv`;
                 link.click();
             };
 
@@ -393,8 +445,9 @@
             const updateCurrentNote = (content) => setNotesData(prev => ({ ...prev, [currentNoteKey]: content }));
             
             const noteLines = currentNoteContent.split('\n');
-            
             const toggleClockStyle = () => setClockStyleIndex(prev => (prev + 1) % CLOCK_STYLES.length);
+            
+            // 修正Grid邏輯：復古風格稍微寬一點
             const getGridColsClass = () => {
                 const n = students.length;
                 if (n === 0) return "grid-cols-1"; 
@@ -414,426 +467,488 @@
             };
             const handleDragEnd = () => { document.removeEventListener('mousemove', handleDragMove); document.removeEventListener('mouseup', handleDragEnd); };
 
-            return (
-                // 恢復純色背景 (薰衣草淺灰紫)
-                <div className="h-screen bg-[#F3F0FF] font-sans text-slate-800 flex flex-col overflow-hidden relative selection:bg-pink-200">
-                
-                {/* 裝飾性背景 (可選，這裡用淡淡的同色系圓形點綴，保持乾淨) */}
-                <div className="absolute top-[-10%] left-[-5%] w-[400px] h-[400px] bg-purple-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
-                <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-100 rounded-full blur-3xl opacity-50 pointer-events-none delay-700"></div>
+            // ---------------------------------------------------------------------------
+            // 復古 UI 元件
+            // ---------------------------------------------------------------------------
 
-                {/* 頂部工具列：標準白色卡片風格 */}
-                <div className="bg-white border-b border-slate-200 shadow-sm px-4 py-3 flex justify-between items-center z-20 shrink-0 mx-2 mt-2 rounded-2xl">
+            return (
+                <div className="h-screen flex flex-col overflow-hidden relative selection:bg-retro-red selection:text-white font-serif">
+                
+                {/* 裝飾：四周的暗角效果 */}
+                <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_100px_rgba(44,44,44,0.15)] z-40"></div>
+
+                {/* 頂部導航列：木製標尺與標籤風格 */}
+                <div className="bg-white border-b-2 border-retro-ink shadow-hard px-4 py-3 flex justify-between items-center z-20 shrink-0 mx-4 mt-4 mb-2">
                     
-                    <div className="flex items-center gap-3 group min-w-[200px]">
-                        <div className="bg-indigo-50 p-2 rounded-xl shadow-sm border border-indigo-100 shrink-0">
-                        <Users className="w-6 h-6 text-indigo-500" />
+                    {/* 左側：班級名稱 (貼在紙膠帶上) */}
+                    <div className="flex items-center gap-3 relative group min-w-[200px]">
+                        <div className="absolute inset-0 bg-[#f1c40f] opacity-20 rotate-[-1deg] transform scale-105 -z-10 skew-x-12"></div>
+                        <div className="p-1 border-2 border-retro-ink bg-white flex items-center justify-center shrink-0">
+                            <Users className="w-5 h-5 text-retro-ink" strokeWidth={2.5} />
                         </div>
                         <input 
                         type="text" 
                         value={classNameTitle} 
                         onChange={(e) => setClassNameTitle(e.target.value)}
-                        placeholder="請輸入班級名稱"
-                        className="text-xl 2xl:text-2xl font-black text-slate-700 bg-transparent border-b-2 border-transparent hover:border-indigo-300 focus:border-indigo-500 outline-none w-full transition-all placeholder-slate-400"
+                        placeholder="輸入班級..."
+                        className="text-2xl font-black text-retro-ink bg-transparent outline-none w-full placeholder-gray-400 font-serif tracking-widest"
+                        style={{ fontFamily: '"Noto Serif TC", serif' }}
                         />
                     </div>
 
-                    {/* 按鈕群組：使用標準間距 gap-2 */}
-                    <div className="flex bg-slate-50 p-1.5 rounded-xl shadow-inner border border-slate-100 gap-2 overflow-x-auto no-scrollbar min-w-0">
-                        <ModeButton active={checkInMode === 'attendance'} onClick={() => setCheckInMode('attendance')} icon={<Users className="w-3.5 h-3.5" />} label="上學打卡" color="text-indigo-600 bg-indigo-100" />
-                        <ModeButton active={checkInMode === 'brushing'} onClick={() => setCheckInMode('brushing')} icon={<Sparkles className="w-3.5 h-3.5" />} label="完成潔牙" color="text-teal-600 bg-teal-100" />
-                        <ModeButton active={checkInMode === 'lunch'} onClick={() => setCheckInMode('lunch')} icon={<Utensils className="w-3.5 h-3.5" />} label="午餐整理" color="text-orange-600 bg-orange-100" />
-                        <ModeButton active={checkInMode === 'duty'} onClick={() => setCheckInMode('duty')} icon={<Award className="w-3.5 h-3.5" />} label="本日值日" color="text-purple-600 bg-purple-100" />
-                        <ModeButton active={checkInMode === 'correction'} onClick={() => setCheckInMode('correction')} icon={<BookOpen className="w-3.5 h-3.5" />} label="作業訂正" color="text-pink-600 bg-pink-100" />
+                    {/* 中間：模式切換 (像是一排郵票或實體標籤) */}
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar mx-4">
+                        <ModeButton active={checkInMode === 'attendance'} onClick={() => setCheckInMode('attendance')} icon={<Users className="w-4 h-4" />} label="點名簿" color="border-retro-ink bg-retro-paper" />
+                        <ModeButton active={checkInMode === 'brushing'} onClick={() => setCheckInMode('brushing')} icon={<Sparkles className="w-4 h-4" />} label="潔牙卡" color="border-retro-green bg-green-50" />
+                        <ModeButton active={checkInMode === 'lunch'} onClick={() => setCheckInMode('lunch')} icon={<Utensils className="w-4 h-4" />} label="午餐值日" color="border-retro-red bg-red-50" />
+                        <ModeButton active={checkInMode === 'duty'} onClick={() => setCheckInMode('duty')} icon={<Award className="w-4 h-4" />} label="值日生" color="border-retro-wood bg-purple-50" />
+                        <ModeButton active={checkInMode === 'correction'} onClick={() => setCheckInMode('correction')} icon={<BookOpen className="w-4 h-4" />} label="訂正欄" color="border-retro-blue bg-blue-50" />
                     </div>
 
-                    <div className="flex items-center gap-3 shrink-0">
-                        <div className="flex items-center bg-slate-50 p-1 rounded-xl border border-slate-100 shadow-sm hidden md:flex">
+                    {/* 右側：工具箱 (筆盒風格) */}
+                    <div className="flex items-center gap-4 shrink-0">
+                        {/* 視圖切換：實體按鈕開關 */}
+                        <div className="flex items-center bg-retro-ink p-1 gap-1 border-2 border-retro-ink hidden md:flex">
                         {['split', 'checkin', 'notebook'].map(m => (
-                            <button key={m} onClick={() => setViewMode(m)} className={`px-3 py-1.5 rounded-lg transition-all text-xs font-bold ${viewMode === m ? 'bg-white shadow text-slate-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}>
-                            {m === 'split' ? '分屏' : m === 'checkin' ? '僅打卡' : '聯絡簿'}
+                            <button key={m} onClick={() => setViewMode(m)} className={`px-3 py-1 text-xs font-bold font-mono transition-all ${viewMode === m ? 'bg-[#f1c40f] text-retro-ink border border-black shadow-[2px_2px_0_0_white]' : 'text-white hover:text-[#f1c40f]'}`}>
+                            {m === 'split' ? '分屏' : m === 'checkin' ? '名冊' : '黑板'}
                             </button>
                         ))}
                         </div>
 
-                        <div className="w-px h-6 bg-slate-300 mx-1"></div>
+                        <div className="w-0.5 h-8 bg-retro-ink/20 mx-1"></div>
 
                         <div className="flex items-center gap-2">
-                        <button onClick={() => setShowSettings(!showSettings)} className="p-2 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm rounded-xl text-slate-600 transition-all active:scale-95" title="設定與學生名單"><Settings className="w-5 h-5" /></button>
-                        <button onClick={handleExportCSV} className="p-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 shadow-sm rounded-xl text-emerald-600 transition-all active:scale-95" title="下載報表"><FileSpreadsheet className="w-5 h-5" /></button>
-                        <button onClick={confirmResetMode} className="p-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 shadow-sm rounded-xl text-rose-500 transition-all active:scale-95" title={`重置${getModeName(checkInMode)}`}><RotateCcw className="w-5 h-5" /></button>
+                        <ToolButton onClick={() => setShowSettings(!showSettings)} icon={<Settings className="w-5 h-5" />} title="設定" />
+                        <ToolButton onClick={handleExportCSV} icon={<FileSpreadsheet className="w-5 h-5" />} title="匯出報表" />
+                        <ToolButton onClick={confirmResetMode} icon={<RotateCcw className="w-5 h-5" />} title="重置狀態" danger />
                         </div>
                     </div>
                 </div>
 
-                {/* 側邊設定面板：標準風格 */}
-                <div className={`fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform transition-transform duration-300 ease-in-out z-50 flex flex-col ${showSettings ? 'translate-x-0' : 'translate-x-full'}`}>
-                    <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h3 className="font-black text-slate-700 flex items-center gap-2"><Settings className="w-5 h-5 text-indigo-500" /> 設定與名單管理</h3>
-                    <button onClick={() => setShowSettings(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-400">✕</button>
+                {/* 側邊設定面板：檔案夾風格 */}
+                <div className={`fixed inset-y-0 right-0 w-96 bg-retro-paper border-l-4 border-retro-ink transform transition-transform duration-300 z-50 flex flex-col shadow-[-10px_0_20px_rgba(0,0,0,0.1)] ${showSettings ? 'translate-x-0' : 'translate-x-full'}`}>
+                    <div className="p-5 border-b-2 border-retro-ink flex justify-between items-center bg-[#e0d0b0]">
+                        <h3 className="font-black text-xl text-retro-ink flex items-center gap-2 font-serif">
+                            <span className="bg-retro-ink text-white px-2 py-1 text-sm font-mono">CONFIG</span> 
+                            系統設定
+                        </h3>
+                        <button onClick={() => setShowSettings(false)} className="w-8 h-8 flex items-center justify-center border-2 border-retro-ink bg-white hover:bg-retro-red hover:text-white transition-colors">✕</button>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-5 space-y-6">
-                    <div className="space-y-4">
-                        <div>
-                        <label className="block text-xs font-bold text-slate-500 mb-1">遲到時間門檻</label>
-                        <input type="time" value={lateThreshold} onChange={(e) => setLateThreshold(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-200" />
-                        </div>
-                        <div>
-                        <label className="block text-xs font-bold text-slate-500 mb-1">顯示字體</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {['sans', 'kai', 'rounded'].map(ft => (
-                                <button key={ft} onClick={() => setFontType(ft)} className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${fontType === ft ? 'bg-indigo-500 text-white border-indigo-500 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-                                {ft === 'sans' ? '預設黑體' : ft === 'kai' ? '標楷體' : '微軟正黑/圓體'}
-                                </button>
-                            ))}
-                        </div>
-                        </div>
-                    </div>
-                    <div className="border-t border-slate-100"></div>
-                    <div>
-                        <div className="flex justify-between items-end mb-3">
-                        <h4 className="font-bold text-slate-700 flex items-center gap-2"><Users className="w-4 h-4 text-orange-500" /> 學生名單管理</h4>
-                        <div className="flex gap-1">
-                            <button onClick={openBatchEdit} className="text-xs bg-green-50 text-green-700 px-2 py-1.5 rounded-lg hover:bg-green-100 flex items-center gap-1 transition-colors border border-green-200 shadow-sm">
-                            <ClipboardList className="w-3 h-3" /> 貼上名單
-                            </button>
-                            <button onClick={addStudent} className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1.5 rounded-lg hover:bg-indigo-100 flex items-center gap-1 transition-colors border border-indigo-200 shadow-sm">
-                            <Plus className="w-3 h-3" /> 手動新增
-                            </button>
-                        </div>
-                        </div>
-                        
-                        {/* 學生名單列表 */}
-                        <div className="space-y-2 pb-10">
-                        {students.length === 0 ? (
-                            <div className="text-center text-slate-400 py-8 text-sm border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
-                            目前沒有學生資料<br/>請點擊上方按鈕建立名單
+                    
+                    <div className="flex-1 overflow-y-auto p-6 space-y-8 retro-scrollbar bg-[url('https://www.transparenttextures.com/patterns/lined-paper.png')]">
+                        {/* 時間與字體設定 */}
+                        <div className="bg-white p-4 border-2 border-retro-ink shadow-hard relative">
+                            <div className="absolute -top-3 left-3 bg-retro-ink text-white px-2 text-xs font-mono">TIME & FONT</div>
+                            <div className="mt-2 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-retro-ink mb-1 font-serif">遲到界線</label>
+                                    <input type="time" value={lateThreshold} onChange={(e) => setLateThreshold(e.target.value)} className="w-full px-2 py-2 bg-retro-bg border-b-2 border-retro-ink outline-none font-mono text-lg focus:bg-white transition-colors" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-retro-ink mb-1 font-serif">字體風格</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {['sans', 'kai', 'rounded'].map(ft => (
+                                            <button key={ft} onClick={() => setFontType(ft)} className={`py-1 text-xs font-bold border-2 transition-all ${fontType === ft ? 'bg-retro-ink text-white border-retro-ink' : 'bg-white text-retro-ink border-retro-ink hover:bg-gray-100'}`}>
+                                            {ft === 'sans' ? '黑體' : ft === 'kai' ? '楷體' : '圓體'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
-                        ) : (
-                            students.map((s) => (
-                            <div key={s.id} className="flex items-center gap-2 group animate-fade-in">
-                                {/* 修正：增加高度 h-10 與內距 py-2，確保文字垂直居中不被切掉 */}
-                                <input 
-                                type="number" 
-                                value={s.id} 
-                                onChange={(e) => updateStudentData(s.id, 'id', e.target.value)} 
-                                className="w-14 h-10 px-1 py-2 text-sm border border-slate-200 rounded-lg text-center font-mono font-bold bg-white focus:border-indigo-500 outline-none shadow-sm leading-normal"
-                                title="座號"
-                                />
-                                <input 
-                                type="text" 
-                                value={s.name} 
-                                onChange={(e) => updateStudentData(s.id, 'name', e.target.value)} 
-                                className="flex-1 h-10 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:border-indigo-500 outline-none transition-colors bg-white shadow-sm leading-normal" 
-                                placeholder="姓名"
-                                />
-                                <button 
-                                    onClick={(e) => confirmRemoveStudent(e, s.id)} 
-                                    className="p-2.5 rounded-lg text-xs font-bold transition-colors bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border border-red-100 shadow-sm" 
-                                    title="刪除學生"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-                            ))
-                        )}
                         </div>
-                    </div>
+
+                        {/* 名單管理 */}
+                        <div className="bg-white p-4 border-2 border-retro-ink shadow-hard relative">
+                            <div className="absolute -top-3 left-3 bg-retro-red text-white px-2 text-xs font-mono">STUDENTS</div>
+                            <div className="mt-2">
+                                <div className="flex justify-end gap-2 mb-4">
+                                    <button onClick={openBatchEdit} className="text-xs bg-white text-retro-ink border-2 border-retro-ink px-2 py-1 hover:bg-retro-ink hover:text-white transition-colors font-bold shadow-hard-sm">
+                                    批次貼上
+                                    </button>
+                                    <button onClick={addStudent} className="text-xs bg-retro-ink text-white border-2 border-retro-ink px-2 py-1 hover:bg-gray-800 transition-colors font-bold shadow-hard-sm flex items-center gap-1">
+                                    <Plus className="w-3 h-3" /> 新增
+                                    </button>
+                                </div>
+                                
+                                <div className="space-y-2 max-h-[400px] overflow-y-auto retro-scrollbar pr-2">
+                                {students.length === 0 ? (
+                                    <div className="text-center text-gray-400 py-6 text-sm border-2 border-dashed border-gray-300 font-serif">
+                                    名冊空白
+                                    </div>
+                                ) : (
+                                    students.map((s) => (
+                                    <div key={s.id} className="flex items-center gap-2 group">
+                                        <input 
+                                        type="number" 
+                                        value={s.id} 
+                                        onChange={(e) => updateStudentData(s.id, 'id', e.target.value)} 
+                                        className="w-12 h-8 px-1 text-sm border-b-2 border-gray-300 text-center font-mono font-bold bg-transparent focus:border-retro-ink outline-none"
+                                        title="座號"
+                                        />
+                                        <input 
+                                        type="text" 
+                                        value={s.name} 
+                                        onChange={(e) => updateStudentData(s.id, 'name', e.target.value)} 
+                                        className="flex-1 h-8 px-2 text-sm border-b-2 border-gray-300 focus:border-retro-ink outline-none bg-transparent font-serif" 
+                                        placeholder="姓名"
+                                        />
+                                        <button 
+                                            onClick={(e) => confirmRemoveStudent(e, s.id)} 
+                                            className="p-1.5 text-gray-400 hover:text-retro-red transition-colors" 
+                                            title="移除"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    ))
+                                )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
-                {/* 批次編輯 Modal */}
+                {/* 批次編輯 Modal (牛皮紙袋風格) */}
                 {showBatchEdit && (
-                    <div className="fixed inset-0 z-[60] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[80vh] border border-slate-200">
-                        <div className="p-5 border-b border-slate-100 flex justify-between items-center">
-                            <h3 className="text-lg font-black text-slate-700 flex items-center gap-2">
-                            <ClipboardList className="w-5 h-5 text-green-500" />
-                            批次貼上名單
-                            </h3>
-                            <button onClick={() => setShowBatchEdit(false)} className="p-1.5 hover:bg-slate-100 rounded-full"><X className="w-5 h-5 text-slate-400" /></button>
-                        </div>
-                        <div className="p-6 flex-1 flex flex-col gap-3">
-                            <p className="text-sm text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                            請直接從 Excel 或 Word 複製名單貼上。<br/>
-                            <span className="font-bold text-slate-600">格式：</span>座號 (空格) 姓名<br/>
-                            <span className="text-xs text-slate-400">例如：1 王小明</span>
-                            </p>
-                            <textarea 
-                            value={batchInput}
-                            onChange={(e) => setBatchInput(e.target.value)}
-                            className="w-full flex-1 min-h-[300px] p-4 border border-slate-200 rounded-2xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none font-mono text-sm leading-relaxed resize-none bg-slate-50"
-                            placeholder={`1 王小明\n2 陳大文\n3 張三`}
-                            />
-                        </div>
-                        <div className="p-5 border-t border-slate-100 bg-slate-50 rounded-b-3xl flex justify-end gap-3">
-                            <button onClick={() => setShowBatchEdit(false)} className="px-5 py-2 text-slate-500 hover:bg-white hover:shadow-sm rounded-xl font-bold transition-all">取消</button>
-                            <button onClick={saveBatchEdit} className="px-6 py-2 bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg shadow-indigo-200 rounded-xl font-bold transition-all active:scale-95 flex items-center gap-2">
-                            <Save className="w-4 h-4" /> 確認儲存
-                            </button>
+                    <div className="fixed inset-0 z-[60] bg-retro-ink/80 flex items-center justify-center p-4">
+                    <div className="bg-[#f39c12] p-1 rounded-sm shadow-2xl w-full max-w-lg transform rotate-1">
+                        <div className="bg-retro-paper border-2 border-retro-ink p-1">
+                            <div className="border border-retro-ink border-dashed p-4 flex flex-col gap-4">
+                                <div className="flex justify-between items-center border-b-2 border-retro-ink pb-2">
+                                    <h3 className="text-lg font-black text-retro-ink font-serif flex items-center gap-2">
+                                    <ClipboardList className="w-5 h-5" /> 匯入名單
+                                    </h3>
+                                    <button onClick={() => setShowBatchEdit(false)}><X className="w-6 h-6 hover:scale-110 transition-transform" /></button>
+                                </div>
+                                <div className="bg-white border-2 border-retro-ink p-3 shadow-inner-hard">
+                                    <p className="text-xs font-mono text-gray-500 mb-2">FORMAT: ID [SPACE] NAME</p>
+                                    <textarea 
+                                    value={batchInput}
+                                    onChange={(e) => setBatchInput(e.target.value)}
+                                    className="w-full h-64 outline-none font-mono text-sm resize-none leading-relaxed bg-transparent"
+                                    placeholder={`1 王小明\n2 陳大文`}
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={() => setShowBatchEdit(false)} className="px-4 py-2 border-2 border-retro-ink text-retro-ink font-bold hover:bg-gray-100 shadow-hard-sm">取消</button>
+                                    <button onClick={saveBatchEdit} className="px-4 py-2 bg-retro-ink text-white border-2 border-retro-ink font-bold hover:bg-black shadow-hard-sm flex items-center gap-2">
+                                    <Save className="w-4 h-4" /> 寫入
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     </div>
                 )}
 
-                {/* 通用確認視窗 (Custom Modal) */}
+                {/* 確認視窗 (警告標籤風格) */}
                 {confirmConfig.show && (
-                    <div className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden scale-100 transition-all border border-slate-200">
-                        <div className={`p-5 border-b border-slate-100 flex items-center gap-3 ${confirmConfig.type === 'danger' ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'}`}>
-                            <div className={`p-2 rounded-full ${confirmConfig.type === 'danger' ? 'bg-red-100' : 'bg-orange-100'}`}>
-                                <AlertTriangle className="w-6 h-6" />
-                            </div>
-                            <h3 className="text-xl font-black">{confirmConfig.title}</h3>
+                    <div className="fixed inset-0 z-[70] bg-retro-ink/50 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-[#fff176] border-4 border-retro-ink p-6 w-full max-w-sm shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative">
+                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-retro-ink text-[#fff176] px-3 py-1 font-black font-mono tracking-widest border-2 border-white">
+                            WARNING
                         </div>
-                        <div className="p-7">
-                            <p className="text-slate-600 font-medium leading-relaxed text-lg">{confirmConfig.message}</p>
+                        <div className="flex flex-col items-center text-center gap-4 mt-2">
+                            <AlertTriangle className={`w-12 h-12 ${confirmConfig.type === 'danger' ? 'text-retro-red' : 'text-orange-500'}`} strokeWidth={2} />
+                            <h3 className="text-xl font-black font-serif text-retro-ink">{confirmConfig.title}</h3>
+                            <p className="text-retro-ink font-medium leading-relaxed font-serif">{confirmConfig.message}</p>
                         </div>
-                        <div className="p-5 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-                            <button onClick={cancelConfirmAction} className="px-5 py-2.5 text-slate-500 hover:bg-slate-100 rounded-xl font-bold transition-all">取消</button>
+                        <div className="mt-6 flex justify-center gap-4">
+                            <button onClick={cancelConfirmAction} className="px-6 py-2 border-2 border-retro-ink font-bold hover:bg-white transition-colors">取消</button>
                             <button 
                             onClick={executeConfirmAction} 
-                            className={`px-7 py-2.5 text-white rounded-xl font-bold shadow-lg transition-transform active:scale-95 ${confirmConfig.type === 'danger' ? 'bg-red-500 hover:bg-red-600 shadow-red-200' : 'bg-orange-500 hover:bg-orange-600 shadow-orange-200'}`}
+                            className={`px-6 py-2 border-2 border-retro-ink text-white font-bold shadow-hard-sm active:translate-y-1 active:shadow-none transition-all ${confirmConfig.type === 'danger' ? 'bg-retro-red' : 'bg-orange-500'}`}
                             >
-                            確認
+                            確認執行
                             </button>
                         </div>
                     </div>
                     </div>
                 )}
 
-                <div ref={splitContainerRef} className="flex-1 flex flex-col lg:flex-row overflow-hidden p-3 gap-3">
-                    {/* 左側：功能互動區 - 標準風格 */}
+                {/* 主內容區 */}
+                <div ref={splitContainerRef} className="flex-1 flex flex-col lg:flex-row overflow-hidden p-4 gap-4">
+                    
+                    {/* 左側：學生卡片區 - 剪貼簿/軟木塞風格 */}
                     <div 
-                    className={`flex flex-col bg-white rounded-[2.5rem] shadow-xl border-4 border-white overflow-hidden relative transition-all duration-300 ease-in-out ${viewMode === 'notebook' ? 'hidden' : ''}`}
-                    style={viewMode === 'split' && typeof window !== 'undefined' && window.innerWidth >= 1024 ? { width: `calc(${splitRatio}% - 0.75rem)`, flex: 'none' } : { flex: 1 }}
+                    className={`flex flex-col bg-[#8d6e63] border-4 border-[#5d4037] shadow-2xl relative transition-all duration-300 ${viewMode === 'notebook' ? 'hidden' : ''}`}
+                    style={viewMode === 'split' && typeof window !== 'undefined' && window.innerWidth >= 1024 ? { width: `calc(${splitRatio}% - 1rem)`, flex: 'none' } : { flex: 1 }}
                     >
-                    {/* 超大時鐘區域 - 修正排版：兩行顯示 */}
-                    <div className="flex-none flex flex-col items-center justify-center py-6 border-b border-slate-100 gap-3 cursor-pointer group/clock relative overflow-hidden" onClick={toggleClockStyle}>
-                        <div className="absolute inset-0 bg-slate-50/50 pointer-events-none"></div>
-                        
-                        {/* 第一行：時間 */}
-                        <div className={`font-mono font-black tracking-widest leading-none select-none transition-all duration-300 relative z-10 ${currentClockStyle.text} group-hover/clock:scale-105`} 
-                            style={{ fontSize: '8rem' }}> {/* 縮小一點點以免爆版 */}
-                            {currentTime.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                        
-                        {/* 第二行：並排顯示 [遲到時間] 和 [當前模式] */}
-                        <div className="flex items-center justify-center gap-4 mt-2 w-full px-4 relative z-10">
-                            {/* 遲到時間 */}
-                            <div className="flex items-center gap-2 text-xl font-bold text-slate-500 bg-white px-6 py-2 rounded-xl shadow-sm border border-slate-200">
-                                <AlertCircle className="w-6 h-6 text-orange-500" />
-                                <span>遲到: {lateThreshold}</span>
-                            </div>
+                        {/* 軟木塞背景紋理 */}
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cork-board.png')] opacity-70 pointer-events-none"></div>
 
-                            {/* 當前模式 */}
-                            <div className={`text-xl font-black px-6 py-2 rounded-xl shadow-sm border border-slate-200 flex items-center gap-2 ${
-                            checkInMode === 'attendance' ? 'bg-indigo-100 text-indigo-600' :
-                            checkInMode === 'brushing' ? 'bg-teal-100 text-teal-600' :
-                            checkInMode === 'lunch' ? 'bg-orange-100 text-orange-600' : 
-                            checkInMode === 'correction' ? 'bg-pink-100 text-pink-600' : 'bg-purple-100 text-purple-600'}`}>
-                                {getModeName(checkInMode)}
+                        {/* 時鐘區域：像是掛在牆上的舊時鐘或日曆 */}
+                        <div className="flex-none flex flex-col items-center justify-center py-6 border-b-4 border-[#5d4037] shadow-lg bg-[#fcfbf9] relative z-10 cursor-pointer group" onClick={toggleClockStyle}>
+                            <div className="flex items-baseline gap-2">
+                                <span className={`font-mono font-black text-6xl tracking-tighter ${currentClockStyle.text}`} style={{ textShadow: '2px 2px 0px rgba(0,0,0,0.1)' }}>
+                                    {currentTime.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                <span className="text-sm font-bold text-gray-400 font-mono animate-pulse">{currentTime.getSeconds()}</span>
                             </div>
+                            
+                            {/* 狀態標籤掛牌 */}
+                            <div className="flex items-center justify-center gap-4 mt-2 w-full px-4">
+                                <div className="flex items-center gap-2 text-sm font-bold text-retro-ink border border-retro-ink px-3 py-1 bg-white shadow-sm rotate-1">
+                                    <Clock className="w-4 h-4" />
+                                    <span className="font-mono">遲到線: {lateThreshold}</span>
+                                </div>
+                                <div className={`text-sm font-black px-4 py-1 border-2 border-retro-ink shadow-hard-sm -rotate-1 ${
+                                checkInMode === 'attendance' ? 'bg-retro-paper text-retro-ink' :
+                                checkInMode === 'brushing' ? 'bg-green-100 text-retro-green' :
+                                checkInMode === 'lunch' ? 'bg-orange-100 text-retro-red' : 
+                                checkInMode === 'correction' ? 'bg-blue-100 text-retro-blue' : 'bg-purple-100 text-purple-700'}`}>
+                                    {getModeName(checkInMode)}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 學生卡片 Grid */}
+                        <div className="flex-1 p-4 overflow-hidden z-10 h-full relative">
+                            {students.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full text-[#5d4037]/50 gap-4" onClick={() => setShowSettings(true)}>
+                                <div className="border-4 border-dashed border-[#5d4037]/30 p-8 rounded-full">
+                                    <Users className="w-16 h-16" />
+                                </div>
+                                <p className="text-xl font-bold font-serif">尚未建立名冊</p>
+                            </div>
+                            ) : (
+                            <div 
+                                className={`grid ${getGridColsClass()} gap-3 h-full`} 
+                                style={{ 
+                                    fontFamily: currentFontFamily, 
+                                    gridAutoRows: 'minmax(0, 1fr)'
+                                }}
+                            >
+                                {students.map((student) => <StudentCard key={student.id} student={student} mode={checkInMode} fontFamily={currentFontFamily} onClick={() => handleStudentClick(student.id)} />)}
+                            </div>
+                            )}
                         </div>
                     </div>
 
-                    <div className="flex-1 p-2 overflow-hidden z-10 h-full"> {/* 移除 p-4 改 p-2, overflow-hidden */}
-                        {students.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4 cursor-pointer group" onClick={() => setShowSettings(true)}>
-                            <div className="bg-white p-8 rounded-full border-4 border-dashed border-slate-300 group-hover:border-indigo-300 group-hover:scale-110 transition-all shadow-sm">
-                                <Users className="w-16 h-16 opacity-50 group-hover:text-indigo-400 transition-colors" />
-                            </div>
-                            <div className="text-center">
-                                <p className="text-2xl font-black text-slate-500 group-hover:text-indigo-500 transition-colors">目前沒有學生資料</p>
-                                <p className="text-base text-slate-400 mt-2">請點擊此處或右上角設定匯入名單</p>
-                            </div>
-                        </div>
-                        ) : (
-                        <div 
-                            className={`grid ${getGridColsClass()} gap-2 h-full`} 
-                            style={{ 
-                                fontFamily: currentFontFamily, 
-                                gridAutoRows: 'minmax(0, 1fr)' // 關鍵：讓格子自動填滿高度
-                            }}
-                        >
-                            {students.map((student) => <StudentButton key={student.id} student={student} mode={checkInMode} fontFamily={currentFontFamily} onClick={() => handleStudentClick(student.id)} />)}
-                        </div>
-                        )}
-                    </div>
-                    </div>
-
+                    {/* 分隔條 */}
                     {viewMode === 'split' && (
-                    <div className="hidden lg:flex w-4 cursor-col-resize items-center justify-center hover:bg-black/5 rounded-full transition-colors z-30 -ml-2 -mr-2" onMouseDown={handleDragStart}>
-                        <div className="w-1 h-12 bg-slate-300 rounded-full shadow-sm"></div>
+                    <div className="hidden lg:flex w-4 cursor-col-resize items-center justify-center z-30 -ml-2 -mr-2 group" onMouseDown={handleDragStart}>
+                        <div className="w-1.5 h-16 bg-[#5d4037] border border-[#3e2723] rounded-full group-hover:bg-[#8d6e63] transition-colors shadow-lg"></div>
                     </div>
                     )}
 
-                    {/* 右側：黑板聯絡簿區 - 修改：移除內距讓黑板貼齊外框 */}
+                    {/* 右側：黑板區 - 實木邊框風格 */}
                     <div 
-                    // 移除 p-5，讓內部 w-full h-full 填滿，移除 bg-white
-                    className={`flex flex-col relative justify-center items-center rounded-[2.5rem] shadow-xl overflow-hidden transition-all duration-300 ease-in-out ${viewMode === 'checkin' ? 'hidden' : ''}`}
-                    style={viewMode === 'split' && typeof window !== 'undefined' && window.innerWidth >= 1024 ? { width: `calc(${100 - splitRatio}% - 0.75rem)`, flex: 'none' } : { flex: 1 }}
+                    className={`flex flex-col relative rounded-sm shadow-2xl overflow-hidden transition-all duration-300 ${viewMode === 'checkin' ? 'hidden' : ''}`}
+                    style={viewMode === 'split' && typeof window !== 'undefined' && window.innerWidth >= 1024 ? { width: `calc(${100 - splitRatio}% - 1rem)`, flex: 'none' } : { flex: 1 }}
                     >
-                    <div className={`w-full h-full bg-[#2d4035] border-[16px] border-[#a0522d] rounded-[2.5rem] shadow-[inset_0_0_80px_rgba(0,0,0,0.5),0_20px_60px_-10px_rgba(0,0,0,0.5)] flex flex-col relative overflow-hidden ring-4 ring-[#8b4513]/30`}>
-                        {/* 黑板紋理 */}
-                        <div className="absolute inset-0 opacity-20 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                        {/* 實木邊框 */}
+                        <div className="absolute inset-0 border-[16px] border-[#3e2723] pointer-events-none z-20 shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]"></div>
                         
-                        <div className="flex justify-between items-center p-6 border-b border-white/10 border-dashed text-white/90 z-10">
-                        <div className="flex items-center gap-3">
-                            <Star className="w-8 h-8 text-yellow-300 fill-yellow-300 animate-pulse drop-shadow-md" />
-                            <h2 className="text-3xl font-black tracking-widest font-serif text-[#f0f0f0] drop-shadow-md">聯絡簿</h2>
-                        </div>
-                        <div className="flex items-center gap-3 bg-white/10 rounded-2xl p-1.5 shadow-inner">
-                            <button onClick={() => setNotebookDate(d => { const n = new Date(d); n.setDate(n.getDate()-1); return n; })} className="p-2 hover:bg-white/20 rounded-xl transition-colors"><ChevronLeft className="w-5 h-5" /></button>
-                            <span className="text-lg font-bold px-3 font-mono tracking-wider">{getNoteDateKey(notebookDate)}</span>
-                            <button onClick={() => setNotebookDate(d => { const n = new Date(d); n.setDate(n.getDate()+1); return n; })} className="p-2 hover:bg-white/20 rounded-xl transition-colors"><ChevronRight className="w-5 h-5" /></button>
-                        </div>
+                        {/* 黑板背景 */}
+                        <div className="absolute inset-0 bg-[#263238] z-0">
+                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30"></div>
+                             {/* 粉筆灰髒跡 */}
+                             <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5 pointer-events-none"></div>
                         </div>
 
-                        <div className="flex justify-end gap-3 px-6 py-3 z-10">
-                            <div className="flex items-center bg-white/10 rounded-xl shadow-inner">
-                                <button onClick={() => setNotebookFontSize(p => Math.max(16, p-2))} className="p-2 hover:bg-white/20 text-white rounded-l-xl transition-colors"><Minus className="w-4 h-4" /></button>
-                                <span className="text-sm font-mono w-8 text-center text-white/90 font-bold">{notebookFontSize}</span>
-                                <button onClick={() => setNotebookFontSize(p => Math.min(72, p+2))} className="p-2 hover:bg-white/20 text-white rounded-r-xl transition-colors"><Plus className="w-4 h-4" /></button>
+                        {/* 黑板頂部資訊列 */}
+                        <div className="relative z-10 flex justify-between items-center p-6 text-gray-200 mt-2">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-red-600/20 p-2 rounded-full border border-red-500/50">
+                                    <Star className="w-6 h-6 text-red-400 fill-red-400/50 animate-pulse" />
+                                </div>
+                                <h2 className="text-2xl font-black font-serif tracking-widest text-[#eceff1] opacity-90" style={{ textShadow: '1px 1px 2px black' }}>聯絡事項</h2>
                             </div>
-                            
-                            <button 
-                            onClick={() => setWritingMode(prev => prev === 'horizontal' ? 'vertical' : 'horizontal')} 
-                            className={`p-2 rounded-xl text-white transition-all shadow-md ${writingMode === 'vertical' ? 'bg-indigo-500 border border-indigo-400' : 'bg-white/10 hover:bg-white/20 border border-white/10'}`} 
-                            title={writingMode === 'horizontal' ? "切換為直式" : "切換為橫式"}
-                            >
-                            {writingMode === 'horizontal' ? <AlignVerticalJustifyStart className="w-5 h-5" /> : <AlignHorizontalJustifyStart className="w-5 h-5" />}
-                            </button>
-                            
-                            {/* 擦黑板按鈕 */}
-                            <button onClick={confirmClearNote} className="p-2 rounded-xl text-white transition-all bg-rose-500 hover:bg-rose-400 shadow-md border border-rose-400" title="擦黑板 (清空內容)">
-                            <Eraser className="w-5 h-5" />
-                            </button>
+                            <div className="flex items-center gap-4 font-mono text-lg text-[#eceff1]">
+                                <button onClick={() => setNotebookDate(d => { const n = new Date(d); n.setDate(n.getDate()-1); return n; })} className="hover:text-white hover:scale-125 transition-transform"><ChevronLeft /></button>
+                                <span className="border-b-2 border-white/20 px-2">{getNoteDateKey(notebookDate)}</span>
+                                <button onClick={() => setNotebookDate(d => { const n = new Date(d); n.setDate(n.getDate()+1); return n; })} className="hover:text-white hover:scale-125 transition-transform"><ChevronRight /></button>
+                            </div>
+                        </div>
 
-                            <button onClick={() => setIsEditingNote(!isEditingNote)} className={`p-2 rounded-xl text-white transition-all shadow-md border ${isEditingNote ? 'bg-green-500 hover:bg-green-400 border-green-400' : 'bg-yellow-500 hover:bg-yellow-400 border-yellow-400'}`}>
-                            {isEditingNote ? <Check className="w-5 h-5" /> : <Edit3 className="w-5 h-5" />}
+                        {/* 黑板控制按鈕 (像粉筆槽上的工具) */}
+                        <div className="relative z-10 flex justify-end gap-3 px-6 pb-2 mr-4">
+                            <div className="flex items-center bg-white/10 rounded-sm border border-white/20">
+                                <button onClick={() => setNotebookFontSize(p => Math.max(16, p-2))} className="p-1.5 hover:bg-white/10 text-white"><Minus className="w-4 h-4" /></button>
+                                <span className="text-xs font-mono w-8 text-center text-white/80">{notebookFontSize}</span>
+                                <button onClick={() => setNotebookFontSize(p => Math.min(72, p+2))} className="p-1.5 hover:bg-white/10 text-white"><Plus className="w-4 h-4" /></button>
+                            </div>
+                            <button onClick={() => setWritingMode(prev => prev === 'horizontal' ? 'vertical' : 'horizontal')} className="p-1.5 text-white/80 hover:text-white border border-white/20 bg-white/5">
+                                {writingMode === 'horizontal' ? <AlignVerticalJustifyStart className="w-4 h-4" /> : <AlignHorizontalJustifyStart className="w-4 h-4" />}
+                            </button>
+                            <button onClick={confirmClearNote} className="p-1.5 text-rose-300 hover:text-rose-100 border border-rose-500/30 bg-rose-500/10">
+                                <Eraser className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setIsEditingNote(!isEditingNote)} className={`p-1.5 border transition-all ${isEditingNote ? 'bg-green-600/50 border-green-400 text-green-100' : 'bg-white/5 border-white/20 text-white/80'}`}>
+                                {isEditingNote ? <Check className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
                             </button>
                         </div>
 
-                        <div className="flex-1 p-8 relative overflow-hidden z-10">
+                        {/* 書寫區域 */}
+                        <div className="flex-1 p-8 relative overflow-hidden z-10 mb-8 mx-4">
                         {isEditingNote ? (
                             <textarea
                             value={currentNoteContent}
                             onChange={(e) => updateCurrentNote(e.target.value)}
-                            className={`w-full h-full bg-black/20 text-white font-serif outline-none resize-none p-6 rounded-3xl border-2 border-dashed border-white/20 leading-relaxed tracking-wider placeholder-white/30 ${writingMode === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}
+                            className={`w-full h-full bg-transparent text-white/90 font-serif outline-none resize-none p-4 leading-relaxed tracking-wider border border-white/10 ${writingMode === 'vertical' ? 'writing-vertical' : ''}`}
                             style={{ fontFamily: currentFontFamily, fontSize: `${notebookFontSize}px` }}
-                            placeholder="輸入事項 (每行一項)..."
+                            placeholder="今日事項..."
                             />
                         ) : (
                             <div 
-                            className={`w-full h-full content-start gap-x-16 gap-y-6 ${writingMode === 'vertical' ? 'flex flex-col flex-wrap [writing-mode:vertical-rl] items-start content-start' : 'grid grid-flow-col grid-rows-6'}`}
+                            className={`w-full h-full content-start gap-x-12 gap-y-4 ${writingMode === 'vertical' ? 'flex flex-col flex-wrap writing-vertical items-start content-start' : 'flex flex-col'}`}
                             style={{ fontFamily: currentFontFamily, fontSize: `${notebookFontSize}px` }}
                             >
                                 {noteLines.map((line, idx) => (
                                 <div 
                                     key={idx} 
-                                    className={`flex ${writingMode === 'vertical' ? 'flex-row items-center gap-3 py-2 min-h-[1em]' : 'flex-row items-baseline gap-4 my-1'} text-white font-medium drop-shadow-md`}
+                                    className={`flex ${writingMode === 'vertical' ? 'flex-row items-center gap-2 py-2 min-h-[1em]' : 'flex-row items-baseline gap-3 my-1'} text-white/95 font-medium`}
+                                    style={{ textShadow: '1px 1px 0px rgba(0,0,0,0.5)' }}
                                 >
-                                    <span className={`text-yellow-400 font-black font-mono select-none drop-shadow-md ${writingMode === 'vertical' ? '[writing-mode:horizontal-tb] mb-1' : ''}`}>
+                                    <span className={`text-[#f1c40f] font-black font-mono select-none opacity-80 ${writingMode === 'vertical' ? '[writing-mode:horizontal-tb] mb-2' : ''}`}>
                                     {idx + 1}.
                                     </span>
-                                    <span className="whitespace-pre-wrap leading-relaxed tracking-wide drop-shadow-sm">{line}</span>
+                                    <span className={`whitespace-pre-wrap leading-relaxed tracking-wide ${writingMode === 'vertical' ? 'rotate-0' : ''}`}>{line}</span>
                                 </div>
                                 ))}
                             </div>
                         )}
                         </div>
-                        
-                        {/* 粉筆槽 */}
-                        <div className="h-10 bg-[#3e2714] border-t-8 border-[#2a1a0e] relative shadow-inner shrink-0 z-20 flex items-center px-10 gap-6">
-                            <div className="w-16 h-3 bg-white/90 rounded-sm shadow-md transform rotate-1"></div>
-                            <div className="w-10 h-3 bg-pink-300/90 rounded-sm shadow-md transform -rotate-2"></div>
-                            <div className="w-8 h-3 bg-blue-300/90 rounded-sm shadow-md transform rotate-3"></div>
+
+                        {/* 粉筆槽裝飾 */}
+                        <div className="absolute bottom-4 left-0 right-0 h-4 bg-transparent z-20 px-12 flex items-end gap-8 opacity-80 pointer-events-none">
+                            <div className="w-12 h-2 bg-white rounded-full shadow-sm transform rotate-1"></div>
+                            <div className="w-8 h-2 bg-red-300 rounded-full shadow-sm transform -rotate-2"></div>
+                            <div className="w-20 h-4 bg-[#5d4037] ml-auto rounded-sm border-t border-[#8d6e63]"></div> {/* 板擦 */}
                         </div>
-                    </div>
                     </div>
                 </div>
 
-                <div className="bg-slate-200 py-1 text-center text-[10px] text-slate-500 font-bold shrink-0">設計者：仙姑凱西</div>
+                {/* Footer 區塊更新：顯示版權聲明 */}
+                <div className="bg-[#5d4037] py-1 text-center text-[10px] text-[#d7ccc8] font-mono shrink-0 border-t border-[#3e2723] z-50 relative">
+                    © 2026 Kathy's Classroom routines, Created with Google Apps Script & Tailwind CSS
+                </div>
+
+                {/* 右下角浮動標籤：復古印章風格 */}
+                <a 
+                    href="https://kathy594520.github.io/new.github.io/AI/AI" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="fixed bottom-8 right-6 z-[60] bg-retro-red text-[#fffbf0] px-3 py-1.5 font-black font-serif border-2 border-[#fffbf0] shadow-hard transform -rotate-6 hover:rotate-0 hover:scale-110 transition-all text-xs tracking-widest flex items-center gap-2 group cursor-pointer"
+                    title="點擊前往"
+                >
+                    <ExternalLink className="w-3 h-3 text-[#fffbf0]" />
+                    <span className="border-b border-[#fffbf0]/50 pb-0.5 group-hover:border-[#fffbf0]">仙姑凱西設計</span>
+                </a>
+
                 </div>
             );
         };
 
-        // 模式按鈕：標準風格 (修正 padding)
+        // 元件：模式切換按鈕 (郵票/標籤風格)
         const ModeButton = ({ active, onClick, icon, label, color }) => (
-            <button onClick={onClick} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all shrink-0 border whitespace-nowrap ${active ? `bg-white shadow-md border-slate-200 ${color.split(' ')[0]} ring-1 ring-slate-200` : 'border-transparent text-slate-500 hover:bg-white hover:text-slate-700'}`}>
-                {icon}<span className="text-xs font-bold">{label}</span>
+            <button onClick={onClick} className={`flex items-center gap-2 px-3 py-1.5 border-2 transition-all shrink-0 font-serif relative overflow-hidden group ${active ? `${color} shadow-hard-sm -translate-y-1` : 'bg-white border-gray-300 text-gray-400 hover:border-retro-ink hover:text-retro-ink'}`}>
+                {active && <div className="absolute -right-2 -top-2 w-6 h-6 bg-white rotate-45 border border-retro-ink"></div>} {/* 摺角效果 */}
+                {icon}
+                <span className="text-sm font-bold tracking-wider">{label}</span>
             </button>
         );
 
-        // 學生按鈕：標準卡片風格 (自動縮放 + CSS Container Queries 實現字體自適應)
-        const StudentButton = ({ student, onClick, fontFamily, mode }) => {
-            let bgClass = "bg-white hover:bg-slate-50", borderClass = "border-slate-200", textClass = "text-slate-800", statusIcon = null;
-            let shadowClass = "shadow-sm hover:shadow-md";
+        // 元件：工具列按鈕 (鉛筆盒風格)
+        const ToolButton = ({ onClick, icon, title, danger }) => (
+            <button 
+                onClick={onClick} 
+                className={`p-2 border-2 shadow-hard-sm transition-transform active:translate-y-[2px] active:shadow-none bg-white ${danger ? 'text-retro-red border-retro-red hover:bg-red-50' : 'text-retro-ink border-retro-ink hover:bg-yellow-50'}`} 
+                title={title}
+            >
+                {icon}
+            </button>
+        );
+
+        // 元件：學生卡片 (圖書卡/索引卡風格)
+        const StudentCard = ({ student, onClick, fontFamily, mode }) => {
+            let bgStyle = "bg-[#fffbf0]", 
+                borderStyle = "border-gray-300", 
+                textStyle = "text-gray-700", 
+                stamp = null;
 
             if (mode === 'attendance') {
                 switch (student.status) {
                 case 'idle': 
-                    bgClass = "bg-white hover:bg-slate-50"; 
-                    textClass = "text-slate-900"; 
-                    borderClass = "border-slate-200";
+                    // 預設狀態：像是一張乾淨的卡片
+                    bgStyle = "bg-[#fffbf0]"; 
+                    borderStyle = "border-gray-300 group-hover:border-retro-ink";
+                    textStyle = "text-retro-ink";
                     break; 
                 case 'present': 
-                    bgClass = "bg-emerald-50 hover:bg-emerald-100"; 
-                    borderClass = "border-emerald-200"; 
-                    textClass = "text-emerald-700"; 
-                    statusIcon = <span className="text-[10px] bg-white/80 px-2 py-0.5 rounded-full text-emerald-800 font-black shadow-sm">{student.arrivalTime}</span>; 
-                    shadowClass = "shadow-md shadow-emerald-100";
+                    // 準時：蓋上藍色圓圈章
+                    bgStyle = "bg-[#fffbf0]"; 
+                    borderStyle = "border-retro-blue"; 
+                    textStyle = "text-retro-blue"; 
+                    stamp = (
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] border-4 border-retro-blue rounded-full opacity-30 animate-stamp flex items-center justify-center">
+                            <span className="text-[10px] font-black -rotate-12 bg-white px-1">{student.arrivalTime}</span>
+                        </div>
+                    );
                     break;
                 case 'late_absent': 
-                    bgClass = "bg-rose-50 hover:bg-rose-100"; 
-                    borderClass = "border-rose-200"; 
-                    textClass = "text-rose-600"; 
-                    statusIcon = <span className="text-[10px] bg-white/80 px-2 py-0.5 rounded-full text-rose-700 font-black animate-pulse shadow-sm">遲到</span>; 
-                    shadowClass = "shadow-md shadow-rose-100 ring-2 ring-rose-200";
+                    // 遲到未到：紅色警告底色
+                    bgStyle = "bg-red-50"; 
+                    borderStyle = "border-retro-red border-dashed"; 
+                    textStyle = "text-retro-red"; 
+                    stamp = <div className="absolute top-1 right-1 text-retro-red opacity-80 animate-bounce"><AlertCircle size={16} /></div>;
                     break;
                 case 'late_arrived': 
-                    bgClass = "bg-orange-50 hover:bg-orange-100"; 
-                    borderClass = "border-orange-200"; 
-                    textClass = "text-orange-700"; 
-                    statusIcon = <div className="flex flex-col items-center leading-none"><span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.5 rounded-md font-bold mb-0.5 shadow-sm">遲到</span><span className="text-[10px] font-bold">{student.arrivalTime}</span></div>; 
+                    // 遲到已到：蓋上紅色「遲」字章
+                    bgStyle = "bg-orange-50"; 
+                    borderStyle = "border-retro-red"; 
+                    textStyle = "text-retro-ink"; 
+                    stamp = (
+                        <div className="absolute top-1 right-1 border-2 border-retro-red px-1 py-0.5 text-[10px] font-black text-retro-red rotate-12 animate-stamp">
+                            LATE {student.arrivalTime}
+                        </div>
+                    );
                     break;
-                default: break;
                 }
-            } else if (mode === 'brushing' && student.brushing) { bgClass = "bg-teal-50 hover:bg-teal-100"; borderClass = "border-teal-200"; textClass = "text-teal-700"; statusIcon = <Sparkles className="w-5 h-5 text-teal-500 fill-teal-200" />; }
-                else if (mode === 'lunch' && student.lunch) { bgClass = "bg-orange-50 hover:bg-orange-100"; borderClass = "border-orange-200"; textClass = "text-orange-700"; statusIcon = <Utensils className="w-5 h-5 text-orange-500" />; }
-                else if (mode === 'duty' && student.isDuty) { bgClass = "bg-purple-50 hover:bg-purple-100"; borderClass = "border-purple-300 ring-2 ring-purple-200"; textClass = "text-purple-700"; statusIcon = <Award className="w-6 h-6 text-purple-500 fill-purple-200 animate-bounce" />; }
-                else if (mode === 'correction' && student.correction) { bgClass = "bg-pink-50 hover:bg-pink-100"; borderClass = "border-pink-300 ring-2 ring-pink-200"; textClass = "text-pink-700"; statusIcon = <BookOpen className="w-5 h-5 text-pink-500 fill-pink-200" />; }
+            } else if (mode === 'brushing' && student.brushing) { 
+                bgStyle = "bg-green-50"; borderStyle = "border-retro-green"; textStyle = "text-retro-green"; 
+                stamp = <div className="absolute bottom-1 right-1 text-retro-green opacity-50"><Sparkles size={24} /></div>; 
+            }
+            else if (mode === 'lunch' && student.lunch) { 
+                bgStyle = "bg-orange-50"; borderStyle = "border-orange-400"; textStyle = "text-orange-600"; 
+                stamp = <div className="absolute bottom-1 right-1 text-orange-400 opacity-50 rotate-12"><Utensils size={24} /></div>; 
+            }
+            else if (mode === 'duty' && student.isDuty) { 
+                bgStyle = "bg-purple-50"; borderStyle = "border-purple-400 double-4"; textStyle = "text-purple-700"; 
+                stamp = <div className="absolute top-0 right-2 bg-purple-600 text-white text-[10px] px-1 shadow-sm">值日</div>; 
+            }
+            else if (mode === 'correction' && student.correction) { 
+                bgStyle = "bg-blue-50"; borderStyle = "border-retro-blue"; textStyle = "text-retro-blue"; 
+                stamp = <div className="absolute inset-0 border-2 border-retro-blue rounded-full scale-75 opacity-20"></div>; 
+            }
 
             return (
-                // 這裡加入 containerType: 'size' 讓子元素可以使用 cq (container query) 單位
-                // min-h-0 允許按鈕在 flex/grid 中被壓縮
                 <button 
                     onClick={onClick} 
                     style={{ containerType: 'size' }}
-                    className={`relative w-full h-full min-h-0 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 transform cursor-pointer select-none border-b-[4px] p-1 active:border-b-0 active:translate-y-[4px] px-1 ${bgClass} ${borderClass} ${textClass} ${shadowClass}`}
+                    className={`relative w-full h-full min-h-0 flex flex-col items-center justify-center transition-all duration-100 cursor-pointer select-none border-2 p-1 overflow-hidden group shadow-sm active:scale-95 active:shadow-inner ${bgStyle} ${borderStyle} ${textStyle}`}
                 >
-                {/* 使用 clamp + cq units 來達成「根據容器大小自動縮放字體」
-                    18cqw: 大約是容器寬度的 18% (適合 5-6 個字的寬度)
-                    35cqh: 大約是容器高度的 35% (適合 3 行的高度)
-                    min(): 取兩者較小值，確保不溢出
-                */}
+                {/* 卡片孔洞裝飾 */}
+                <div className="absolute top-1/2 left-1 w-2 h-2 bg-retro-bg rounded-full shadow-inner opacity-40"></div>
+                <div className="absolute top-1/2 right-1 w-2 h-2 bg-retro-bg rounded-full shadow-inner opacity-40"></div>
+                
+                {stamp}
+
                 <span 
-                    className="font-bold leading-tight w-full text-center drop-shadow-sm whitespace-nowrap" 
+                    className="font-bold leading-tight w-full text-center whitespace-nowrap z-10 font-serif" 
                     style={{ 
                         fontFamily, 
                         fontSize: 'clamp(1rem, min(18cqw, 35cqh), 4rem)' 
                     }}
                 >
-                    <span className="mr-[0.2em] opacity-60 font-mono text-[0.8em] align-baseline">{student.id}.</span>{student.name}
+                    <span className="mr-[0.3em] font-mono text-[0.7em] align-middle opacity-50">{student.id}</span>
+                    {student.name}
                 </span>
                 
-                {/* Icon 大小也稍微跟隨高度變化，但有上限 */}
-                <div className="flex items-center justify-center mt-[2cqh] h-[min(20px,15cqh)] w-full">
-                    <div style={{ width: 'clamp(12px, 15cqw, 24px)', height: 'clamp(12px, 15cqw, 24px)' }}>
-                        {statusIcon}
-                    </div>
-                </div>
+                {/* 裝飾線條 */}
+                <div className="absolute bottom-2 w-3/4 h-[1px] bg-current opacity-10"></div>
                 </button>
             );
         };
