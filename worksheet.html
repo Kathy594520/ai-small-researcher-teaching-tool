@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>語法冒險學習單生成器</title>
+    <title>語法冒險學習單生成器 (含注音/楷體版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -11,10 +11,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Zen+Maru+Gothic:wght@500;700;900&family=Balsamiq+Sans:wght@700&display=swap" rel="stylesheet">
     
     <style>
+        /* --- 字型引入 (GitHub Raw 連結) --- */
+        @font-face {
+            font-family: 'ZhuyinFont';
+            /* 使用 raw.githubusercontent.com 以確保可以直接讀取檔案 */
+            src: url('https://raw.githubusercontent.com/Kathy594520/-/main/%E6%B3%A8%E9%9F%B3%E8%8A%AB%E8%8D%BDBpmfIansui-Regular_6131434.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
         /* --- 基礎設定 --- */
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #f3f4f6; }
+        
+        /* 字型類別 */
+        .font-default { font-family: 'Noto Sans TC', sans-serif; }
         .font-rounded { font-family: 'Zen Maru Gothic', sans-serif; }
         .font-hand { font-family: 'Balsamiq+Sans', cursive; }
+        /* 標楷體設定：優先使用常見系統標楷體，無則使用襯線體 */
+        .font-kaiti { font-family: "BiauKai", "DFKai-SB", "KaiTi", "STKaiti", "AR PL UKai TW", serif; }
+        .font-zhuyin { font-family: 'ZhuyinFont', sans-serif; line-height: 1.8; } /* 注音字型行高稍微加大以免重疊 */
 
         /* --- A4 紙張模擬 --- */
         .a4-paper {
@@ -62,6 +77,14 @@
             star: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
         };
 
+        // --- 字型選項 ---
+        const FONT_OPTIONS = {
+            'default': { name: '預設黑體', class: 'font-default' },
+            'rounded': { name: '圓體', class: 'font-rounded' },
+            'kaiti': { name: '標楷體', class: 'font-kaiti' },
+            'zhuyin': { name: '注音字型', class: 'font-zhuyin' }
+        };
+
         // --- 模板資料 ---
         const TEMPLATES = {
             'although': {
@@ -97,7 +120,7 @@
                 headerClass: 'border-4 border-black text-black rounded-xl shadow-none',
                 borderClass: 'border-2 border-black',
                 formulaClass: 'border-2 border-dashed border-black rounded-xl bg-white',
-                fontClass: 'font-rounded',
+                fontDefault: 'rounded',
                 accentColor: 'text-black',
                 connectorClass: 'border-2 border-black rounded-xl px-5 py-2 font-black bg-white text-black text-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]', 
                 partClass: 'border-2 border-black rounded-xl p-4 text-center bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]',
@@ -109,7 +132,7 @@
                 headerClass: 'bg-blue-600 text-white rounded-2xl shadow-md border-none',
                 borderClass: 'border-2 border-gray-100',
                 formulaClass: 'bg-blue-50/50 border-2 border-blue-100 rounded-3xl',
-                fontClass: 'font-rounded',
+                fontDefault: 'rounded',
                 accentColor: 'text-blue-600',
                 connectorClass: 'bg-blue-500 text-white rounded-xl px-5 py-2 font-black text-xl shadow-md transform -rotate-2',
                 partClass: 'bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 text-center shadow-sm',
@@ -121,7 +144,7 @@
                 headerClass: 'bg-amber-700 text-amber-50 border-4 border-amber-900 border-dashed rounded-lg shadow-lg',
                 borderClass: 'border-4 border-dashed border-amber-200',
                 formulaClass: 'bg-amber-100/50 border-4 border-amber-800/20 rounded-xl',
-                fontClass: 'font-hand',
+                fontDefault: 'hand', // 原本預設手寫體，但現在可被覆蓋
                 accentColor: 'text-amber-700',
                 connectorClass: 'bg-amber-600 text-white rounded-xl px-5 py-2 font-black text-xl shadow-md transform rotate-2',
                 partClass: 'bg-[#f8f1e0] border-2 border-amber-300 rounded-2xl p-4 text-center shadow-sm',
@@ -133,7 +156,7 @@
                 headerClass: 'bg-indigo-900 text-indigo-100 rounded-t-3xl border-b-8 border-indigo-500',
                 borderClass: 'border-2 border-indigo-100',
                 formulaClass: 'bg-indigo-50/50 border-2 border-indigo-200 rounded-3xl',
-                fontClass: 'font-rounded',
+                fontDefault: 'rounded',
                 accentColor: 'text-indigo-600',
                 connectorClass: 'bg-indigo-600 text-white rounded-xl px-5 py-2 font-black text-xl shadow-md',
                 partClass: 'bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 text-center shadow-sm',
@@ -155,6 +178,8 @@
             const [activeTab, setActiveTab] = useState('templates');
             const [currentStyle, setCurrentStyle] = useState('lineart');
             const [mascotType, setMascotType] = useState('robot');
+            // 新增字型狀態，預設為 null (跟隨 Style 設定)，或者直接指定 'default'
+            const [currentFont, setCurrentFont] = useState('default');
 
             const applyTemplate = (key) => setData(prev => ({ ...prev, ...TEMPLATES[key] }));
             const updateField = (field, value, section = null) => {
@@ -166,6 +191,9 @@
             const removeItem = (listName, id) => setData(prev => ({ ...prev, [listName]: prev[listName].filter(item => item.id !== id) }));
 
             const style = VISUAL_STYLES[currentStyle];
+            
+            // 決定最終使用的字型 Class
+            const fontClass = FONT_OPTIONS[currentFont]?.class || FONT_OPTIONS['default'].class;
 
             return (
                 <div className="flex h-screen w-full overflow-hidden text-gray-800 bg-gray-100 font-sans">
@@ -220,6 +248,19 @@
                                             {['robot', 'owl', 'cat', 'hero'].map(m => (
                                                 <button key={m} onClick={() => setMascotType(m)} className={`text-2xl p-2 rounded-md transition-all ${mascotType === m ? 'bg-white shadow scale-110' : 'opacity-50'}`}>
                                                     {m === 'robot' ? '🤖' : m === 'owl' ? '🦉' : m === 'cat' ? '🐱' : '🦸'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* 新增字型選擇區塊 - 調整為 2 列以容納 4 個選項 */}
+                                    <div>
+                                        <h3 className="text-sm font-bold text-gray-900 mb-3">D. 選擇字型</h3>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {Object.entries(FONT_OPTIONS).map(([key, font]) => (
+                                                <button key={key} onClick={() => setCurrentFont(key)} className={`py-2 px-1 border-2 rounded-lg text-xs font-bold transition-all ${currentFont === key ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:bg-gray-50'}`}>
+                                                    <span className={font.class} style={{ fontSize: '1.2rem' }}>字</span><br/>
+                                                    {font.name}
                                                 </button>
                                             ))}
                                         </div>
@@ -287,7 +328,7 @@
                     <div className="flex-1 overflow-auto flex justify-center p-8 bg-gray-200/50">
                         <div className="a4-container origin-top transform scale-[0.65] lg:scale-[0.8] xl:scale-[0.9] transition-transform">
                             
-                            <div className={`a4-paper p-10 ${style.fontClass} ${style.bgClass} text-gray-800`}>
+                            <div className={`a4-paper p-10 ${fontClass} ${style.bgClass} text-gray-800`}>
                                 
                                 {currentStyle === 'adventure' && <div className="absolute inset-0 border-[20px] border-amber-100 m-4 pointer-events-none opacity-50"></div>}
                                 {currentStyle === 'space' && <><div className="absolute top-10 right-10 text-4xl opacity-20">🪐</div><div className="absolute bottom-20 left-10 text-6xl opacity-10">🚀</div></>}
@@ -359,7 +400,7 @@
                                         {data.exercises.map((ex, i) => (
                                             <div key={ex.id} className="relative group">
                                                 <div className="flex items-baseline gap-3">
-                                                    <span className={`font-bold text-xl font-hand ${currentStyle==='lineart'?'text-black':'text-gray-400'}`}>Q{i+1}.</span>
+                                                    <span className={`font-bold text-xl ${currentStyle==='lineart'?'text-black':'text-gray-400'}`}>Q{i+1}.</span>
                                                     <div className={`text-xl font-medium border-b-2 pb-2 w-full leading-loose flex flex-wrap items-center ${currentStyle==='lineart'?'border-black border-dashed text-black':'border-gray-200 text-gray-800'}`}>
                                                         {ex.prompt}
                                                         {currentStyle === 'lineart' && <span className="ml-2">{Icons.pencil}</span>}
