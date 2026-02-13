@@ -493,7 +493,7 @@
                 e.stopPropagation();
                 setConfirmConfig({
                 show: true,
-                title: "移除學籍",
+                title: "移除學生",
                 message: `確定要將座號 ${id} 從名冊中移除嗎？此操作不可逆。`,
                 type: "danger",
                 action: () => { setStudents(prev => prev.filter(s => s.id !== id)); }
@@ -1204,7 +1204,7 @@
 
                 {/* Footer 區塊 */}
                 <div className="bg-[#5d4037] py-1 text-center text-[10px] text-[#d7ccc8] font-mono shrink-0 border-t border-[#3e2723] z-50 relative">
-                    © 2026 Kathy's Classroom routines, Created with Google Apps Script & Tailwind CSS
+                    Classroom routines Created with Google Apps Script & Tailwind CSS 資料只存在您的瀏覽器中，不會上傳到雲端。
                 </div>
 
                 </div>
@@ -1320,4 +1320,5 @@
         root.render(<App />);
     </script>
 </body>
+
 </html>
