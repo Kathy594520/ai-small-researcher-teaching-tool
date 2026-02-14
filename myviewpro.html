@@ -93,9 +93,9 @@
         /* 調整主容器寬度配置 */
         .main-container { 
             width: 99%; 
-            max-width: 100%; /* 移除最大寬度限制，佔滿螢幕 */
+            max-width: 100%; 
             display: grid; 
-            grid-template-columns: 1fr 250px; /* 側邊欄縮小至 250px */
+            grid-template-columns: 1fr 250px; 
             gap: 15px; 
             padding: 0 10px 20px 10px;
             flex: 1;
@@ -111,7 +111,7 @@
             aspect-ratio: 16/9;
             box-shadow: 0 0 30px rgba(0,0,0,0.5);
             transition: border-color 0.3s;
-            width: 100%; /* 確保填滿 */
+            width: 100%; 
         }
         .video-box.active { border-color: var(--cyber-cyan); box-shadow: 0 0 20px rgba(0,242,255,0.1); }
         
@@ -167,7 +167,7 @@
         .panel { 
             background: var(--glass); 
             backdrop-filter: blur(15px); 
-            padding: 20px; /* 稍微縮小內距 */
+            padding: 20px; 
             border-radius: 20px; 
             border: 1px solid var(--glass-border); 
             margin-bottom: 15px; 
@@ -212,7 +212,7 @@
         /* 星星評分系統樣式 - 調整大小以適應窄欄 */
         .score-display {
             text-align: center;
-            font-size: 2.2rem; /* 縮小字體 */
+            font-size: 2.2rem;
             font-weight: bold;
             color: var(--gold);
             text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
@@ -222,24 +222,21 @@
         .star-container {
             display: flex;
             justify-content: center;
-            gap: 5px; /* 縮小間距 */
-            margin-bottom: 15px;
+            gap: 5px; 
+            margin-bottom: 10px;
             background: rgba(0,0,0,0.3);
             padding: 8px;
             border-radius: 50px;
             border: 1px solid var(--glass-border);
+            cursor: pointer; /* 增加手指游標 */
         }
         .star-btn {
-            font-size: 1.6rem; /* 縮小星星 */
+            font-size: 1.6rem; 
             color: #444;
             cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: transform 0.1s;
             user-select: none;
-        }
-        .star-btn:hover {
-            transform: scale(1.3);
-            color: var(--gold);
-            text-shadow: 0 0 10px var(--gold);
+            /* 移除舊的 hover 樣式，改用 JS 控制 */
         }
         .star-btn:active {
             transform: scale(0.9);
@@ -249,6 +246,18 @@
             font-size: 0.85rem;
             color: var(--text-main);
             opacity: 0.7;
+        }
+        
+        /* 投票回饋文字 */
+        .vote-feedback-text {
+            height: 20px; 
+            font-size: 0.85rem; 
+            color: var(--gold); 
+            text-align: center; 
+            margin-bottom: 10px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
         .hidden { display: none !important; }
@@ -448,13 +457,15 @@
             </div>
 
             <!-- 星星按鈕容器 -->
-            <div class="star-container">
-                <div class="star-btn" onclick="vote(1)">★</div>
-                <div class="star-btn" onclick="vote(2)">★</div>
-                <div class="star-btn" onclick="vote(3)">★</div>
-                <div class="star-btn" onclick="vote(4)">★</div>
-                <div class="star-btn" onclick="vote(5)">★</div>
+            <div class="star-container" onmouseleave="resetStars()">
+                <div class="star-btn" onmouseenter="highlightStars(1)" onclick="vote(1)">★</div>
+                <div class="star-btn" onmouseenter="highlightStars(2)" onclick="vote(2)">★</div>
+                <div class="star-btn" onmouseenter="highlightStars(3)" onclick="vote(3)">★</div>
+                <div class="star-btn" onmouseenter="highlightStars(4)" onclick="vote(4)">★</div>
+                <div class="star-btn" onmouseenter="highlightStars(5)" onclick="vote(5)">★</div>
             </div>
+            
+            <div id="vote-feedback" class="vote-feedback-text"></div>
 
             <div class="total-votes">總票數: <span id="totalVotes" style="color:var(--cyber-cyan); font-weight:bold;">0</span></div>
 
@@ -734,9 +745,52 @@
         document.getElementById('avgScore').innerText = avg;
     }
 
+    // 星星互動效果：滑鼠移入時亮起前面的星星
+    function highlightStars(count) {
+        const stars = document.querySelectorAll('.star-btn');
+        const labels = ["加油", "普通", "還行", "不錯", "超讚！"];
+        const feedback = document.getElementById('vote-feedback');
+        
+        stars.forEach((star, index) => {
+            if (index < count) {
+                star.style.color = 'var(--gold)';
+                star.style.textShadow = '0 0 10px var(--gold)';
+                star.style.transform = 'scale(1.1)';
+            } else {
+                star.style.color = '#444';
+                star.style.textShadow = 'none';
+                star.style.transform = 'scale(1)';
+            }
+        });
+        
+        // 顯示對應文字
+        feedback.innerText = `${count} 顆星 - ${labels[count-1]}`;
+        feedback.style.opacity = '1';
+    }
+
+    // 滑鼠移出時重置 (恢復成未選狀態)
+    function resetStars() {
+        const stars = document.querySelectorAll('.star-btn');
+        const feedback = document.getElementById('vote-feedback');
+        
+        stars.forEach(star => {
+            star.style.color = '#444';
+            star.style.textShadow = 'none';
+            star.style.transform = 'scale(1)';
+        });
+        
+        feedback.style.opacity = '0';
+    }
+
     function vote(starVal) {
         const isHost = document.getElementById('tab-h').classList.contains('active');
         
+        // 顯示已送出回饋
+        const feedback = document.getElementById('vote-feedback');
+        feedback.innerText = `已送出 ${starVal} 星好評！`;
+        feedback.style.opacity = '1';
+        setTimeout(() => { if(feedback.innerText.includes('已送出')) feedback.style.opacity = '0'; }, 1500);
+
         if (isHost) {
             // 導播投票 (測試用)
             voteData[starVal-1]++;
