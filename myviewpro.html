@@ -223,7 +223,7 @@
             user-select: all;
         }
 
-        /* 連線確認視窗 */
+        /* 連線確認視窗 & 資訊視窗 */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -245,7 +245,17 @@
             text-align: center;
             box-shadow: 0 0 40px rgba(0, 242, 255, 0.2);
             animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-height: 85vh;
+            overflow-y: auto;
         }
+        .modal-box.wide { max-width: 600px; text-align: left; }
+        
+        .info-section { margin-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; }
+        .info-section:last-child { border-bottom: none; }
+        .info-title { color: var(--cyber-cyan); font-weight: bold; margin-bottom: 10px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+        .info-content { font-size: 0.95rem; line-height: 1.6; opacity: 0.9; color: #ddd; }
+        .info-badge { background: rgba(188, 19, 254, 0.2); padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-left: auto; color: #fff; }
+
         @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -283,6 +293,52 @@
             <button class="action-btn danger" onclick="handleCallDecision(false)">拒絕</button>
             <button class="action-btn" onclick="handleCallDecision(true)">允許並傳送畫面</button>
         </div>
+    </div>
+</div>
+
+<!-- 系統說明 Modal (新增) -->
+<div id="infoModal" class="modal-overlay hidden" onclick="if(event.target === this) closeInfo()">
+    <div class="modal-box wide">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0; border:none;">📖 系統應用指南</h3>
+            <button onclick="closeInfo()" style="background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+        
+        <div class="info-section">
+            <div class="info-title">🧨 過年聚會神器 <span class="info-badge">家庭娛樂</span></div>
+            <div class="info-content">
+                不用安裝 APP，這就是最好的雲端圍爐工具！
+                <ul style="padding-left: 20px; margin: 5px 0;">
+                    <li><strong>全球連線：</strong>遠端親戚掃描 ID 即可加入，手機/平板皆可通。</li>
+                    <li><strong>互動投票：</strong>發起「才藝評分」、「紅包大賽」投票，炒熱氣氛不冷場。</li>
+                    <li><strong>精彩錄影：</strong>一鍵錄下小孩拜年、發紅包的珍貴瞬間，高畫質保存。</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-title">🎓 校園應用場景 <span class="info-badge" style="background:rgba(0, 242, 255, 0.2)">專業教育</span></div>
+            <div class="info-content">
+                專為校園環境設計，解決傳統廣播與視訊痛點：
+                <ul style="padding-left: 20px; margin: 5px 0;">
+                    <li><strong>全校晨會：</strong>雨天或酷暑時，校長室直播，各班投影收看。</li>
+                    <li><strong>運動會轉播：</strong>小記者持手機在操場移動，家長遠端觀賽。</li>
+                    <li><strong>實驗觀察：</strong>理化課微距拍攝實驗過程，全班大螢幕同步看細節。</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-title">🛡️ 技術原理與隱私安全</div>
+            <div class="info-content">
+                本系統採用 <strong>WebRTC (P2P)</strong> 技術：
+                <br>• <strong>不經過伺服器：</strong>影像直接點對點傳輸，不留存於任何雲端平台。
+                <br>• <strong>導播審核制：</strong>陌生人無法隨意闖入，確保校園與家庭隱私。
+                <br>• <strong>連線即銷毀：</strong>網頁關閉後，所有通道自動斷開，無數位足跡。
+            </div>
+        </div>
+        
+        <button class="action-btn" onclick="closeInfo()">了解，開始使用</button>
     </div>
 </div>
 
@@ -346,9 +402,11 @@
             <button class="action-btn secondary" style="margin-top:30px;" onclick="resetVote()">重設統計數據 (導播限定)</button>
         </div>
         
+        <!-- 系統說明按鈕區域 -->
         <div class="panel">
-            <h3>💬 系統狀態</h3>
-            <div id="logs" style="font-family: monospace; font-size: 0.8rem; opacity: 0.7; height: 100px; overflow-y: auto;">
+            <h3>💬 系統狀態 & 說明</h3>
+            <button class="action-btn secondary" style="margin-bottom:15px; border-color:var(--cyber-cyan); color:var(--cyber-cyan);" onclick="showInfo()">📖 系統與應用說明</button>
+            <div id="logs" style="font-family: monospace; font-size: 0.8rem; opacity: 0.7; height: 80px; overflow-y: auto;">
                 > 系統初始化完成...<br>
                 > 等待使用者選擇模式...
             </div>
@@ -644,6 +702,14 @@
         updateVoteUI(); 
         broadcastData({type: 'update', data: voteData});
         log("統計數據已重置並同步");
+    }
+
+    // 系統說明 Modal 控制
+    function showInfo() {
+        document.getElementById('infoModal').classList.remove('hidden');
+    }
+    function closeInfo() {
+        document.getElementById('infoModal').classList.add('hidden');
     }
 
     // 工具
