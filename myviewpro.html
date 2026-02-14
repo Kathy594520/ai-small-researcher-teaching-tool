@@ -14,6 +14,7 @@
             --text-main: #e0e0e0;
             --glass: rgba(255, 255, 255, 0.05);
             --glass-border: rgba(255, 255, 255, 0.1);
+            --gold: #ffd700;
         }
 
         * { box-sizing: border-box; }
@@ -34,7 +35,7 @@
 
         header { 
             width: 100%; 
-            padding: 20px; 
+            padding: 15px; 
             text-align: center; 
             border-bottom: 1px solid var(--glass-border);
             background: rgba(10, 10, 15, 0.8);
@@ -65,7 +66,7 @@
         .tabs { 
             display: flex; 
             gap: 10px; 
-            margin: 20px 0; 
+            margin: 15px 0; 
             background: var(--glass); 
             padding: 5px; 
             border-radius: 12px; 
@@ -75,11 +76,11 @@
             background: none; 
             border: none; 
             color: var(--text-main); 
-            padding: 10px 24px; 
+            padding: 8px 20px; 
             cursor: pointer; 
             border-radius: 8px; 
             transition: 0.3s; 
-            font-size: 1rem;
+            font-size: 0.95rem;
         }
         .tab-btn:hover { background: rgba(255,255,255,0.05); }
         .tab-btn.active { 
@@ -89,13 +90,15 @@
             box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
         }
 
+        /* 調整主容器寬度配置 */
         .main-container { 
-            width: 95%; 
-            max-width: 1200px; 
+            width: 99%; 
+            max-width: 100%; /* 移除最大寬度限制，佔滿螢幕 */
             display: grid; 
-            grid-template-columns: 1fr 320px; 
-            gap: 20px; 
-            padding-bottom: 40px;
+            grid-template-columns: 1fr 250px; /* 側邊欄縮小至 250px */
+            gap: 15px; 
+            padding: 0 10px 20px 10px;
+            flex: 1;
         }
         @media (max-width: 900px) { .main-container { grid-template-columns: 1fr; } }
 
@@ -108,6 +111,7 @@
             aspect-ratio: 16/9;
             box-shadow: 0 0 30px rgba(0,0,0,0.5);
             transition: border-color 0.3s;
+            width: 100%; /* 確保填滿 */
         }
         .video-box.active { border-color: var(--cyber-cyan); box-shadow: 0 0 20px rgba(0,242,255,0.1); }
         
@@ -163,23 +167,23 @@
         .panel { 
             background: var(--glass); 
             backdrop-filter: blur(15px); 
-            padding: 24px; 
+            padding: 20px; /* 稍微縮小內距 */
             border-radius: 20px; 
             border: 1px solid var(--glass-border); 
-            margin-bottom: 20px; 
+            margin-bottom: 15px; 
         }
         
-        h3 { margin-top: 0; color: var(--cyber-cyan); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        h3 { margin-top: 0; color: var(--cyber-cyan); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; font-size: 1.1rem; }
 
         .input-group { margin-bottom: 15px; }
         .input-style { 
             background: rgba(0,0,0,0.3); 
             border: 1px solid var(--glass-border); 
-            padding: 12px; 
+            padding: 10px; 
             border-radius: 8px; 
             color: #fff; 
             width: 100%; 
-            font-size: 1rem;
+            font-size: 0.95rem;
             transition: 0.3s;
         }
         .input-style:focus { outline: none; border-color: var(--cyber-cyan); background: rgba(0,0,0,0.5); }
@@ -187,12 +191,12 @@
         .action-btn { 
             background: linear-gradient(135deg, var(--cyber-cyan), var(--cyber-purple)); 
             border: none; 
-            padding: 14px; 
+            padding: 12px; 
             border-radius: 8px; 
             color: white; 
             width: 100%; 
             font-weight: bold; 
-            font-size: 1rem;
+            font-size: 0.95rem;
             cursor: pointer; 
             margin-top: 5px; 
             transition: 0.3s;
@@ -205,12 +209,47 @@
         .action-btn.secondary:hover { background: rgba(255,255,255,0.05); box-shadow: none; }
         .action-btn.danger { background: linear-gradient(135deg, #ff0055, #cc0044); }
 
-        /* 投票 */
-        .vote-item { margin-top: 20px; cursor: pointer; transition: 0.2s; }
-        .vote-item:hover { opacity: 0.9; }
-        .vote-label { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; }
-        .bar-bg { height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden; }
-        .fill { height: 100%; background: var(--cyber-cyan); width: 0%; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px var(--cyber-cyan); }
+        /* 星星評分系統樣式 - 調整大小以適應窄欄 */
+        .score-display {
+            text-align: center;
+            font-size: 2.2rem; /* 縮小字體 */
+            font-weight: bold;
+            color: var(--gold);
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+            margin: 5px 0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .star-container {
+            display: flex;
+            justify-content: center;
+            gap: 5px; /* 縮小間距 */
+            margin-bottom: 15px;
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 50px;
+            border: 1px solid var(--glass-border);
+        }
+        .star-btn {
+            font-size: 1.6rem; /* 縮小星星 */
+            color: #444;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            user-select: none;
+        }
+        .star-btn:hover {
+            transform: scale(1.3);
+            color: var(--gold);
+            text-shadow: 0 0 10px var(--gold);
+        }
+        .star-btn:active {
+            transform: scale(0.9);
+        }
+        .total-votes {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            opacity: 0.7;
+        }
 
         .hidden { display: none !important; }
         .id-display { 
@@ -221,6 +260,7 @@
             padding: 2px 6px;
             border-radius: 4px;
             user-select: all;
+            font-size: 0.9rem;
         }
 
         /* 連線確認視窗 & 資訊視窗 */
@@ -255,6 +295,19 @@
         .info-title { color: var(--cyber-cyan); font-weight: bold; margin-bottom: 10px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
         .info-content { font-size: 0.95rem; line-height: 1.6; opacity: 0.9; color: #ddd; }
         .info-badge { background: rgba(188, 19, 254, 0.2); padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-left: auto; color: #fff; }
+
+        /* 版權頁尾 */
+        footer {
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            font-size: 0.75rem;
+            color: var(--text-main);
+            opacity: 0.6;
+            margin-top: auto;
+            border-top: 1px solid var(--glass-border);
+            background: rgba(0,0,0,0.2);
+        }
 
         @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -296,7 +349,7 @@
     </div>
 </div>
 
-<!-- 系統說明 Modal (新增) -->
+<!-- 系統說明 Modal -->
 <div id="infoModal" class="modal-overlay hidden" onclick="if(event.target === this) closeInfo()">
     <div class="modal-box wide">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
@@ -386,20 +439,26 @@
     <!-- 右側：互動區 -->
     <div class="right-col">
         <div class="panel">
-            <h3>📊 即時互動民調</h3>
-            <p style="font-size:0.8rem; opacity:0.7;">點擊選項即可投票 (連線後將自動同步)</p>
+            <h3>📊 即時評分</h3>
+            <p style="font-size:0.8rem; opacity:0.7;">覺得內容有趣嗎？給個五星好評！</p>
             
-            <div class="vote-item" onclick="vote(0)">
-                <div class="vote-label"><span>🎥 畫質清晰流暢</span> <span id="v0">0%</span></div>
-                <div class="bar-bg"><div id="p0" class="fill"></div></div>
-            </div>
-            
-            <div class="vote-item" onclick="vote(1)">
-                <div class="vote-label"><span>😂 內容非常有趣</span> <span id="v1">0%</span></div>
-                <div class="bar-bg"><div id="p1" class="fill" style="background:var(--cyber-purple); box-shadow: 0 0 10px var(--cyber-purple);"></div></div>
+            <!-- 分數顯示 -->
+            <div class="score-display">
+                <span id="avgScore">0.0</span><span style="font-size:1.1rem; color:var(--text-main); opacity:0.6"> / 5.0</span>
             </div>
 
-            <button class="action-btn secondary" style="margin-top:30px;" onclick="resetVote()">重設統計數據 (導播限定)</button>
+            <!-- 星星按鈕容器 -->
+            <div class="star-container">
+                <div class="star-btn" onclick="vote(1)">★</div>
+                <div class="star-btn" onclick="vote(2)">★</div>
+                <div class="star-btn" onclick="vote(3)">★</div>
+                <div class="star-btn" onclick="vote(4)">★</div>
+                <div class="star-btn" onclick="vote(5)">★</div>
+            </div>
+
+            <div class="total-votes">總票數: <span id="totalVotes" style="color:var(--cyber-cyan); font-weight:bold;">0</span></div>
+
+            <button class="action-btn secondary" style="margin-top:20px;" onclick="resetVote()">重設評分 (導播限定)</button>
         </div>
         
         <!-- 系統說明按鈕區域 -->
@@ -414,17 +473,24 @@
     </div>
 </div>
 
+<footer>
+    <p>© 2026 Kathy's myviewpro Created with Google Apps Script & Tailwind CSS</p>
+</footer>
+
 <script>
     let peer = null;
     let localStream = null;
     let mediaRecorder = null;
     let chunks = [];
-    let voteData = [0, 0];
+    
+    // 初始化投票資料: [1星票數, 2星票數, 3星票數, 4星票數, 5星票數]
+    let voteData = [0, 0, 0, 0, 0];
+    
     let startTime = 0;
     let timerInterval = null;
-    let pendingConnection = null; // 暫存資料連線 (用於審核)
-    let guestConnections = [];    // 導播端：已連線的觀眾名單
-    let hostConn = null;          // 觀眾端：與導播的連線
+    let pendingConnection = null; 
+    let guestConnections = [];    
+    let hostConn = null;          
 
     // 初始化 PeerJS
     function initPeer() {
@@ -441,8 +507,6 @@
 
             // 監聽連線 (導播邏輯)
             peer.on('connection', (conn) => {
-                // 當收到連線時，先暫存，並設定資料監聽
-                // 注意：這裡我們允許接收資料，但只有接受後才算正式觀眾
                 conn.on('data', (data) => {
                     handleIncomingData(data, conn);
                 });
@@ -452,14 +516,13 @@
                     log(`觀眾 ${conn.peer} 已離開`);
                 });
 
-                // 觸發審核視窗
                 log(`收到來自 ${conn.peer} 的請求信號...`);
                 pendingConnection = conn;
                 document.getElementById('callerIdDisplay').innerText = conn.peer;
                 document.getElementById('callModal').classList.remove('hidden');
             });
 
-            // 監聽通話 (觀眾邏輯：接收導播回撥的畫面)
+            // 監聽通話 (觀眾邏輯)
             peer.on('call', (call) => {
                 log("收到導播的畫面傳送...");
                 call.answer(); 
@@ -474,14 +537,18 @@
     }
     initPeer();
 
-    // 處理收到的資料 (投票/更新)
+    // 處理收到的資料
     function handleIncomingData(data, conn) {
         if (data.type === 'vote') {
-            // 導播收到投票
-            log(`收到 ${conn.peer} 的投票`);
-            voteData[data.idx]++;
-            updateVoteUI();
-            broadcastData({type: 'update', data: voteData}); // 同步給所有人
+            // 導播收到投票 (data.val 是 1~5)
+            // 轉為陣列索引 (0~4)
+            const idx = data.val - 1;
+            if (idx >= 0 && idx < 5) {
+                voteData[idx]++;
+                log(`收到 ${conn.peer} 給的 ${data.val} 星評價`);
+                updateVoteUI();
+                broadcastData({type: 'update', data: voteData}); // 同步給所有人
+            }
         } else if (data.type === 'update') {
             // 觀眾收到更新
             voteData = data.data;
@@ -489,7 +556,7 @@
         }
     }
 
-    // 廣播資料給所有觀眾 (導播用)
+    // 廣播資料給所有觀眾
     function broadcastData(msg) {
         guestConnections.forEach(c => {
             if(c.open) c.send(msg);
@@ -530,7 +597,7 @@
         }
     }
 
-    // 處理連線決定 (導播端)
+    // 處理連線決定
     function handleCallDecision(accept) {
         const modal = document.getElementById('callModal');
         modal.classList.add('hidden');
@@ -540,19 +607,12 @@
 
         if (accept) {
             log(`已允許，正在反向傳送畫面給 ${guestId}...`);
-            
-            // 1. 加入觀眾名單
             guestConnections.push(pendingConnection);
-            
-            // 2. 立即同步當前票數給新觀眾
             if(pendingConnection.open) {
                 pendingConnection.send({type: 'update', data: voteData});
             }
-
-            // 3. 撥打視訊電話 (MediaCall)
             const call = peer.call(guestId, localStream);
             call.on('close', () => log("觀眾視訊斷線"));
-            
             setStatus("● 直播中 (訊號傳送中)", "rec");
         } else {
             log(`已拒絕 ${guestId}`);
@@ -572,7 +632,6 @@
         setStatus("請求連線中...", "normal");
         log(`正在傳送訊號給導播 ID: ${id}`);
         
-        // 建立資料連線
         const conn = peer.connect(id);
         hostConn = conn;
         
@@ -596,16 +655,13 @@
         });
     }
 
-    // 處理遠端串流顯示 (觀眾端)
     function handleRemoteStream(remoteStream) {
         const video = document.getElementById('vDisplay');
         video.srcObject = remoteStream;
-        
         document.getElementById('videoContainer').classList.add('active');
         log("已接收影像訊號！");
         setStatus("● 直播收看中", "live");
 
-        // 強制播放處理
         const playPromise = video.play();
         if (playPromise !== undefined) {
             playPromise.then(() => {
@@ -617,7 +673,6 @@
         }
     }
 
-    // 觀眾端強制播放 (點擊 Overlay)
     function forcePlay() {
         const video = document.getElementById('vDisplay');
         video.play();
@@ -625,7 +680,6 @@
         log("使用者觸發播放");
     }
 
-    // 錄影功能
     function toggleRecording() {
         const btn = document.getElementById('recBtn');
         const timerDisplay = document.getElementById('recTimer');
@@ -664,32 +718,38 @@
         }
     }
 
-    // 投票系統
+    // 評分系統邏輯
     function updateVoteUI() {
-        const total = voteData[0] + voteData[1];
-        [0, 1].forEach(i => {
-            const p = total === 0 ? 0 : Math.round((voteData[i]/total)*100);
-            document.getElementById(`v${i}`).innerText = p + "%";
-            document.getElementById(`p${i}`).style.width = p + "%";
-        });
+        // 計算總票數
+        const total = voteData.reduce((a, b) => a + b, 0);
+        document.getElementById('totalVotes').innerText = total;
+
+        // 計算加權平均 (1*票數 + 2*票數 ... / 總票數)
+        let weightedSum = 0;
+        for (let i = 0; i < 5; i++) {
+            weightedSum += voteData[i] * (i + 1);
+        }
+
+        const avg = total === 0 ? 0 : (weightedSum / total).toFixed(1);
+        document.getElementById('avgScore').innerText = avg;
     }
 
-    function vote(idx) {
+    function vote(starVal) {
         const isHost = document.getElementById('tab-h').classList.contains('active');
         
         if (isHost) {
-            // 導播投票：更新自己並廣播
-            voteData[idx]++;
+            // 導播投票 (測試用)
+            voteData[starVal-1]++;
             updateVoteUI();
             broadcastData({type: 'update', data: voteData});
-            log(`導播投票: 選項 ${idx+1}`);
+            log(`導播給予評價: ${starVal} 星`);
         } else {
-            // 觀眾投票：傳送給導播
+            // 觀眾投票
             if (hostConn && hostConn.open) {
-                hostConn.send({type: 'vote', idx: idx});
-                log(`已送出投票: 選項 ${idx+1}`);
+                hostConn.send({type: 'vote', val: starVal});
+                log(`已送出評價: ${starVal} 星`);
             } else {
-                alert("請先連線至導播才能投票！");
+                alert("請先連線至導播才能評分！");
             }
         }
     }
@@ -698,10 +758,11 @@
         const isHost = document.getElementById('tab-h').classList.contains('active');
         if (!isHost) return alert("權限不足：只有導播可以重置統計數據。");
 
-        voteData = [0,0]; 
+        // 重置為 0
+        voteData = [0, 0, 0, 0, 0]; 
         updateVoteUI(); 
         broadcastData({type: 'update', data: voteData});
-        log("統計數據已重置並同步");
+        log("評分數據已重置並同步");
     }
 
     // 系統說明 Modal 控制
