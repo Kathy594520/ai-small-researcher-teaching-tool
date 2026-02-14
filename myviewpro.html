@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -132,7 +132,7 @@
         .dot.live { background: var(--cyber-cyan); box-shadow: 0 0 10px var(--cyber-cyan); }
         .dot.rec { background: var(--neon-red); animation: pulse 1s infinite; }
 
-        /* 播放按鈕遮罩 (解決自動播放問題) */
+        /* 播放按鈕遮罩 */
         .play-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -223,7 +223,7 @@
             user-select: all;
         }
 
-        /* 連線確認視窗 (Modal) */
+        /* 連線確認視窗 */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -281,7 +281,7 @@
         <div class="caller-id-badge" id="callerIdDisplay">Unknown ID</div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
             <button class="action-btn danger" onclick="handleCallDecision(false)">拒絕</button>
-            <button class="action-btn" onclick="handleCallDecision(true)">允許連線</button>
+            <button class="action-btn" onclick="handleCallDecision(true)">允許並傳送畫面</button>
         </div>
     </div>
 </div>
@@ -323,7 +323,7 @@
             <div class="input-group">
                 <input type="password" id="pKey" class="input-style" placeholder="輸入校園隱私密碼 (提示: 2026...)">
             </div>
-            <button class="action-btn" onclick="connectToHost()">驗證並觀看</button>
+            <button class="action-btn" onclick="connectToHost()">驗證並請求畫面</button>
         </div>
     </div>
 
@@ -364,7 +364,7 @@
     let voteData = [0, 0];
     let startTime = 0;
     let timerInterval = null;
-    let pendingCall = null;
+    let pendingConnection = null; // 暫存資料連線 (觀眾發來的)
 
     // 初始化 PeerJS
     function initPeer() {
@@ -376,8 +376,22 @@
             });
             peer.on('error', (err) => {
                 log(`連線錯誤: ${err.type}`);
-                alert("連線伺服器發生錯誤，請重新整理頁面試試。");
+                alert("連線伺服器發生錯誤: " + err.type);
             });
+
+            // 全域監聽：觀眾端接收導播的畫面呼叫
+            // 這是新邏輯的核心：觀眾是被動接收 Call 的一方
+            peer.on('call', (call) => {
+                log("收到導播的畫面傳送...");
+                
+                // 觀眾自動接聽 (不需要傳送自己的畫面)
+                call.answer(); 
+                
+                call.on('stream', (remoteStream) => {
+                    handleRemoteStream(remoteStream);
+                });
+            });
+
         } catch (e) {
             log("PeerJS 初始化失敗");
         }
@@ -394,7 +408,6 @@
         const video = document.getElementById('vDisplay');
         video.muted = (m === 'host'); // 導播自己靜音
         
-        // 隱藏播放覆蓋層
         document.getElementById('playOverlay').classList.add('hidden');
         log(`切換模式至: ${m === 'host' ? '導播端' : '觀眾端'}`);
     }
@@ -411,40 +424,50 @@
             document.getElementById('recBtn').disabled = false;
             document.getElementById('camBtn').innerText = "鏡頭已開啟";
             document.getElementById('videoContainer').classList.add('active');
-            log("鏡頭開啟成功");
+            log("鏡頭開啟成功，等待觀眾...");
 
-            // 監聽連線
-            peer.on('call', (call) => {
-                log(`收到來自 ${call.peer} 的連線請求，等待確認...`);
-                pendingCall = call;
-                document.getElementById('callerIdDisplay').innerText = call.peer;
+            // 導播監聽資料連線 (DataConnection)
+            // 當觀眾連上時，觸發確認視窗
+            peer.on('connection', (conn) => {
+                log(`收到來自 ${conn.peer} 的請求信號...`);
+                pendingConnection = conn;
+                document.getElementById('callerIdDisplay').innerText = conn.peer;
                 document.getElementById('callModal').classList.remove('hidden');
             });
+
         } catch (e) { 
             alert("無法取得鏡頭權限 🎥\n請確認瀏覽器允許存取。"); 
             log("鏡頭權限被拒絕");
         }
     }
 
-    // 處理連線決定
+    // 處理連線決定 (導播端)
     function handleCallDecision(accept) {
         const modal = document.getElementById('callModal');
         modal.classList.add('hidden');
         
-        if (!pendingCall) return;
+        if (!pendingConnection) return;
+        const guestId = pendingConnection.peer;
 
         if (accept) {
-            log(`已允許 ${pendingCall.peer} 的連線`);
-            pendingCall.answer(localStream);
-            setStatus("● 直播中 (觀眾已連線)", "rec");
+            log(`已允許，正在反向傳送畫面給 ${guestId}...`);
+            // 關鍵修改：導播主動 Call 觀眾 (送出 localStream)
+            // 這樣確保 Offer 包含 Video Track，解決黑畫面問題
+            const call = peer.call(guestId, localStream);
+            
+            call.on('close', () => {
+                log("觀眾已斷線");
+            });
+            
+            setStatus("● 直播中 (訊號傳送中)", "rec");
         } else {
-            log(`已拒絕 ${pendingCall.peer} 的連線`);
-            pendingCall.close();
+            log(`已拒絕 ${guestId}`);
+            pendingConnection.close();
         }
-        pendingCall = null;
+        pendingConnection = null;
     }
 
-    // 觀眾端：連線
+    // 觀眾端：連線請求
     function connectToHost() {
         const id = document.getElementById('targetId').value.trim();
         const pw = document.getElementById('pKey').value;
@@ -452,42 +475,47 @@
         if (pw !== "2026media") return alert("🔐 密碼錯誤！(提示：2026media)");
         if (!id) return alert("請輸入導播 ID");
 
-        setStatus("嘗試連線中...", "normal");
-        log(`正在連線至 ID: ${id}`);
+        setStatus("請求連線中...", "normal");
+        log(`正在傳送訊號給導播 ID: ${id}`);
         
-        // 傳送空 stream 進行握手
-        const call = peer.call(id, new MediaStream());
+        // 觀眾只建立資料連線 (Data Connection) 作為信號
+        // 不在這裡建立 Media Call
+        const conn = peer.connect(id);
         
-        call.on('stream', (remoteStream) => {
-            const video = document.getElementById('vDisplay');
-            video.srcObject = remoteStream;
-            
-            document.getElementById('videoContainer').classList.add('active');
-            log("已接收遠端影像訊號，嘗試播放...");
-            setStatus("● 訊號接收成功", "live");
-
-            // 嘗試自動播放
-            const playPromise = video.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    log("自動播放成功");
-                }).catch(error => {
-                    log("自動播放被阻擋，顯示播放按鈕");
-                    document.getElementById('playOverlay').classList.remove('hidden');
-                });
-            }
+        conn.on('open', () => {
+            log("訊號已送達，等待導播確認...");
+            setStatus("等待導播接受...", "normal");
         });
 
-        call.on('error', (err) => {
+        conn.on('close', () => {
+            log("訊號連線中斷");
+        });
+
+        conn.on('error', (err) => {
             log("連線失敗: " + err);
-            setStatus("連線失敗", "normal");
+            setStatus("找不到導播 ID", "normal");
         });
+    }
+
+    // 處理遠端串流顯示 (觀眾端)
+    function handleRemoteStream(remoteStream) {
+        const video = document.getElementById('vDisplay');
+        video.srcObject = remoteStream;
         
-        call.on('close', () => {
-            log("連線已結束");
-            setStatus("連線中斷", "normal");
-            alert("連線已斷開");
-        });
+        document.getElementById('videoContainer').classList.add('active');
+        log("已接收影像訊號！");
+        setStatus("● 直播收看中", "live");
+
+        // 強制播放處理
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                log("自動播放成功");
+            }).catch(error => {
+                log("自動播放被阻擋，顯示播放按鈕");
+                document.getElementById('playOverlay').classList.remove('hidden');
+            });
+        }
     }
 
     // 觀眾端強制播放 (點擊 Overlay)
@@ -498,7 +526,7 @@
         log("使用者觸發播放");
     }
 
-    // 錄影
+    // 錄影功能
     function toggleRecording() {
         const btn = document.getElementById('recBtn');
         const timerDisplay = document.getElementById('recTimer');
@@ -537,7 +565,7 @@
         }
     }
 
-    // 投票
+    // 投票系統
     function updateVoteUI() {
         const total = voteData[0] + voteData[1];
         [0, 1].forEach(i => {
