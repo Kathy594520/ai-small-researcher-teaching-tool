@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -616,34 +616,68 @@
         
         if (!isScreenSharing) {
             try {
-                // 1. 取得桌面串流
-                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, cursor: "always" });
+                // 1. 取得桌面串流 (新增 audio: true 請求系統聲音)
+                // 注意：在分享視窗中，請務必勾選「分享分頁音訊」或「分享系統音訊」
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({ 
+                    video: true, 
+                    audio: true, // 關鍵：請求音訊
+                    cursor: "always" 
+                });
                 const screenVideoTrack = screenStream.getVideoTracks()[0];
                 
-                // 2. 混合音訊：保留原本的麥克風聲音 (如果有的話)
-                let audioTrack = null;
-                if (originalCamStream && originalCamStream.getAudioTracks().length > 0) {
-                     audioTrack = originalCamStream.getAudioTracks()[0];
+                // 2. 智慧音訊混合 (Web Audio API)
+                let finalAudioTrack = null;
+                
+                // 來源 A: 麥克風 (如果已開啟)
+                const micTrack = (originalCamStream && originalCamStream.getAudioTracks().length > 0) 
+                                ? originalCamStream.getAudioTracks()[0] : null;
+                                
+                // 來源 B: 系統聲音 (如果使用者有勾選分享音訊)
+                const sysAudioTrack = (screenStream.getAudioTracks().length > 0) 
+                                     ? screenStream.getAudioTracks()[0] : null;
+
+                if (micTrack && sysAudioTrack) {
+                    // 兩者都有 -> 混音 (Mix)
+                    log("正在混合麥克風與系統音效...");
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const dest = ctx.createMediaStreamDestination();
+                    
+                    const micSrc = ctx.createMediaStreamSource(new MediaStream([micTrack]));
+                    const sysSrc = ctx.createMediaStreamSource(new MediaStream([sysAudioTrack]));
+                    
+                    micSrc.connect(dest);
+                    sysSrc.connect(dest);
+                    
+                    finalAudioTrack = dest.stream.getAudioTracks()[0];
+                } else {
+                    // 擇一 (優先使用系統音效，若無則用麥克風)
+                    finalAudioTrack = sysAudioTrack || micTrack;
                 }
                 
-                // 3. 建立新的混合串流 (影片=桌面, 聲音=麥克風)
+                // 3. 建立新的混合串流
                 const newStream = new MediaStream([screenVideoTrack]);
-                if (audioTrack) newStream.addTrack(audioTrack);
+                if (finalAudioTrack) newStream.addTrack(finalAudioTrack);
                 
                 // 4. 更新本地畫面
                 localStream = newStream;
                 document.getElementById('vDisplay').srcObject = localStream;
 
-                // 5. 更新所有現有連線的影像軌道 (Track Replacement)
+                // 5. 更新所有現有連線的影像軌道
                 activeMediaCalls.forEach(call => {
                     const senders = call.peerConnection.getSenders();
                     const videoSender = senders.find(s => s.track && s.track.kind === 'video');
                     if (videoSender) {
                         videoSender.replaceTrack(screenVideoTrack);
                     }
+                    // 音訊軌道通常需要重新協商，簡單起見這裡主要切換畫面
+                    // 若要切換聲音，最好是重撥或使用 replaceTrack (如果接收端支援)
+                    const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
+                    if (audioSender && finalAudioTrack) {
+                        audioSender.replaceTrack(finalAudioTrack);
+                    }
                 });
 
-                // 6. 處理「停止共用」事件 (使用者透過瀏覽器 UI 停止時)
+                // 6. 處理「停止共用」事件
                 screenVideoTrack.onended = () => {
                     if (isScreenSharing) toggleScreenShare(); // 觸發切回鏡頭邏輯
                 };
@@ -652,7 +686,7 @@
                 btn.innerText = "切回鏡頭";
                 btn.classList.remove('warn');
                 btn.classList.add('secondary');
-                log("已切換至桌面分享");
+                log("已切換至桌面分享 (含音訊)");
 
             } catch (err) {
                 if (err.name === 'NotAllowedError') {
@@ -666,6 +700,7 @@
             // 切換回鏡頭
             if (originalCamStream) {
                 const camVideoTrack = originalCamStream.getVideoTracks()[0];
+                const camAudioTrack = originalCamStream.getAudioTracks()[0];
                 
                 // 更新本地
                 localStream = originalCamStream;
@@ -675,9 +710,10 @@
                 activeMediaCalls.forEach(call => {
                     const senders = call.peerConnection.getSenders();
                     const videoSender = senders.find(s => s.track && s.track.kind === 'video');
-                    if (videoSender) {
-                        videoSender.replaceTrack(camVideoTrack);
-                    }
+                    if (videoSender) videoSender.replaceTrack(camVideoTrack);
+                    
+                    const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
+                    if (audioSender && camAudioTrack) audioSender.replaceTrack(camAudioTrack);
                 });
             }
             
