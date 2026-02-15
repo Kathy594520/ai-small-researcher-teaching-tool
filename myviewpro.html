@@ -209,6 +209,7 @@
         .action-btn.secondary:hover { background: rgba(255,255,255,0.05); box-shadow: none; }
         .action-btn.danger { background: linear-gradient(135deg, #ff0055, #cc0044); }
         .action-btn.warn { background: linear-gradient(135deg, #ff9900, #ff5500); }
+        .action-btn.off { background: #444; color: #aaa; border: 1px solid #666; }
 
         /* 星星評分系統樣式 */
         .score-display {
@@ -428,8 +429,11 @@
                 <button id="camBtn" class="action-btn" onclick="initHost()">1. 開啟鏡頭</button>
                 <button id="screenBtn" class="action-btn warn" onclick="toggleScreenShare()" disabled>2. 分享桌面</button>
             </div>
-             <button id="recBtn" class="action-btn secondary" style="width:100%; margin-top:10px;" onclick="toggleRecording()" disabled>3. 開始錄影</button>
-            <p style="font-size:0.8rem; opacity:0.6; margin-top:15px;">* 請將 ID 複製給觀眾，點擊 ID 可全選。<br>* 錄影檔將以 .webm 格式直接下載至您的裝置。</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                <button id="micBtn" class="action-btn secondary" onclick="toggleMic()" disabled>🎤 模式：說話</button>
+                <button id="recBtn" class="action-btn secondary" onclick="toggleRecording()" disabled>3. 開始錄影</button>
+            </div>
+            <p style="font-size:0.8rem; opacity:0.6; margin-top:15px;">* 提示：播放電腦影片時，請切換至「放影片」模式以消除雜音。</p>
         </div>
 
         <div id="guestPanel" class="panel hidden" style="margin-top:20px;">
@@ -600,6 +604,7 @@
             setStatus("直播準備就緒", "live");
             document.getElementById('recBtn').disabled = false;
             document.getElementById('screenBtn').disabled = false;
+            document.getElementById('micBtn').disabled = false; // 啟用麥克風按鈕
             document.getElementById('camBtn').innerText = "鏡頭已開啟";
             document.getElementById('videoContainer').classList.add('active');
             log("鏡頭開啟成功，等待觀眾...");
@@ -610,6 +615,38 @@
         }
     }
 
+    // 切換麥克風
+    function toggleMic() {
+        // 優先控制原始麥克風串流 (這樣混音時才不會把電腦聲音也切掉)
+        const targetStream = originalCamStream || localStream;
+        
+        if (!targetStream) return;
+        const audioTracks = targetStream.getAudioTracks();
+        if (audioTracks.length === 0) {
+            log("找不到麥克風音軌");
+            return;
+        }
+
+        // 切換啟用狀態
+        const isEnabled = audioTracks[0].enabled;
+        audioTracks.forEach(track => track.enabled = !isEnabled);
+
+        const btn = document.getElementById('micBtn');
+        if (isEnabled) {
+            // 原本是開的，現在關掉 (靜音) -> 進入「放影片模式」
+            btn.innerText = "🎬 模式：放影片";
+            btn.classList.add('danger');
+            btn.classList.remove('secondary');
+            log("進入放影片模式 (麥克風靜音)");
+        } else {
+            // 原本是關的，現在打開 -> 進入「說話模式」
+            btn.innerText = "🎤 模式：說話";
+            btn.classList.remove('danger');
+            btn.classList.add('secondary');
+            log("進入說話模式 (麥克風開啟)");
+        }
+    }
+
     // 切換桌面分享
     async function toggleScreenShare() {
         const btn = document.getElementById('screenBtn');
@@ -617,27 +654,22 @@
         if (!isScreenSharing) {
             try {
                 // 1. 取得桌面串流 (新增 audio: true 請求系統聲音)
-                // 注意：在分享視窗中，請務必勾選「分享分頁音訊」或「分享系統音訊」
                 const screenStream = await navigator.mediaDevices.getDisplayMedia({ 
                     video: true, 
-                    audio: true, // 關鍵：請求音訊
+                    audio: true, 
                     cursor: "always" 
                 });
                 const screenVideoTrack = screenStream.getVideoTracks()[0];
                 
-                // 2. 智慧音訊混合 (Web Audio API)
+                // 2. 智慧音訊混合
                 let finalAudioTrack = null;
                 
-                // 來源 A: 麥克風 (如果已開啟)
                 const micTrack = (originalCamStream && originalCamStream.getAudioTracks().length > 0) 
                                 ? originalCamStream.getAudioTracks()[0] : null;
-                                
-                // 來源 B: 系統聲音 (如果使用者有勾選分享音訊)
                 const sysAudioTrack = (screenStream.getAudioTracks().length > 0) 
                                      ? screenStream.getAudioTracks()[0] : null;
 
                 if (micTrack && sysAudioTrack) {
-                    // 兩者都有 -> 混音 (Mix)
                     log("正在混合麥克風與系統音效...");
                     const ctx = new (window.AudioContext || window.webkitAudioContext)();
                     const dest = ctx.createMediaStreamDestination();
@@ -650,7 +682,6 @@
                     
                     finalAudioTrack = dest.stream.getAudioTracks()[0];
                 } else {
-                    // 擇一 (優先使用系統音效，若無則用麥克風)
                     finalAudioTrack = sysAudioTrack || micTrack;
                 }
                 
@@ -669,8 +700,6 @@
                     if (videoSender) {
                         videoSender.replaceTrack(screenVideoTrack);
                     }
-                    // 音訊軌道通常需要重新協商，簡單起見這裡主要切換畫面
-                    // 若要切換聲音，最好是重撥或使用 replaceTrack (如果接收端支援)
                     const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
                     if (audioSender && finalAudioTrack) {
                         audioSender.replaceTrack(finalAudioTrack);
@@ -679,7 +708,7 @@
 
                 // 6. 處理「停止共用」事件
                 screenVideoTrack.onended = () => {
-                    if (isScreenSharing) toggleScreenShare(); // 觸發切回鏡頭邏輯
+                    if (isScreenSharing) toggleScreenShare(); 
                 };
 
                 isScreenSharing = true;
@@ -702,11 +731,9 @@
                 const camVideoTrack = originalCamStream.getVideoTracks()[0];
                 const camAudioTrack = originalCamStream.getAudioTracks()[0];
                 
-                // 更新本地
                 localStream = originalCamStream;
                 document.getElementById('vDisplay').srcObject = localStream;
                 
-                // 更新遠端
                 activeMediaCalls.forEach(call => {
                     const senders = call.peerConnection.getSenders();
                     const videoSender = senders.find(s => s.track && s.track.kind === 'video');
