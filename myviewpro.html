@@ -429,11 +429,8 @@
                 <button id="camBtn" class="action-btn" onclick="initHost()">1. 開啟鏡頭</button>
                 <button id="screenBtn" class="action-btn warn" onclick="toggleScreenShare()" disabled>2. 分享桌面</button>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
-                <button id="micBtn" class="action-btn secondary" onclick="toggleMic()" disabled>🎤 模式：說話</button>
-                <button id="recBtn" class="action-btn secondary" onclick="toggleRecording()" disabled>3. 開始錄影</button>
-            </div>
-            <p style="font-size:0.8rem; opacity:0.6; margin-top:15px;">* 提示：播放電腦影片時，請切換至「放影片」模式以消除雜音。</p>
+            <button id="recBtn" class="action-btn secondary" style="width:100%; margin-top:10px;" onclick="toggleRecording()" disabled>3. 開始錄影</button>
+            <p style="font-size:0.8rem; opacity:0.6; margin-top:15px;">* 提示：若分享影片聲音，系統會自動切換為電腦音訊（暫時關閉麥克風）以防回音。</p>
         </div>
 
         <div id="guestPanel" class="panel hidden" style="margin-top:20px;">
@@ -499,7 +496,7 @@
     let chunks = [];
     let isScreenSharing = false;
     
-    // 初始化投票資料: [1星票數, 2星票數, 3星票數, 4星票數, 5星票數]
+    // 初始化投票資料
     let voteData = [0, 0, 0, 0, 0];
     
     let startTime = 0;
@@ -507,7 +504,7 @@
     let pendingConnection = null; 
     let guestConnections = [];    
     let hostConn = null;
-    let activeMediaCalls = []; // 儲存所有視訊通話物件，用於切換軌道
+    let activeMediaCalls = []; 
 
     // 初始化 PeerJS
     function initPeer() {
@@ -522,7 +519,6 @@
                 alert("連線伺服器發生錯誤: " + err.type);
             });
 
-            // 監聽連線 (導播邏輯)
             peer.on('connection', (conn) => {
                 conn.on('data', (data) => {
                     handleIncomingData(data, conn);
@@ -539,7 +535,6 @@
                 document.getElementById('callModal').classList.remove('hidden');
             });
 
-            // 監聽通話 (觀眾邏輯)
             peer.on('call', (call) => {
                 log("收到導播的畫面傳送...");
                 call.answer(); 
@@ -554,7 +549,6 @@
     }
     initPeer();
 
-    // 處理收到的資料
     function handleIncomingData(data, conn) {
         if (data.type === 'vote') {
             const idx = data.val - 1;
@@ -570,14 +564,12 @@
         }
     }
 
-    // 廣播資料給所有觀眾
     function broadcastData(msg) {
         guestConnections.forEach(c => {
             if(c.open) c.send(msg);
         });
     }
 
-    // 模式切換
     function switchMode(m) {
         document.getElementById('hostPanel').classList.toggle('hidden', m !== 'host');
         document.getElementById('guestPanel').classList.toggle('hidden', m !== 'guest');
@@ -585,18 +577,17 @@
         document.getElementById('tab-g').classList.toggle('active', m === 'guest');
         
         const video = document.getElementById('vDisplay');
-        video.muted = (m === 'host'); // 導播自己靜音
+        video.muted = (m === 'host'); 
         
         document.getElementById('playOverlay').classList.add('hidden');
         log(`切換模式至: ${m === 'host' ? '導播端' : '觀眾端'}`);
     }
 
-    // 導播端：開啟鏡頭
     async function initHost() {
         try {
             log("正在請求鏡頭權限...");
             localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            originalCamStream = localStream; // 保存原始鏡頭串流
+            originalCamStream = localStream; 
             
             const video = document.getElementById('vDisplay');
             video.srcObject = localStream;
@@ -604,7 +595,6 @@
             setStatus("直播準備就緒", "live");
             document.getElementById('recBtn').disabled = false;
             document.getElementById('screenBtn').disabled = false;
-            document.getElementById('micBtn').disabled = false; // 啟用麥克風按鈕
             document.getElementById('camBtn').innerText = "鏡頭已開啟";
             document.getElementById('videoContainer').classList.add('active');
             log("鏡頭開啟成功，等待觀眾...");
@@ -615,98 +605,60 @@
         }
     }
 
-    // 切換麥克風
-    function toggleMic() {
-        // 優先控制原始麥克風串流 (這樣混音時才不會把電腦聲音也切掉)
-        const targetStream = originalCamStream || localStream;
-        
-        if (!targetStream) return;
-        const audioTracks = targetStream.getAudioTracks();
-        if (audioTracks.length === 0) {
-            log("找不到麥克風音軌");
-            return;
-        }
-
-        // 切換啟用狀態
-        const isEnabled = audioTracks[0].enabled;
-        audioTracks.forEach(track => track.enabled = !isEnabled);
-
-        const btn = document.getElementById('micBtn');
-        if (isEnabled) {
-            // 原本是開的，現在關掉 (靜音) -> 進入「放影片模式」
-            btn.innerText = "🎬 模式：放影片";
-            btn.classList.add('danger');
-            btn.classList.remove('secondary');
-            log("進入放影片模式 (麥克風靜音)");
-        } else {
-            // 原本是關的，現在打開 -> 進入「說話模式」
-            btn.innerText = "🎤 模式：說話";
-            btn.classList.remove('danger');
-            btn.classList.add('secondary');
-            log("進入說話模式 (麥克風開啟)");
-        }
-    }
-
-    // 切換桌面分享
+    // 簡化版切換桌面分享 (無混音，自動切換音訊源)
     async function toggleScreenShare() {
         const btn = document.getElementById('screenBtn');
         
         if (!isScreenSharing) {
             try {
-                // 1. 取得桌面串流 (新增 audio: true 請求系統聲音)
+                // 1. 取得桌面串流
                 const screenStream = await navigator.mediaDevices.getDisplayMedia({ 
                     video: true, 
-                    audio: true, 
+                    audio: true, // 請求音訊
                     cursor: "always" 
                 });
                 const screenVideoTrack = screenStream.getVideoTracks()[0];
                 
-                // 2. 智慧音訊混合
-                let finalAudioTrack = null;
+                // 2. 決定音訊來源
+                // 如果有螢幕音訊，就用螢幕音訊 (會替換掉麥克風 = 自動防回音)
+                // 如果沒有 (只分享畫面)，則保留原本的麥克風
+                let targetAudioTrack = null;
+                const hasScreenAudio = screenStream.getAudioTracks().length > 0;
                 
-                const micTrack = (originalCamStream && originalCamStream.getAudioTracks().length > 0) 
-                                ? originalCamStream.getAudioTracks()[0] : null;
-                const sysAudioTrack = (screenStream.getAudioTracks().length > 0) 
-                                     ? screenStream.getAudioTracks()[0] : null;
-
-                if (micTrack && sysAudioTrack) {
-                    log("正在混合麥克風與系統音效...");
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const dest = ctx.createMediaStreamDestination();
-                    
-                    const micSrc = ctx.createMediaStreamSource(new MediaStream([micTrack]));
-                    const sysSrc = ctx.createMediaStreamSource(new MediaStream([sysAudioTrack]));
-                    
-                    micSrc.connect(dest);
-                    sysSrc.connect(dest);
-                    
-                    finalAudioTrack = dest.stream.getAudioTracks()[0];
+                if (hasScreenAudio) {
+                    targetAudioTrack = screenStream.getAudioTracks()[0];
+                    log("偵測到系統音訊，已自動切換 (麥克風暫停)");
                 } else {
-                    finalAudioTrack = sysAudioTrack || micTrack;
+                    if (originalCamStream && originalCamStream.getAudioTracks().length > 0) {
+                        targetAudioTrack = originalCamStream.getAudioTracks()[0];
+                        log("未偵測到系統音訊，維持麥克風收音");
+                    }
                 }
                 
-                // 3. 建立新的混合串流
+                // 3. 建立新串流 (本地預覽用)
                 const newStream = new MediaStream([screenVideoTrack]);
-                if (finalAudioTrack) newStream.addTrack(finalAudioTrack);
+                // 本地預覽通常不需要聽到自己的麥克風，但如果是系統音效可能需要確認
+                // 這裡為了避免導播自己聽到回音，本地預覽通常靜音 (video.muted = true 已在 switchMode 設定)
+                if (targetAudioTrack) newStream.addTrack(targetAudioTrack);
                 
-                // 4. 更新本地畫面
                 localStream = newStream;
                 document.getElementById('vDisplay').srcObject = localStream;
 
-                // 5. 更新所有現有連線的影像軌道
+                // 4. 更新連線 (Replace Track)
                 activeMediaCalls.forEach(call => {
                     const senders = call.peerConnection.getSenders();
                     const videoSender = senders.find(s => s.track && s.track.kind === 'video');
                     if (videoSender) {
-                        videoSender.replaceTrack(screenVideoTrack);
+                        videoSender.replaceTrack(screenVideoTrack).catch(e => log("影像切換失敗:"+e));
                     }
+                    
                     const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
-                    if (audioSender && finalAudioTrack) {
-                        audioSender.replaceTrack(finalAudioTrack);
+                    if (audioSender && targetAudioTrack) {
+                        audioSender.replaceTrack(targetAudioTrack).catch(e => log("音訊切換失敗:"+e));
                     }
                 });
 
-                // 6. 處理「停止共用」事件
+                // 5. 處理停止事件
                 screenVideoTrack.onended = () => {
                     if (isScreenSharing) toggleScreenShare(); 
                 };
@@ -715,18 +667,16 @@
                 btn.innerText = "切回鏡頭";
                 btn.classList.remove('warn');
                 btn.classList.add('secondary');
-                log("已切換至桌面分享 (含音訊)");
 
             } catch (err) {
                 if (err.name === 'NotAllowedError') {
                     alert("⚠️ 無法分享螢幕：瀏覽器權限受限。\n請將此網頁下載為 HTML 檔案後，直接在瀏覽器中開啟即可正常使用。");
-                    log("權限錯誤：需下載後執行");
                 } else {
-                    log("取消分享或發生錯誤: " + err);
+                    log("錯誤: " + err);
                 }
             }
         } else {
-            // 切換回鏡頭
+            // 切回鏡頭
             if (originalCamStream) {
                 const camVideoTrack = originalCamStream.getVideoTracks()[0];
                 const camAudioTrack = originalCamStream.getAudioTracks()[0];
@@ -736,11 +686,12 @@
                 
                 activeMediaCalls.forEach(call => {
                     const senders = call.peerConnection.getSenders();
-                    const videoSender = senders.find(s => s.track && s.track.kind === 'video');
-                    if (videoSender) videoSender.replaceTrack(camVideoTrack);
+                    
+                    const videoSender = senders.find(s => s.track && s.track.kind === 'video') || senders.find(s => !s.track);
+                    if (videoSender) videoSender.replaceTrack(camVideoTrack).catch(e => log("切回鏡頭失敗:"+e));
                     
                     const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
-                    if (audioSender && camAudioTrack) audioSender.replaceTrack(camAudioTrack);
+                    if (audioSender && camAudioTrack) audioSender.replaceTrack(camAudioTrack).catch(e => log("切回麥克風失敗:"+e));
                 });
             }
             
@@ -748,11 +699,10 @@
             btn.innerText = "2. 分享桌面";
             btn.classList.add('warn');
             btn.classList.remove('secondary');
-            log("已切回鏡頭畫面");
+            log("已切回鏡頭與麥克風");
         }
     }
 
-    // 處理連線決定
     function handleCallDecision(accept) {
         const modal = document.getElementById('callModal');
         modal.classList.add('hidden');
@@ -767,9 +717,8 @@
                 pendingConnection.send({type: 'update', data: voteData});
             }
             
-            // 撥打並儲存 Call 物件
             const call = peer.call(guestId, localStream);
-            activeMediaCalls.push(call); // 加入列表以便切換桌面時更新
+            activeMediaCalls.push(call); 
 
             call.on('close', () => {
                 log("觀眾視訊斷線");
@@ -784,7 +733,6 @@
         pendingConnection = null;
     }
 
-    // 觀眾端：連線請求
     function connectToHost() {
         const id = document.getElementById('targetId').value.trim();
         const pw = document.getElementById('pKey').value;
@@ -881,7 +829,6 @@
         }
     }
 
-    // 評分系統邏輯
     function updateVoteUI() {
         const total = voteData.reduce((a, b) => a + b, 0);
         document.getElementById('totalVotes').innerText = total;
@@ -895,7 +842,6 @@
         document.getElementById('avgScore').innerText = avg;
     }
 
-    // 星星互動效果
     function highlightStars(count) {
         const stars = document.querySelectorAll('.star-btn');
         const labels = ["加油", "普通", "還行", "不錯", "超讚！"];
@@ -963,7 +909,6 @@
         log("評分數據已重置並同步");
     }
 
-    // 系統說明 Modal 控制
     function showInfo() {
         document.getElementById('infoModal').classList.remove('hidden');
     }
