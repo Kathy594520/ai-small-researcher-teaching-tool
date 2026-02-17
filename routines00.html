@@ -265,7 +265,7 @@
             // 雲端上傳功能
             // -------------------------------------------------------------------------
             const handleUploadToCloud = async () => {
-                if (GAS_DEPLOY_URL === "https://script.google.com/macros/s/AKfycbyT7DSgVjyUfdSNa1uyqTUlEYnmxMREZis0DlEchCI9VQZDttDtZXKYXxUj5-py8RQRKQ/exec") {
+                if (GAS_DEPLOY_URL === "YOUR_GAS_DEPLOY_URL") {
                     alert("請先在程式碼中設定 GAS_DEPLOY_URL！");
                     return;
                 }
@@ -276,6 +276,10 @@
                     date: dateStr,
                     students: students.sort((a, b) => a.id - b.id)
                 };
+                
+                // 加入除錯訊息
+                console.log("正在準備上傳資料:", payload);
+                console.log("目標網址:", GAS_DEPLOY_URL);
 
                 try {
                     // 使用 no-cors 模式，因為跨域請求 GAS 通常不回傳標準 CORS header，但 post 會成功
@@ -442,7 +446,4 @@
         root.render(<App />);
     </script>
 </body>
-
 </html>
-
-
