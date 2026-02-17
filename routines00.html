@@ -81,9 +81,9 @@
         } from 'lucide-react';
 
         // ===========================================================================
-        // 設定區：請將此處換成您的 Google Apps Script 部署網址 (以 /exec 結尾)
+        // 設定區
         // ===========================================================================
-        const GAS_DEPLOY_URL = "https://script.google.com/macros/s/AKfycbxOBVlK0Ji7vmTPEGbA__Fw9qrzVDFA34AEudll10JFLMDpBwPBD4bPggJmbz05X0oZ/exec; // 例如 "https://script.google.com/macros/s/..../exec"
+        const GAS_DEPLOY_URL = "https://script.google.com/macros/s/AKfycbxOBVlK0Ji7vmTPEGbA__Fw9qrzVDFA34AEudll10JFLMDpBwPBD4bPggJmbz05X0oZ/exec"; 
         const DEFAULT_ZHUYIN_FONT_URL = "https://raw.githubusercontent.com/Kathy594520/-/main/BpmfZihiOnly-R.ttf"; 
 
         const App = () => {
@@ -270,6 +270,11 @@
                     return;
                 }
                 
+                if (students.length === 0) {
+                    alert("名冊是空的，無法上傳！請先新增學生。");
+                    return;
+                }
+
                 setIsUploading(true);
                 const dateStr = currentTime.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
                 const payload = {
@@ -277,22 +282,18 @@
                     students: students.sort((a, b) => a.id - b.id)
                 };
                 
-                // 加入除錯訊息
                 console.log("正在準備上傳資料:", payload);
-                console.log("目標網址:", GAS_DEPLOY_URL);
 
                 try {
-                    // 使用 no-cors 模式，因為跨域請求 GAS 通常不回傳標準 CORS header，但 post 會成功
+                    // 使用 no-cors 模式，並且明確指定 charset=utf-8
                     const response = await fetch(GAS_DEPLOY_URL, {
                         method: "POST",
                         mode: "no-cors", 
-                        headers: { "Content-Type": "text/plain" }, // GAS 最好用 text/plain
+                        headers: { "Content-Type": "text/plain;charset=utf-8" }, 
                         body: JSON.stringify(payload)
                     });
 
-                    // 因為 no-cors 拿不到 response status，我們假設如果沒噴錯就是成功
-                    // 或是您可以在 GAS 那邊 return 簡單的 json
-                    alert("資料已傳送至雲端試算表！(若沒看到資料請檢查 GAS 部署)");
+                    alert("資料已傳送至雲端試算表！\n(由於安全限制，瀏覽器無法確認是否成功，請直接檢查試算表)");
                 } catch (error) {
                     console.error("Upload failed", error);
                     alert("上傳失敗，請檢查網路或 GAS 設定。");
@@ -446,7 +447,4 @@
         root.render(<App />);
     </script>
 </body>
-
 </html>
-
-
