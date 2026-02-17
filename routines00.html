@@ -1,7 +1,5 @@
-<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <base target="_top">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>班級自治小黑板</title>
@@ -64,9 +62,6 @@
                 linear-gradient(90deg, #e5dcc5 1px, transparent 1px);
             background-size: 20px 20px;
             color: #2c2c2c;
-            margin: 0; /* GAS Reset */
-            padding: 0;
-            overflow: hidden; /* Prevent body scroll */
         }
 
         /* 復古捲軸 */
@@ -88,9 +83,8 @@
             background: white;
             padding: 10px 10px 30px 10px;
             box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-            transition: box-shadow 0.2s, transform 0.1s;
+            transition: box-shadow 0.2s, transform 0.1s; /* 移除 width transition 以確保拖曳縮放流暢 */
             cursor: grab;
-            position: absolute; /* Ensure absolute positioning works */
         }
         .polaroid:active {
             cursor: grabbing;
@@ -127,13 +121,6 @@
         .writing-vertical {
             writing-mode: vertical-rl;
             text-orientation: upright;
-        }
-
-        /* GAS Specific fix for React Root */
-        #root {
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
         }
     </style>
 </head>
@@ -301,6 +288,7 @@
             useEffect(() => { localStorage.setItem('class_notebook_font_size', notebookFontSize); }, [notebookFontSize]);
             useEffect(() => { localStorage.setItem('class_font_type', fontType); }, [fontType]);
             useEffect(() => { localStorage.setItem('class_clock_style', clockStyleIndex); }, [clockStyleIndex]);
+            // 移除 font URL 的 local storage 寫入，因為已寫死
             
             // 剪貼簿存儲
             useEffect(() => { 
@@ -1332,4 +1320,5 @@
         root.render(<App />);
     </script>
 </body>
+
 </html>
