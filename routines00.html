@@ -83,7 +83,7 @@
         // ===========================================================================
         // 設定區
         // ===========================================================================
-        const GAS_DEPLOY_URL = "https://script.google.com/macros/s/AKfycbxOBVlK0Ji7vmTPEGbA__Fw9qrzVDFA34AEudll10JFLMDpBwPBD4bPggJmbz05X0oZ/exec"; 
+        const GAS_DEPLOY_URL = "https://script.google.com/macros/s/AKfycbwlEzioVhOA90h2AWNpULfrUcFDhqoWZa5m5cnbjYaO_pvk72thnUG7xC7OGnUc5pKG0A/exec"; 
         const DEFAULT_ZHUYIN_FONT_URL = "https://raw.githubusercontent.com/Kathy594520/-/main/BpmfZihiOnly-R.ttf"; 
 
         const App = () => {
@@ -265,7 +265,7 @@
             // 雲端上傳功能
             // -------------------------------------------------------------------------
             const handleUploadToCloud = async () => {
-                if (GAS_DEPLOY_URL === "YOUR_GAS_DEPLOY_URL") {
+                if (GAS_DEPLOY_URL === "https://script.google.com/macros/s/AKfycbw_Si1J7MoQt760XIZTHkbb1ZfRfCOSCegebLLt1D46r2io0-VYcYY7YPcSSKd20Ro/exec") {
                     alert("請先在程式碼中設定 GAS_DEPLOY_URL！");
                     return;
                 }
@@ -277,9 +277,10 @@
 
                 setIsUploading(true);
                 const dateStr = currentTime.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+                // 使用 [...students] 建立副本再排序，避免修改原始狀態
                 const payload = {
                     date: dateStr,
-                    students: students.sort((a, b) => a.id - b.id)
+                    students: [...students].sort((a, b) => a.id - b.id)
                 };
                 
                 console.log("正在準備上傳資料:", payload);
@@ -293,7 +294,7 @@
                         body: JSON.stringify(payload)
                     });
 
-                    alert("資料已傳送至雲端試算表！\n(由於安全限制，瀏覽器無法確認是否成功，請直接檢查試算表)");
+                    alert("資料已傳送至雲端試算表！\n(由於安全限制，瀏覽器無法確認是否成功，請直接檢查試算表。\n若試算表仍為空白，請檢查 GAS 後端的【執行項目】紀錄。)");
                 } catch (error) {
                     console.error("Upload failed", error);
                     alert("上傳失敗，請檢查網路或 GAS 設定。");
