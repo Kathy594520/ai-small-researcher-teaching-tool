@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>導師手札 - 點名與通知系統 (最終完整版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --theme-dark: #78350f;
+            --theme-light: #fef3c7;
+            --theme-paper: #fffbeb;
+            --theme-line: #fde68a;
+            --theme-border: #d97706;
+        }
+        
+        body {
+            font-family: 'Noto Serif TC', serif;
+            background-color: var(--theme-light);
+            color: var(--theme-dark);
+            transition: all 0.3s ease;
+        }
+
+        /* 螢幕顯示與列印控制 */
+        .print-only { display: none; }
+        
+        @media print {
+            .screen-only { display: none !important; }
+            .print-only { 
+                display: flex !important; 
+                flex-wrap: wrap; 
+                gap: 15px; 
+                width: 100%; 
+                background: white;
+                color: black;
+            }
+            body { background: white; margin: 0; padding: 0; }
+            
+            .slip-card {
+                width: calc(50% - 10px);
+                border: 2px dashed #666;
+                padding: 15px;
+                box-sizing: border-box;
+                page-break-inside: avoid;
+                break-inside: avoid;
+                margin-bottom: 10px;
+                font-family: 'Noto Serif TC', serif;
+            }
+        }
+
+        /* 復古筆記本樣式 */
+        .notebook-container {
+            background-color: var(--theme-paper);
+            border-radius: 8px;
+            box-shadow: 10px 10px 20px rgba(0,0,0,0.1), -2px -2px 10px rgba(255,255,255,0.5);
+            position: relative;
+            padding-left: 40px;
+            border-right: 2px solid rgba(0,0,0,0.05);
+            border-bottom: 2px solid rgba(0,0,0,0.05);
+        }
+
+        .notebook-container::before {
+            content: ''; position: absolute; top: 0; bottom: 0; left: 20px;
+            width: 2px; background-color: rgba(200, 50, 50, 0.3); z-index: 10;
+        }
+
+        .binder-holes {
+            position: absolute; left: 8px; top: 20px; bottom: 20px; width: 15px;
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+
+        .hole {
+            width: 12px; height: 12px; background-color: var(--theme-light);
+            border-radius: 50%; box-shadow: inset 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .ruled-paper {
+            background-image: repeating-linear-gradient(transparent, transparent 39px, var(--theme-line) 39px, var(--theme-line) 40px);
+            line-height: 40px;
+        }
+
+        .custom-checkbox {
+            appearance: none; width: 20px; height: 20px; border: 2px solid var(--theme-dark);
+            border-radius: 4px; background-color: transparent; cursor: pointer;
+            position: relative; transform: translateY(5px);
+        }
+        .custom-checkbox:checked::after {
+            content: '✓'; position: absolute; top: -12px; left: 2px;
+            font-size: 20px; color: #dc2626; font-weight: bold;
+        }
+
+        .btn-retro {
+            background-color: transparent; border: 2px solid var(--theme-dark);
+            color: var(--theme-dark); transition: all 0.2s;
+        }
+        .btn-retro:hover { background-color: var(--theme-dark); color: var(--theme-paper); }
+
+        .toggle-radio { display: none; }
+        .toggle-label {
+            cursor: pointer; padding: 4px 12px; border: 1px solid var(--theme-dark);
+            color: var(--theme-dark); transition: all 0.2s; font-size: 0.875rem;
+        }
+        .toggle-label:first-of-type { border-radius: 20px 0 0 20px; border-right: none; }
+        .toggle-label:last-of-type { border-radius: 0 20px 20px 0; border-left: none; }
+        .toggle-radio:checked + .toggle-label {
+            background-color: var(--theme-dark); color: var(--theme-paper); font-weight: bold;
+        }
+
+        input[type="file"] { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- === 螢幕顯示區 === -->
+    <div class="screen-only min-h-screen p-4 md:p-8 flex flex-col">
+        <div class="max-w-5xl mx-auto flex-grow w-full">
+            <!-- 頂部控制列 -->
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <h1 class="text-3xl font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-book-open"></i> 導師手札
+                </h1>
+                
+                <div class="flex items-center gap-4">
+                    <!-- 隱私模式選擇器 -->
+                    <div class="flex bg-white/50 rounded-full shadow-sm">
+                        <input type="radio" id="privacy-full" name="privacyMode" value="full" class="toggle-radio" onchange="updatePreview()">
+                        <label for="privacy-full" class="toggle-label" title="顯示完整姓名">完整名單</label>
+                        
+                        <input type="radio" id="privacy-mask" name="privacyMode" value="mask" class="toggle-radio" checked onchange="updatePreview()">
+                        <label for="privacy-mask" class="toggle-label border-l border-r" title="保留姓氏，中間打圈">保留姓氏</label>
+                        
+                        <input type="radio" id="privacy-number" name="privacyMode" value="number" class="toggle-radio" onchange="updatePreview()">
+                        <label for="privacy-number" class="toggle-label" title="只顯示座號">僅顯示座號</label>
+                    </div>
+
+                    <!-- 主題選擇器 -->
+                    <div class="flex items-center gap-2 bg-white/50 px-3 py-1.5 rounded-full shadow-sm">
+                        <button onclick="setTheme('brown')" class="w-5 h-5 rounded-full bg-[#78350f] border-2 border-white shadow hover:scale-110 transition" title="經典牛皮"></button>
+                        <button onclick="setTheme('green')" class="w-5 h-5 rounded-full bg-[#064e3b] border-2 border-white shadow hover:scale-110 transition" title="復古抹茶"></button>
+                        <button onclick="setTheme('blue')"  class="w-5 h-5 rounded-full bg-[#1e3a8a] border-2 border-white shadow hover:scale-110 transition" title="褪色丹寧"></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 筆記本主體 -->
+            <div class="notebook-container p-6 md:p-10 mb-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="binder-holes" id="binderHoles"></div>
+
+                <!-- 左頁：學生名單與狀態 -->
+                <div class="ruled-paper pr-4">
+                    <h2 class="text-2xl font-bold mb-2 flex items-center justify-between">
+                        <span class="flex items-center gap-3">
+                            <span><i class="fa-solid fa-users"></i> 班級動態紀錄</span>
+                            <button onclick="openImportModal()" class="text-xs bg-white/50 hover:bg-white/80 border border-current/30 px-2 py-1 rounded transition flex items-center gap-1 shadow-sm font-normal">
+                                <i class="fa-solid fa-file-import"></i> 批次匯入
+                            </button>
+                        </span>
+                        <span class="text-sm font-normal" id="currentDate"></span>
+                    </h2>
+                    
+                    <div class="overflow-x-auto mt-4">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b-2 border-current">
+                                    <th class="pb-2 w-1/4">座號姓名</th>
+                                    <th class="pb-2 text-center">缺席</th>
+                                    <th class="pb-2 text-center">缺同意書</th>
+                                    <th class="pb-2 text-center">缺通知單</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentList">
+                                <!-- 學生名單由 JS 生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 右頁：通知設定與發送 -->
+                <div class="ruled-paper pl-0 md:pl-4 md:border-l-2 md:border-dashed border-current/30 flex flex-col h-full">
+                    <h2 class="text-2xl font-bold mb-4"><i class="fa-regular fa-paper-plane"></i> 家長通知中心</h2>
+
+                    <div class="mb-4 bg-white/40 p-3 rounded-lg border border-current/20 leading-tight">
+                        <p class="font-bold mb-2">1. 選擇通知語氣：</p>
+                        <div class="flex flex-wrap gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="tone" value="polite" class="custom-checkbox" checked onchange="updatePreview()"> <span>溫和提醒</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="tone" value="friendly" class="custom-checkbox" onchange="updatePreview()"> <span>親切問候</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="tone" value="urgent" class="custom-checkbox" onchange="updatePreview()"> <span class="text-red-700 font-bold">急切通知</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 bg-white/40 p-3 rounded-lg border border-current/20 leading-tight">
+                        <p class="font-bold mb-2">2. 附加照片註解 (LINE專用)：</p>
+                        <label class="btn-retro px-4 py-2 rounded inline-block cursor-pointer text-sm mb-2">
+                            <i class="fa-solid fa-camera"></i> 選擇圖片
+                            <input type="file" id="imageInput" accept="image/*" onchange="handleImageUpload(event)">
+                        </label>
+                        <div id="imagePreviewContainer" class="hidden mb-2 relative">
+                            <img id="imagePreview" src="" alt="預覽" class="max-h-32 rounded border border-current/30 shadow-sm">
+                            <button onclick="clearImage()" class="absolute top-1 left-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition">
+                                <i class="fa-solid fa-times"></i>
+                            </button>
+                        </div>
+                        <textarea id="imageAnnotation" class="w-full bg-transparent border-b-2 border-current/30 focus:border-current outline-none resize-none leading-relaxed mt-2" rows="2" placeholder="在此輸入圖片文字註解..." oninput="updatePreview()"></textarea>
+                    </div>
+
+                    <div class="mb-4 flex-grow">
+                        <p class="font-bold mb-1 flex items-center gap-2">
+                            3. 群組訊息預覽 (可直接點擊編輯)：
+                            <span class="text-xs font-normal text-gray-500 bg-white/50 px-2 py-0.5 rounded-full"><i class="fa-solid fa-shield-halved"></i> 去識別化保護中</span>
+                        </p>
+                        <!-- 改為可編輯的 textarea -->
+                        <textarea id="messagePreview" class="w-full bg-white/80 p-3 rounded-lg border-2 border-current/30 min-h-[150px] text-sm whitespace-pre-wrap leading-relaxed shadow-inner focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 resize-y transition-colors"></textarea>
+                        <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-circle-info"></i> 提示：發送前可直接在框內修改內容。發送時會直接使用您編輯後的文字。</p>
+                    </div>
+
+                    <!-- ★ 動作按鈕區塊 ★ -->
+                    <div class="mt-auto border-t-2 border-current/20 pt-4 flex flex-col gap-3">
+                        <p class="text-xs text-gray-600 font-bold mb-1"><i class="fa-solid fa-paper-plane"></i> 發送與輸出方式：</p>
+                        
+                        <div class="grid grid-cols-2 gap-2">
+                            <!-- 主要功能群 -->
+                            <button onclick="sendViaLineApp()" class="bg-[#00B900] hover:bg-[#009900] text-white px-3 py-3 rounded-lg font-bold shadow-md flex items-center justify-center gap-2 transform transition hover:-translate-y-1 col-span-2 text-lg">
+                                <i class="fa-brands fa-line text-2xl"></i> 一鍵開啟 LINE 傳送 (大群組)
+                            </button>
+                            
+                            <button onclick="printSlips()" class="bg-indigo-600 hover:bg-indigo-800 text-white px-3 py-3 rounded-lg font-bold shadow-md flex items-center justify-center gap-2 transform transition hover:-translate-y-1 col-span-2 text-lg">
+                                <i class="fa-solid fa-print text-2xl"></i> 列印聯絡簿通知單 (個人)
+                            </button>
+
+                            <!-- 次要功能群 -->
+                            <button onclick="nativeShare()" class="bg-gray-800 hover:bg-black text-white px-3 py-2 rounded font-bold shadow-md flex items-center justify-center gap-2 transition text-sm">
+                                <i class="fa-solid fa-share-nodes"></i> 手機分享
+                            </button>
+
+                            <button onclick="copyMessage()" class="btn-retro px-3 py-2 rounded font-bold flex items-center justify-center gap-2 text-sm">
+                                <i class="fa-regular fa-copy"></i> 複製文字
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 頁尾版權製作說明與資安提醒 -->
+            <div class="text-center mt-6 mb-2">
+                <p class="text-red-600 font-bold mb-3 bg-red-100 inline-block px-5 py-2 rounded-full text-sm shadow-sm border border-red-200">
+                    <i class="fa-solid fa-shield-halved"></i> 資安提醒：如使用公用電腦，關閉網頁離開前，請務必記得登出您的 LINE 帳號！
+                </p>
+                <div class="text-sm font-bold opacity-60 tracking-wider">
+                    © 2026 Kathy's easyline Created with Google Apps Script & Tailwind CSS
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- === 列印專用隱藏區 === -->
+    <div id="printArea" class="print-only">
+        <!-- 這裡由 JS 動態生成每位學生的專屬小卡 -->
+    </div>
+
+    <!-- 提示對話框 (Modal) -->
+    <div id="modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50 screen-only">
+        <div class="bg-white text-gray-800 p-6 rounded-lg max-w-sm w-full text-center shadow-2xl transform scale-95 transition-transform" id="modalContent">
+            <div id="modalIcon" class="text-4xl mb-4 text-green-500"><i class="fa-solid fa-circle-check"></i></div>
+            <h3 id="modalTitle" class="text-xl font-bold mb-2">處理成功</h3>
+            <p id="modalText" class="mb-6">您的操作已完成。</p>
+            <button onclick="closeModal()" class="bg-gray-800 text-white px-6 py-2 rounded hover:bg-gray-700">確定</button>
+        </div>
+    </div>
+
+    <!-- 匯入名單對話框 (Modal) -->
+    <div id="importModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50 screen-only">
+        <div class="bg-white text-gray-800 p-6 rounded-lg max-w-md w-full shadow-2xl transform scale-95 transition-transform">
+            <h3 class="text-xl font-bold mb-4"><i class="fa-solid fa-file-import"></i> 批次匯入/編輯學生名單</h3>
+            <p class="text-sm text-gray-600 mb-2">請在下方輸入或貼上學生姓名，<strong>每行一位</strong>。<br>系統會自動編排座號。</p>
+            <textarea id="importTextarea" class="w-full border-2 border-gray-300 rounded p-2 h-48 focus:border-green-500 outline-none resize-none mb-4 bg-gray-50 leading-relaxed"></textarea>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeImportModal()" class="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 font-bold">取消</button>
+                <button onclick="processImport()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-bold">確認匯入</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 初始化與基礎邏輯 ---
+        const students = [
+            { id: 1, name: '王小明' }, { id: 2, name: '陳語彤' }, { id: 3, name: '林子軒' },
+            { id: 4, name: '張凱婷' }, { id: 5, name: '黃俊傑' }, { id: 6, name: '李明' }, { id: 7, name: '歐陽震華' }
+        ];
+
+        const templates = {
+            polite: { greeting: "各位家長您好，今日班級狀況提醒：\n", absent: "【未到校名單】：", consent: "【未交同意書】：", notice: "【未交通知單】：", footer: "\n再麻煩家長協助留意並督促孩子，感謝您的配合！導師 敬上。" },
+            friendly: { greeting: "親愛的爸爸媽媽們好～今天有幾件事情要麻煩大家幫忙留意喔！\n", absent: "📍 今天請假/未到的寶貝：", consent: "📝 還沒交回「同意書」的寶貝：", notice: "✉️ 還沒交回「通知單」的寶貝：", footer: "\n如果已經讓孩子帶在書包裡了，請忽略此訊息。祝大家有個美好的一天！😊" },
+            urgent: { greeting: "【‼️重要班級通知‼️】家長您好，以下為急需處理之事項：\n", absent: "⚠️ 今日未到校 (盡速聯繫導師)：", consent: "⚠️ 同意書逾期未交：", notice: "⚠️ 通知單逾期未交：", footer: "\n為保障學生權益，請名單上的家長【務必於明日】讓學生繳回相關表單，或主動與導師聯繫。謝謝！" }
+        };
+
+        let statusData = {};
+        let uploadedImageFile = null;
+
+        window.onload = () => {
+            const today = new Date();
+            document.getElementById('currentDate').innerText = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
+            const binder = document.getElementById('binderHoles');
+            for(let i=0; i<15; i++) binder.innerHTML += `<div class="hole"></div>`;
+            renderStudentList();
+            updatePreview();
+        };
+
+        function setTheme(color) {
+            const root = document.documentElement;
+            if (color === 'brown') { root.style.setProperty('--theme-dark', '#78350f'); root.style.setProperty('--theme-light', '#fef3c7'); root.style.setProperty('--theme-paper', '#fffbeb'); root.style.setProperty('--theme-line', '#fde68a'); } 
+            else if (color === 'green') { root.style.setProperty('--theme-dark', '#064e3b'); root.style.setProperty('--theme-light', '#d1fae5'); root.style.setProperty('--theme-paper', '#ecfdf5'); root.style.setProperty('--theme-line', '#a7f3d0'); } 
+            else if (color === 'blue') { root.style.setProperty('--theme-dark', '#1e3a8a'); root.style.setProperty('--theme-light', '#dbeafe'); root.style.setProperty('--theme-paper', '#eff6ff'); root.style.setProperty('--theme-line', '#bfdbfe'); }
+        }
+
+        function renderStudentList() {
+            const tbody = document.getElementById('studentList');
+            tbody.innerHTML = '';
+            students.forEach(student => {
+                if(!statusData[student.id]) statusData[student.id] = { absent: false, consent: false, notice: false };
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-current/20 hover:bg-black/5 transition";
+                tr.innerHTML = `
+                    <td class="py-1">${student.id.toString().padStart(2,'0')} ${student.name}</td>
+                    <td class="text-center"><input type="checkbox" class="custom-checkbox" onchange="toggleStatus(${student.id}, 'absent', this.checked)" ${statusData[student.id].absent ? 'checked' : ''}></td>
+                    <td class="text-center"><input type="checkbox" class="custom-checkbox" onchange="toggleStatus(${student.id}, 'consent', this.checked)" ${statusData[student.id].consent ? 'checked' : ''}></td>
+                    <td class="text-center"><input type="checkbox" class="custom-checkbox" onchange="toggleStatus(${student.id}, 'notice', this.checked)" ${statusData[student.id].notice ? 'checked' : ''}></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function toggleStatus(id, type, isChecked) {
+            statusData[id][type] = isChecked;
+            updatePreview();
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                uploadedImageFile = file;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('imagePreview').src = e.target.result;
+                    document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                }
+                reader.readAsDataURL(file); updatePreview();
+            }
+        }
+
+        function clearImage() {
+            uploadedImageFile = null; document.getElementById('imageInput').value = '';
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+            document.getElementById('imagePreview').src = ''; updatePreview();
+        }
+
+        function getMaskedName(student) {
+            const mode = document.querySelector('input[name="privacyMode"]:checked').value;
+            const paddedId = student.id.toString().padStart(2, '0');
+            if (mode === 'number') return `${paddedId}號`;
+            else if (mode === 'mask') {
+                const name = student.name;
+                let maskedName = "";
+                if (name.length <= 2) maskedName = name.substring(0, 1) + "Ｏ";
+                else if (name.length === 3) maskedName = name.substring(0, 1) + "Ｏ" + name.substring(2);
+                else maskedName = name.substring(0, 2) + "Ｏ".repeat(name.length - 3) + name.substring(name.length - 1);
+                return `${paddedId}號 ${maskedName}`;
+            } else return `${paddedId}號 ${student.name}`;
+        }
+
+        function generateMessageText() {
+            const selectedTone = document.querySelector('input[name="tone"]:checked').value;
+            const t = templates[selectedTone];
+            let absentList = [], consentList = [], noticeList = [];
+
+            students.forEach(s => {
+                const displayName = getMaskedName(s);
+                if(statusData[s.id].absent) absentList.push(displayName);
+                if(statusData[s.id].consent) consentList.push(displayName);
+                if(statusData[s.id].notice) noticeList.push(displayName);
+            });
+
+            let finalMsg = "", hasContent = false;
+            if (absentList.length > 0) { finalMsg += `${t.absent}\n  ${absentList.join('\n  ')}\n\n`; hasContent = true; }
+            if (consentList.length > 0) { finalMsg += `${t.consent}\n  ${consentList.join('\n  ')}\n\n`; hasContent = true; }
+            if (noticeList.length > 0) { finalMsg += `${t.notice}\n  ${noticeList.join('\n  ')}\n\n`; hasContent = true; }
+
+            const annotation = document.getElementById('imageAnnotation').value.trim();
+            if (annotation) { finalMsg += `【註解】：\n${annotation}\n\n`; hasContent = true; }
+
+            if (!hasContent && !uploadedImageFile) return "無任何通知事項。(請勾選學生狀態或添加註解)";
+            return t.greeting + "\n" + finalMsg + t.footer;
+        }
+
+        function updatePreview() { 
+            // 寫入到可編輯的 textarea 中
+            document.getElementById('messagePreview').value = generateMessageText(); 
+        }
+
+        // ==========================================
+        // 列印個人小卡邏輯
+        // ==========================================
+        function printSlips() {
+            const printArea = document.getElementById('printArea');
+            printArea.innerHTML = ''; 
+            let hasAnyNotice = false;
+            
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
+
+            students.forEach(s => {
+                const status = statusData[s.id];
+                if (status.absent || status.consent || status.notice) {
+                    hasAnyNotice = true;
+                    const slip = document.createElement('div');
+                    slip.className = 'slip-card';
+                    
+                    const boxAbsent = status.absent ? '☑️ <strong style="color:black;">今日未到校</strong>' : '<span style="color:#999;">☐ 今日未到校</span>';
+                    const boxConsent = status.consent ? '☑️ <strong style="color:black;">未繳交同意書</strong>' : '<span style="color:#999;">☐ 未繳交同意書</span>';
+                    const boxNotice = status.notice ? '☑️ <strong style="color:black;">未繳交通知單</strong>' : '<span style="color:#999;">☐ 未繳交通知單</span>';
+
+                    const annotation = document.getElementById('imageAnnotation').value.trim();
+                    const annotationHtml = annotation ? `<p style="font-size:12px; margin-top:8px; border-top:1px dashed #ccc; padding-top:5px;"><strong>導師叮嚀：</strong><br>${annotation}</p>` : '';
+
+                    slip.innerHTML = `
+                        <h3 style="text-align:center; margin:0 0 10px 0; border-bottom:2px solid #000; padding-bottom:5px;">📌 導師通知單</h3>
+                        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:10px;">
+                            <span><strong>${s.id.toString().padStart(2,'0')}號 ${s.name}</strong> 的家長 您好：</span>
+                            <span>日期：${dateStr}</span>
+                        </div>
+                        <p style="font-size:13px; margin-bottom:5px;">貴子弟今日有以下事項需您協助配合：</p>
+                        <ul style="list-style-type:none; padding-left:5px; margin:0; line-height:1.8; font-size:14px;">
+                            <li>${boxAbsent}</li>
+                            <li>${boxConsent}</li>
+                            <li>${boxNotice}</li>
+                        </ul>
+                        ${annotationHtml}
+                        <div style="margin-top:25px; text-align:right; font-size:14px;">
+                            家長簽章：<span style="display:inline-block; width:120px; border-bottom:1px solid #000;"></span>
+                        </div>
+                    `;
+                    printArea.appendChild(slip);
+                }
+            });
+
+            if (!hasAnyNotice) {
+                showModal('提示', '目前沒有任何學生被勾選未交事項，不需要列印喔！', 'error');
+                return;
+            }
+            window.print();
+        }
+
+        // ==========================================
+        // 複製到剪貼簿的核心函式 (相容 iFrame 與本機端)
+        // ==========================================
+        function executeCopy(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            let successful = false;
+            try {
+                successful = document.execCommand('copy');
+            } catch (err) {
+                console.error('複製失敗', err);
+            }
+            document.body.removeChild(textArea);
+            return successful;
+        }
+
+        // ==========================================
+        // 其他發送邏輯
+        // ==========================================
+        function sendViaLineApp() {
+            // 直接抓取 textarea 內 (可能被老師手動編輯過) 的文字
+            const msg = document.getElementById('messagePreview').value.trim();
+            if(msg === "" || msg.includes("無任何通知事項")) { showModal('提示', '請先勾選名單再發送喔！', 'error'); return; }
+            
+            // 雙重保險：自動複製到剪貼簿
+            const isCopied = executeCopy(msg);
+
+            const encodedMsg = encodeURIComponent(msg);
+            
+            // 使用最原始且穩定的 scheme，直接當作純文字帶入聊天室
+            const lineUrl = `https://line.me/R/msg/text/?${encodedMsg}`;
+            
+            if (uploadedImageFile) {
+                const proceed = confirm("💡 貼心提醒：\n「一鍵開啟 LINE」只能帶文字。\n要連圖片一起傳請改用黑色的「手機分享」。\n確定只傳文字嗎？");
+                if(!proceed) return;
+            }
+            window.open(lineUrl, '_blank');
+
+            // 顯示成功與貼心提醒提示 (包含登出安全警告)
+            setTimeout(() => {
+                const hintMessage = isCopied 
+                    ? '✅ 訊息已經為您「自動複製」了！<br><br>如果在 LINE 裡面沒有出現文字，<br>請直接在聊天室<strong>【在這裡複製貼上您的訊息】</strong>即可發送。<br><br><hr class="my-3 border-gray-300"><span class="text-red-600 font-bold text-sm"><i class="fa-solid fa-triangle-exclamation"></i> 提醒：如使用公用電腦，離開前請記得登出您的 LINE 帳號！</span>'
+                    : '開啟 LINE 成功！<br><br>請直接在聊天室<strong>【在這裡複製貼上您的訊息】</strong>即可發送。<br><br><hr class="my-3 border-gray-300"><span class="text-red-600 font-bold text-sm"><i class="fa-solid fa-triangle-exclamation"></i> 提醒：如使用公用電腦，離開前請記得登出您的 LINE 帳號！</span>';
+                
+                showModal('跳轉提示', hintMessage, 'success');
+            }, 500);
+        }
+
+        async function nativeShare() {
+            const msg = document.getElementById('messagePreview').value.trim();
+            if(msg === "" || msg.includes("無任何通知事項") && !uploadedImageFile) { showModal('提示', '沒有要分享的內容', 'error'); return; }
+            if (navigator.share) {
+                try {
+                    const shareData = { title: '導師手札通知', text: msg };
+                    if (uploadedImageFile && navigator.canShare) {
+                        const filesArray = [uploadedImageFile];
+                        if (navigator.canShare({ files: filesArray })) shareData.files = filesArray;
+                    }
+                    await navigator.share(shareData);
+                } catch (err) { console.log('分享取消或失敗', err); }
+            } else { showModal('不支援', '您的裝置不支援內建分享。', 'error'); }
+        }
+
+        function copyMessage() {
+            const msg = document.getElementById('messagePreview').value.trim();
+            if(msg === "" || msg.includes("無任何通知事項")) { showModal('錯誤', '沒有內容可複製', 'error'); return; }
+            
+            if (executeCopy(msg)) {
+                showModal('複製成功', '文字已複製！', 'success');
+            } else {
+                showModal('複製失敗', '請手動複製。', 'error');
+            }
+        }
+
+        // --- 輔助介面與匯入邏輯 ---
+        function showModal(title, text, type) {
+            document.getElementById('modalTitle').innerText = title; document.getElementById('modalText').innerHTML = text;
+            const icon = document.getElementById('modalIcon');
+            icon.innerHTML = type === 'success' ? '<i class="fa-solid fa-circle-check text-green-500"></i>' : '<i class="fa-solid fa-circle-exclamation text-red-500"></i>';
+            document.getElementById('modal').classList.remove('hidden');
+        }
+        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+        function openImportModal() {
+            document.getElementById('importTextarea').value = students.map(s => `${s.id} ${s.name}`).join('\n');
+            document.getElementById('importModal').classList.remove('hidden');
+        }
+        function closeImportModal() { document.getElementById('importModal').classList.add('hidden'); }
+        function processImport() {
+            const lines = document.getElementById('importTextarea').value.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            if (lines.length === 0) { showModal('錯誤', '名單不能為空！', 'error'); return; }
+            let newStudents = [], defaultId = 1;
+            lines.forEach(line => {
+                const match = line.match(/^(\d+)[.\s、]+(.*)$/);
+                if (match) {
+                    const id = parseInt(match[1], 10), name = match[2].trim() || '未知';
+                    newStudents.push({ id, name }); defaultId = id + 1;
+                } else { newStudents.push({ id: defaultId, name: line }); defaultId++; }
+            });
+            students.length = 0; students.push(...newStudents); statusData = {}; 
+            closeImportModal(); renderStudentList(); updatePreview();
+            showModal('匯入成功', `已匯入 ${newStudents.length} 位學生名單！`, 'success');
+        }
+    </script>
+</body>
+</html>
