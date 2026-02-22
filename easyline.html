@@ -307,6 +307,20 @@
         let uploadedImageFile = null;
 
         window.onload = () => {
+            // 【新增】從瀏覽器的 localStorage 讀取暫存的學生名單
+            const savedStudents = localStorage.getItem('teacherNotebookStudents');
+            if (savedStudents) {
+                try {
+                    const parsedStudents = JSON.parse(savedStudents);
+                    if (Array.isArray(parsedStudents) && parsedStudents.length > 0) {
+                        students.length = 0; // 清空預設名單
+                        students.push(...parsedStudents); // 載入暫存名單
+                    }
+                } catch (e) {
+                    console.error('讀取暫存名單失敗', e);
+                }
+            }
+
             const today = new Date();
             document.getElementById('currentDate').innerText = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
             const binder = document.getElementById('binderHoles');
@@ -564,8 +578,12 @@
                 } else { newStudents.push({ id: defaultId, name: line }); defaultId++; }
             });
             students.length = 0; students.push(...newStudents); statusData = {}; 
+            
+            // 【新增】將匯入的最新名單存入瀏覽器的 localStorage
+            localStorage.setItem('teacherNotebookStudents', JSON.stringify(students));
+
             closeImportModal(); renderStudentList(); updatePreview();
-            showModal('匯入成功', `已匯入 ${newStudents.length} 位學生名單！`, 'success');
+            showModal('匯入成功', `已匯入 ${newStudents.length} 位學生名單！<br><br><span style="color:#00B900; font-size:0.9em;"><i class="fa-solid fa-floppy-disk"></i> 名單已自動儲存於此瀏覽器中，下次開啟免重匯。</span>`, 'success');
         }
     </script>
 </body>
