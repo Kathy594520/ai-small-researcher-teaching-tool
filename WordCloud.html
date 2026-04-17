@@ -151,7 +151,7 @@
 
   </main>
 
-  <!-- Confirm Modal (Simple custom version) -->
+  <!-- Confirm Modal (With Password Lock) -->
   <div id="confirmModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 hidden">
     <div class="bg-white p-6 rounded-xl shadow-2xl max-w-xs w-full mx-4 text-center">
       <div class="text-red-500 mb-3 flex justify-center">
@@ -160,10 +160,21 @@
         </svg>
       </div>
       <h3 class="text-lg font-bold text-gray-800 mb-2">確定要清除所有資料嗎？</h3>
-      <p class="text-sm text-gray-500 mb-6">此動作將永久刪除雲端上的所有關鍵字，無法還原。</p>
+      <p class="text-sm text-gray-500 mb-4">此動作將永久刪除雲端上的所有關鍵字，無法還原。</p>
+      
+      <!-- 密碼輸入區 -->
+      <div class="mb-5 text-left">
+        <label for="clearPassword" class="block text-sm font-medium text-gray-700 mb-1">請輸入密碼：</label>
+        <input type="password" id="clearPassword" 
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400 transition" 
+               placeholder="輸入密碼..."
+               onkeypress="handlePasswordKeyPress(event)">
+        <p id="passwordError" class="text-red-500 text-xs mt-1 hidden">❌ 密碼錯誤，請重新輸入</p>
+      </div>
+
       <div class="flex gap-3">
         <button onclick="toggleConfirmModal(false)" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg transition font-medium">取消</button>
-        <button onclick="executeClear()" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg transition font-medium">確定清除</button>
+        <button onclick="checkPasswordAndClear()" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg transition font-medium">確定清除</button>
       </div>
     </div>
   </div>
@@ -183,7 +194,7 @@
     </div>
   </div>
 
-  <div id="toast-container"></div>
+  <div id="toast-container" class="fixed bottom-4 right-4 z-[70] flex flex-col gap-2"></div>
 
   <footer class="bg-gray-100 text-center p-4 text-xs text-gray-400 mt-auto">
     Created with Google Apps Script & WordCloud2.js
@@ -234,7 +245,20 @@
     }
 
     function toggleConfirmModal(show) {
-      document.getElementById('confirmModal').classList.toggle('hidden', !show);
+      const modal = document.getElementById('confirmModal');
+      const passwordInput = document.getElementById('clearPassword');
+      const passwordError = document.getElementById('passwordError');
+
+      if (show) {
+        // 開啟視窗時，清空密碼與錯誤訊息
+        passwordInput.value = '';
+        passwordError.classList.add('hidden');
+        modal.classList.remove('hidden');
+        // 自動聚焦在密碼輸入框
+        setTimeout(() => passwordInput.focus(), 100);
+      } else {
+        modal.classList.add('hidden');
+      }
     }
 
     function showToast(message, type = 'info') {
@@ -250,9 +274,31 @@
       }, 3000);
     }
 
-    // --- 清除資料邏輯 ---
+    // --- 清除資料邏輯與密碼驗證 ---
     function confirmClearData() {
       toggleConfirmModal(true);
+    }
+
+    function handlePasswordKeyPress(e) {
+      if (e.key === 'Enter') {
+        checkPasswordAndClear();
+      }
+    }
+
+    function checkPasswordAndClear() {
+      const pwdInput = document.getElementById('clearPassword').value;
+      const errorMsg = document.getElementById('passwordError');
+
+      // 檢查密碼是否為 8888
+      if (pwdInput === '8888') {
+        errorMsg.classList.add('hidden');
+        executeClear();
+      } else {
+        // 密碼錯誤，顯示錯誤訊息並清除輸入框
+        errorMsg.classList.remove('hidden');
+        document.getElementById('clearPassword').value = '';
+        document.getElementById('clearPassword').focus();
+      }
     }
 
     function executeClear() {
