@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>四年級數學小測驗 — 周長與面積</title>
+<style>
+  :root {
+    --primary: #4F8EF7;
+    --primary-hover: #2563EB;
+    --success-bg: #DCFCE7;
+    --success-text: #14532D;
+    --error-bg: #FEF2F2;
+    --error-text: #7F1D1D;
+    --text-main: #111827;
+    --text-sub: #6B7280;
+    --border: #E5E7EB;
+    --bg: #F7F9FC;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", sans-serif;
+    background: var(--bg);
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 32px 16px 60px;
+  }
+
+  /* ── Header ── */
+  .header {
+    width: 100%;
+    max-width: 720px;
+    margin-bottom: 28px;
+  }
+  .header-badge {
+    display: inline-block;
+    background: #EEF2FF;
+    color: #4338CA;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 100px;
+    margin-bottom: 10px;
+    letter-spacing: .04em;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    line-height: 1.3;
+  }
+  .header p {
+    font-size: 14px;
+    color: var(--text-sub);
+    margin-top: 6px;
+  }
+
+  /* ── Progress bar ── */
+  .progress-wrap {
+    width: 100%;
+    max-width: 720px;
+    margin-bottom: 20px;
+  }
+  .progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-sub);
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  .progress-bar-bg {
+    height: 6px;
+    background: #E5E7EB;
+    border-radius: 100px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 100px;
+    transition: width .4s ease;
+  }
+
+  /* ── Card ── */
+  .card {
+    width: 100%;
+    max-width: 720px;
+    background: #fff;
+    border-radius: 20px;
+    padding: 36px 40px;
+    box-shadow: 0 2px 16px rgba(0,0,0,.06);
+  }
+
+  .question-num {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .question-text {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.55;
+    margin-bottom: 28px;
+    color: var(--text-main);
+  }
+
+  /* ── Options ── */
+  .options-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .option-item {
+    background: #F9FAFB;
+    border: 1.5px solid transparent;
+    border-radius: 14px;
+    padding: 18px 22px;
+    cursor: pointer;
+    transition: all .18s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  .option-item:not(.disabled):hover {
+    background: #EEF2FF;
+    border-color: #C7D2FE;
+  }
+  .option-header {
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    color: var(--text-main);
+  }
+  .option-prefix {
+    font-weight: 700;
+    min-width: 28px;
+    color: var(--text-sub);
+  }
+  .option-item.correct { background: var(--success-bg); border-color: #86EFAC; }
+  .option-item.wrong   { background: var(--error-bg);   border-color: #FCA5A5; }
+  .option-item.faded   { opacity: .45; pointer-events: none; }
+  .option-item.disabled { pointer-events: none; }
+
+  .feedback-section {
+    max-height: 0; overflow: hidden; opacity: 0;
+    transition: max-height .35s ease, opacity .35s ease, margin-top .35s ease;
+    font-size: 14px; line-height: 1.6;
+  }
+  .option-item.correct .feedback-section,
+  .option-item.wrong   .feedback-section {
+    max-height: 200px; opacity: 1; margin-top: 10px;
+  }
+  .option-item.correct .feedback-section { color: var(--success-text); }
+  .option-item.wrong   .feedback-section { color: var(--error-text); }
+
+  /* ── Explain box ── */
+  .explain-box {
+    display: none;
+    margin-top: 20px;
+    background: #F0F9FF;
+    border-left: 4px solid #38BDF8;
+    border-radius: 0 12px 12px 0;
+    padding: 14px 18px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #0C4A6E;
+  }
+  .explain-box.show { display: block; }
+
+  /* ── Footer controls ── */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 32px;
+  }
+  .hint-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 14px; font-weight: 600; color: var(--text-sub);
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 0; transition: color .15s;
+  }
+  .hint-btn:hover { color: var(--primary); }
+  .nav-btns { display: flex; gap: 10px; }
+
+  .btn {
+    padding: 10px 26px; border-radius: 100px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    border: none; transition: all .18s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn-outline {
+    background: #fff; border: 1.5px solid var(--border); color: var(--text-main);
+  }
+  .btn-outline:hover { border-color: #9CA3AF; background: #F9FAFB; }
+  .btn-outline:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-primary {
+    background: var(--primary); color: #fff;
+    box-shadow: 0 4px 12px rgba(79,142,247,.25);
+  }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-primary:disabled { background: #E5E7EB; color: #9CA3AF; box-shadow: none; cursor: not-allowed; }
+
+  /* ── Results ── */
+  .result-view { width: 100%; max-width: 720px; animation: fadeUp .5s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+  .result-emoji { font-size: 56px; text-align: center; margin-bottom: 16px; }
+  .result-title { font-size: 30px; font-weight: 800; text-align: center; letter-spacing: -.02em; margin-bottom: 6px; }
+  .result-sub   { font-size: 15px; color: var(--text-sub); text-align: center; margin-bottom: 36px; }
+
+  .stats-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px; margin-bottom: 32px;
+  }
+  .stat-card {
+    background: #F9FAFB; border-radius: 18px;
+    padding: 28px 20px; display: flex; flex-direction: column;
+    align-items: flex-start;
+  }
+  .stat-label { font-size: 13px; font-weight: 600; color: var(--text-sub); margin-bottom: 10px; }
+  .stat-value { font-size: 44px; font-weight: 300; color: var(--text-main); line-height: 1; letter-spacing: -1px; }
+  .stat-unit  { font-size: 15px; font-weight: 600; color: var(--text-sub); margin-top: 4px; }
+
+  .result-actions { display: flex; justify-content: flex-end; gap: 12px; }
+  .btn-lg { padding: 13px 32px; font-size: 15px; border-radius: 100px; font-weight: 700; cursor: pointer; border: 1.5px solid var(--border); background: #fff; color: var(--text-main); transition: all .18s; }
+  .btn-lg:hover { border-color: #000; background: #F9FAFB; }
+  .btn-lg.primary { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 4px 14px rgba(79,142,247,.3); }
+  .btn-lg.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+
+  /* Review badge */
+  .review-badge {
+    display: none; background: #FEF3C7; color: #92400E;
+    font-size: 12px; font-weight: 700; padding: 3px 10px;
+    border-radius: 100px; margin-left: 10px;
+  }
+  .review-badge.show { display: inline; }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 600px) {
+    .card { padding: 24px 20px; }
+    .question-text { font-size: 18px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .result-actions { flex-direction: column; }
+    .btn-lg { width: 100%; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div class="header">
+  <div class="header-badge">康軒版 ▸ 四年級下學期 ▸ 第六單元</div>
+  <h1>周長與面積 小測驗</h1>
+  <p>共 15 題 · 選擇題 · 完成後可查看詳解</p>
+</div>
+
+<!-- ── PROGRESS ── -->
+<div class="progress-wrap" id="progressWrap">
+  <div class="progress-info">
+    <span>第 <span id="curQ">1</span> 題，共 15 題
+      <span class="review-badge" id="reviewBadge">複習模式</span>
+    </span>
+    <span id="pctText">0%</span>
+  </div>
+  <div class="progress-bar-bg">
+    <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+  </div>
+</div>
+
+<!-- ── QUIZ CARD ── -->
+<div class="card" id="quizCard">
+  <div class="question-num" id="qNum">第 1 題</div>
+  <div class="question-text" id="questionText">Loading…</div>
+  <div class="options-list" id="optionsList"></div>
+  <div class="explain-box" id="explainBox"></div>
+
+  <div class="footer">
+    <button class="hint-btn" id="hintBtn" onclick="toggleHint()">
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3
+             m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547
+             A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531
+             c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+      </svg>
+      <span id="hintLabel">提示</span>
+    </button>
+    <div class="nav-btns">
+      <button class="btn btn-outline" id="prevBtn" onclick="prevQ()" disabled>上一題</button>
+      <button class="btn btn-primary" id="nextBtn" onclick="nextQ()" disabled>下一題</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RESULT VIEW ── -->
+<div class="result-view hidden" id="resultView">
+  <div class="result-emoji" id="resultEmoji">🎉</div>
+  <div class="result-title" id="resultTitle">測驗完成！</div>
+  <div class="result-sub"  id="resultSub"></div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">得分</div>
+      <div class="stat-value" id="statScore">0</div>
+      <div class="stat-unit">/ 15</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">正確率</div>
+      <div class="stat-value" id="statAcc">0</div>
+      <div class="stat-unit">%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">答對 / 答錯</div>
+      <div class="stat-value" id="statRight">0</div>
+      <div class="stat-unit">答對 · <span id="statWrong">0</span> 答錯</div>
+    </div>
+  </div>
+
+  <div class="result-actions">
+    <button class="btn-lg" onclick="startReview()">查看詳解</button>
+    <button class="btn-lg primary" onclick="retake()">再測一次</button>
+  </div>
+</div>
+
+<script>
+const questions = [
+  /* ── 6-1 長方形、正方形的周長 ── */
+  {
+    q: "一個長方形的長是 8 公分、寬是 5 公分，它的周長是多少公分？",
+    hint: "長方形周長 ＝ (長 ＋ 寬) × 2",
+    opts: ["13 公分", "26 公分", "40 公分", "16 公分"],
+    ans: 1,
+    fb: [
+      "只加了長和寬，還沒乘以 2 喔！",
+      "正確！(8 ＋ 5) × 2 ＝ 26 公分 ✓",
+      "40 是面積 8×5，不是周長。",
+      "16 是 8×2，忘了加寬了。"
+    ],
+    explain: "長方形有兩條長和兩條寬，所以周長 ＝ (長 ＋ 寬) × 2 ＝ (8 ＋ 5) × 2 ＝ 13 × 2 ＝ 26（公分）。"
+  },
+  {
+    q: "一個正方形的邊長是 7 公分，它的周長是多少公分？",
+    hint: "正方形四邊等長，周長 ＝ 邊長 × 4",
+    opts: ["14 公分", "28 公分", "49 公分", "21 公分"],
+    ans: 1,
+    fb: [
+      "7 × 2 ＝ 14，只算了兩邊。",
+      "正確！7 × 4 ＝ 28 公分 ✓",
+      "49 是面積，不是周長。",
+      "7 × 3 ＝ 21，算了三邊而不是四邊。"
+    ],
+    explain: "正方形四邊等長，周長 ＝ 邊長 × 4 ＝ 7 × 4 ＝ 28（公分）。"
+  },
+  {
+    q: "一個長方形的周長是 36 公分，長是 11 公分，寬是多少公分？",
+    hint: "先算長＋寬的和，再減去長。",
+    opts: ["7 公分", "14 公分", "18 公分", "25 公分"],
+    ans: 0,
+    fb: [
+      "正確！36 ÷ 2 ＝ 18，18 − 11 ＝ 7 公分 ✓",
+      "14 是長＋寬的一半再加一點，算錯了。",
+      "18 是長＋寬的和，還要再減去長。",
+      "25 超過半個周長了，不可能是寬。"
+    ],
+    explain: "周長 ÷ 2 ＝ 長 ＋ 寬 ＝ 36 ÷ 2 ＝ 18（公分），再用 18 − 11 ＝ 7（公分），所以寬是 7 公分。"
+  },
+  {
+    q: "一個正方形的周長是 52 公分，邊長是多少公分？",
+    hint: "周長 ÷ 4 ＝ 邊長",
+    opts: ["12 公分", "13 公分", "26 公分", "48 公分"],
+    ans: 1,
+    fb: [
+      "52 ÷ 4 ＝ 13，不是 12。",
+      "正確！52 ÷ 4 ＝ 13 公分 ✓",
+      "26 是 52 ÷ 2，除以了 2 而不是 4。",
+      "48 是 52 − 4，方向錯了。"
+    ],
+    explain: "正方形四邊等長，邊長 ＝ 周長 ÷ 4 ＝ 52 ÷ 4 ＝ 13（公分）。"
+  },
+  /* ── 6-2 長方形、正方形的面積 ── */
+  {
+    q: "一個長方形的長是 9 公分、寬是 6 公分，面積是多少平方公分？",
+    hint: "長方形面積 ＝ 長 × 寬",
+    opts: ["30 平方公分", "54 平方公分", "45 平方公分", "15 平方公分"],
+    ans: 1,
+    fb: [
+      "30 是周長的一半，不是面積。",
+      "正確！9 × 6 ＝ 54 平方公分 ✓",
+      "9 × 5 ＝ 45，寬用錯了。",
+      "15 是長＋寬，不是面積。"
+    ],
+    explain: "長方形面積 ＝ 長 × 寬 ＝ 9 × 6 ＝ 54（平方公分）。"
+  },
+  {
+    q: "一個正方形的邊長是 8 公分，面積是多少平方公分？",
+    hint: "正方形面積 ＝ 邊長 × 邊長",
+    opts: ["32 平方公分", "64 平方公分", "16 平方公分", "24 平方公分"],
+    ans: 1,
+    fb: [
+      "32 是 8 × 4（周長），不是面積。",
+      "正確！8 × 8 ＝ 64 平方公分 ✓",
+      "16 是 8 × 2，只乘了 2。",
+      "24 是 8 × 3，只乘了 3。"
+    ],
+    explain: "正方形面積 ＝ 邊長 × 邊長 ＝ 8 × 8 ＝ 64（平方公分）。"
+  },
+  {
+    q: "一塊長方形花圃，長是 12 公尺、寬是 5 公尺，面積是多少平方公尺？",
+    hint: "面積 ＝ 長 × 寬（注意單位是公尺）",
+    opts: ["34 平方公尺", "60 平方公尺", "17 平方公尺", "70 平方公尺"],
+    ans: 1,
+    fb: [
+      "34 是周長的一半，不是面積。",
+      "正確！12 × 5 ＝ 60 平方公尺 ✓",
+      "17 是長＋寬，不是面積。",
+      "70 算錯了，12 × 5 ＝ 60 才對。"
+    ],
+    explain: "面積 ＝ 長 × 寬 ＝ 12 × 5 ＝ 60（平方公尺）。"
+  },
+  /* ── 6-3 周長和面積的關係 ── */
+  {
+    q: "甲長方形長 10 公分、寬 4 公分；乙長方形長 8 公分、寬 6 公分。下列敘述何者正確？",
+    hint: "分別算出兩個長方形的周長和面積再比較。",
+    opts: [
+      "甲、乙周長相同，面積也相同",
+      "甲、乙周長相同，但面積不同",
+      "甲、乙周長不同，面積相同",
+      "甲、乙周長和面積都不同"
+    ],
+    ans: 1,
+    fb: [
+      "周長相同，但面積 40 ≠ 48，不同喔！",
+      "正確！甲乙周長都是 28 公分，但面積分別是 40 和 48 平方公分 ✓",
+      "周長：甲 (10＋4)×2＝28，乙 (8＋6)×2＝28，兩者相同。",
+      "周長其實是相同的，再算一次看看！"
+    ],
+    explain: "甲周長 ＝ (10＋4)×2 ＝ 28 公分，乙周長 ＝ (8＋6)×2 ＝ 28 公分，周長相同。甲面積 ＝ 10×4 ＝ 40，乙面積 ＝ 8×6 ＝ 48，面積不同。由此可知：周長相同，面積不一定相同！"
+  },
+  {
+    q: "用 24 公分的鐵絲圍成一個正方形，這個正方形的面積是多少平方公分？",
+    hint: "先算邊長，再算面積。",
+    opts: ["36 平方公分", "16 平方公分", "48 平方公分", "24 平方公分"],
+    ans: 0,
+    fb: [
+      "正確！邊長 ＝ 24 ÷ 4 ＝ 6，面積 ＝ 6 × 6 ＝ 36 平方公分 ✓",
+      "16 ＝ 4 × 4，邊長算成 4 了。",
+      "48 是用 24 × 2 算出來的，方向錯了。",
+      "24 是周長，不是面積。"
+    ],
+    explain: "邊長 ＝ 24 ÷ 4 ＝ 6（公分），面積 ＝ 6 × 6 ＝ 36（平方公分）。"
+  },
+  /* ── 6-4 認識 1 平方公尺 ── */
+  {
+    q: "1 平方公尺等於多少平方公分？",
+    hint: "1 公尺 ＝ 100 公分，想想面積怎麼換算。",
+    opts: ["100 平方公分", "1000 平方公分", "10000 平方公分", "100000 平方公分"],
+    ans: 2,
+    fb: [
+      "100 只是 1 公尺 ＝ 100 公分，面積要兩個方向都乘。",
+      "1000 不對，再想想看。",
+      "正確！100 × 100 ＝ 10000 平方公分 ✓",
+      "100000 太多了！"
+    ],
+    explain: "1 公尺 ＝ 100 公分，所以 1 平方公尺 ＝ 100 公分 × 100 公分 ＝ 10000 平方公分。"
+  },
+  {
+    q: "一間教室地板的面積約是 50 平方公尺，換算成平方公分是多少？",
+    hint: "1 平方公尺 ＝ 10000 平方公分",
+    opts: ["5000 平方公分", "50000 平方公分", "500000 平方公分", "5000000 平方公分"],
+    ans: 2,
+    fb: [
+      "5000 ＝ 50 × 100，只乘了一次 100。",
+      "50000 ＝ 50 × 1000，不對。",
+      "正確！50 × 10000 ＝ 500000 平方公分 ✓",
+      "5000000 太多了！"
+    ],
+    explain: "50 平方公尺 ＝ 50 × 10000 ＝ 500000（平方公分）。"
+  },
+  /* ── 6-5 複合圖形的面積 ── */
+  {
+    q: "一個「ㄇ」形圖案，可以看成一個大長方形（長 10 公分、寬 8 公分）挖去一個小長方形（長 6 公分、寬 4 公分），面積是多少平方公分？",
+    hint: "大長方形面積 − 小長方形面積",
+    opts: ["56 平方公分", "80 平方公分", "24 平方公分", "104 平方公分"],
+    ans: 0,
+    fb: [
+      "正確！10×8 − 6×4 ＝ 80 − 24 ＝ 56 平方公分 ✓",
+      "80 是大長方形的面積，還沒減去挖掉的部分。",
+      "24 是小長方形的面積，還要用大的減去它。",
+      "104 是兩個面積相加，應該要相減。"
+    ],
+    explain: "大長方形面積 ＝ 10 × 8 ＝ 80（平方公分），小長方形面積 ＝ 6 × 4 ＝ 24（平方公分），複合圖形面積 ＝ 80 − 24 ＝ 56（平方公分）。"
+  },
+  {
+    q: "一個圖形由兩個長方形拼成：左邊長方形長 5 公分、寬 4 公分；右邊長方形長 3 公分、寬 6 公分。整個圖形的面積是多少平方公分？",
+    hint: "兩個長方形面積分別計算，再相加。",
+    opts: ["38 平方公分", "42 平方公分", "48 平方公分", "36 平方公分"],
+    ans: 0,
+    fb: [
+      "正確！5×4 ＋ 3×6 ＝ 20 ＋ 18 ＝ 38 平方公分 ✓",
+      "42 算錯了，再確認一次 5×4 和 3×6。",
+      "48 不對，仔細算算看。",
+      "36 不對，兩塊加起來應該是 38。"
+    ],
+    explain: "左邊面積 ＝ 5 × 4 ＝ 20（平方公分），右邊面積 ＝ 3 × 6 ＝ 18（平方公分），合計 ＝ 20 ＋ 18 ＝ 38（平方公分）。"
+  },
+  {
+    q: "一個「十」字形圖案，可以分成三個長方形（上下各一個 2×4 公分，中間一個 8×4 公分）。整個圖形的面積是多少平方公分？",
+    hint: "三個長方形面積分別算再相加。",
+    opts: ["40 平方公分", "48 平方公分", "56 平方公分", "64 平方公分"],
+    ans: 1,
+    fb: [
+      "40 ＝ 8×4＋2×4，少算了一個 2×4。",
+      "正確！2×4 ＋ 8×4 ＋ 2×4 ＝ 8＋32＋8 ＝ 48 平方公分 ✓",
+      "56 算多了。",
+      "64 算多了。"
+    ],
+    explain: "上方 ＝ 2×4 ＝ 8，中間 ＝ 8×4 ＝ 32，下方 ＝ 2×4 ＝ 8，合計 ＝ 8＋32＋8 ＝ 48（平方公分）。"
+  },
+  {
+    q: "小明想用籬笆圍住一塊長方形菜園，長 15 公尺、寬 8 公尺。如果每公尺籬笆要花 20 元，共需要花多少元？",
+    hint: "先算周長，再乘以每公尺的費用。",
+    opts: ["460 元", "920 元", "2400 元", "4800 元"],
+    ans: 1,
+    fb: [
+      "460 算錯了，周長是 46 公尺，46 × 20 ＝ 920。",
+      "正確！周長 ＝ (15＋8)×2 ＝ 46 公尺，46 × 20 ＝ 920 元 ✓",
+      "2400 ＝ 15×8×20，把面積當周長用了。",
+      "4800 算錯了。"
+    ],
+    explain: "周長 ＝ (15 ＋ 8) × 2 ＝ 46（公尺），費用 ＝ 46 × 20 ＝ 920（元）。"
+  }
+];
+
+// ── State ──
+let cur = 0;
+let answered  = new Array(questions.length).fill(false);
+let selected  = new Array(questions.length).fill(null);
+let hintShown = new Array(questions.length).fill(false);
+let reviewMode = false;
+
+// ── Render ──
+function render() {
+  const d = questions[cur];
+  const isAns = answered[cur];
+  const sel   = selected[cur];
+  const total = questions.length;
+
+  // progress
+  const pct = Math.round(((cur + 1) / total) * 100);
+  document.getElementById('curQ').textContent = cur + 1;
+  document.getElementById('pctText').textContent = pct + '%';
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('qNum').textContent = '第 ' + (cur + 1) + ' 題';
+  document.getElementById('reviewBadge').className = 'review-badge' + (reviewMode ? ' show' : '');
+
+  // question
+  document.getElementById('questionText').textContent = d.q;
+
+  // options
+  const list = document.getElementById('optionsList');
+  list.innerHTML = '';
+  const prefixes = ['A', 'B', 'C', 'D'];
+  d.opts.forEach((opt, i) => {
+    const el = document.createElement('div');
+    el.className = 'option-item';
+
+    let cls = '';
+    if (isAns || (reviewMode && sel !== null)) {
+      el.classList.add('disabled');
+      if (i === d.ans) cls = 'correct';
+      else if (i === sel && i !== d.ans) cls = 'wrong';
+      else cls = 'faded';
+    }
+    if (cls) el.classList.add(cls);
+
+    el.innerHTML = `
+      <div class="option-header">
+        <span class="option-prefix">${prefixes[i]}.</span>
+        <span>${opt}</span>
+      </div>
+      <div class="feedback-section">${d.fb[i]}</div>
+    `;
+    if (!isAns && !reviewMode) {
+      el.onclick = () => choose(i);
+    }
+    list.appendChild(el);
+  });
+
+  // explain box
+  const box = document.getElementById('explainBox');
+  if (isAns || reviewMode) {
+    box.textContent = '📖 ' + d.explain;
+    box.className = 'explain-box show';
+  } else {
+    box.className = 'explain-box';
+  }
+
+  // hint button
+  const hintBtn   = document.getElementById('hintBtn');
+  const hintLabel = document.getElementById('hintLabel');
+  if (isAns || reviewMode) {
+    hintBtn.style.display = 'none';
+  } else {
+    hintBtn.style.display = 'flex';
+    hintLabel.textContent = hintShown[cur] ? '隱藏提示' : '提示';
+  }
+
+  // nav
+  document.getElementById('prevBtn').disabled = cur === 0;
+  const nextBtn = document.getElementById('nextBtn');
+  if (reviewMode) {
+    nextBtn.disabled = false;
+    nextBtn.textContent = cur === total - 1 ? '回到成績' : '下一題';
+  } else {
+    nextBtn.disabled = !isAns;
+    nextBtn.textContent = cur === total - 1 ? '完成測驗' : '下一題';
+  }
+}
+
+function choose(i) {
+  if (answered[cur]) return;
+  answered[cur] = true;
+  selected[cur] = i;
+  render();
+}
+
+function toggleHint() {
+  if (answered[cur]) return;
+  hintShown[cur] = !hintShown[cur];
+  const box = document.getElementById('explainBox');
+  if (hintShown[cur]) {
+    box.textContent = '💡 ' + questions[cur].hint;
+    box.className = 'explain-box show';
+  } else {
+    box.className = 'explain-box';
+  }
+  document.getElementById('hintLabel').textContent = hintShown[cur] ? '隱藏提示' : '提示';
+}
+
+function prevQ() {
+  if (cur > 0) { cur--; render(); }
+}
+
+function nextQ() {
+  if (reviewMode) {
+    if (cur === questions.length - 1) { showResults(); return; }
+    cur++; render(); return;
+  }
+  if (cur < questions.length - 1) { cur++; render(); }
+  else showResults();
+}
+
+// ── Results ──
+function showResults() {
+  document.getElementById('quizCard').classList.add('hidden');
+  document.getElementById('progressWrap').classList.add('hidden');
+  document.getElementById('resultView').classList.remove('hidden');
+
+  let correct = 0;
+  selected.forEach((s, i) => { if (s === questions[i].ans) correct++; });
+  const wrong = questions.length - correct;
+  const acc   = Math.round((correct / questions.length) * 100);
+
+  document.getElementById('statScore').textContent = correct;
+  document.getElementById('statAcc').textContent   = acc;
+  document.getElementById('statRight').textContent = correct;
+  document.getElementById('statWrong').textContent = wrong;
+
+  let emoji = '🎉', title = '太棒了！滿分！', sub = '你完全掌握了周長與面積！';
+  if (acc < 100) { emoji = '👍'; title = '做得不錯！'; sub = '繼續加油，下次一定可以更好！'; }
+  if (acc < 70)  { emoji = '💪'; title = '再努力一點！'; sub = '建議複習詳解，再挑戰一次吧！'; }
+  if (acc < 40)  { emoji = '📚'; title = '需要多練習！'; sub = '先看看詳解，慢慢來沒關係！'; }
+
+  document.getElementById('resultEmoji').textContent = emoji;
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultSub').textContent   = sub;
+}
+
+function startReview() {
+  reviewMode = true;
+  cur = 0;
+  document.getElementById('resultView').classList.add('hidden');
+  document.getElementById('quizCard').classList.remove('hidden');
+  document.getElementById('progressWrap').classList.remove('hidden');
+  render();
+}
+
+function retake() {
+  reviewMode = false;
+  cur = 0;
+  answered.fill(false);
+  selected.fill(null);
+  hintShown.fill(false);
+  document.getElementById('resultView').classList.add('hidden');
+  document.getElementById('quizCard').classList.remove('hidden');
+  document.getElementById('progressWrap').classList.remove('hidden');
+  render();
+}
+
+// ── Init ──
+render();
+</script>
+</body>
+</html>
