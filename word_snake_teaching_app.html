@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>語詞貪食蛇</title>
+  <style>
+    :root {
+      --bg1:#fff7ed;
+      --bg2:#eef2ff;
+      --card:#ffffffcc;
+      --ink:#334155;
+      --main:#ff7aa2;
+      --main2:#7dd3fc;
+      --ok:#34d399;
+      --bad:#fb7185;
+      --soft:#fef3c7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin:0;
+      min-height:100vh;
+      font-family:"Noto Sans TC", system-ui, -apple-system, sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at 12% 12%, #ffe4e6 0 18%, transparent 19%),
+        radial-gradient(circle at 88% 8%, #dbeafe 0 16%, transparent 17%),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+    }
+    .container { max-width:960px; margin:0 auto; padding:18px; }
+    .top {
+      text-align:center;
+      margin-bottom:14px;
+    }
+    h1 {
+      margin:0;
+      font-size:clamp(2.2rem,6vw,3.4rem);
+      letter-spacing:.04em;
+      color:#ec4899;
+      text-shadow:2px 3px 0 #fff;
+    }
+    .layout {
+      display:grid;
+      grid-template-columns:minmax(320px,1fr) 310px;
+      gap:14px;
+      align-items:start;
+    }
+    .card {
+      background:var(--card);
+      border:3px solid #fff;
+      border-radius:28px;
+      box-shadow:0 14px 30px #64748b22;
+      padding:14px;
+      backdrop-filter:blur(8px);
+    }
+    canvas {
+      width:100%;
+      aspect-ratio:1;
+      background:#fffaf0;
+      border-radius:24px;
+      display:block;
+      box-shadow:inset 0 0 0 4px #ffffff, inset 0 0 0 8px #fde68a;
+    }
+    .row {
+      margin:10px 0;
+      line-height:1.45;
+      font-size:1.55rem;
+    }
+    .label {
+      display:inline-block;
+      padding:2px 10px;
+      margin-right:6px;
+      border-radius:999px;
+      background:#fce7f3;
+      color:#be185d;
+      font-weight:800;
+    }
+    #prompt {
+      display:block;
+      margin-top:8px;
+      padding:12px;
+      border-radius:18px;
+      background:#fff7ed;
+      border:2px dashed #fdba74;
+      color:#9a3412;
+      font-size:1.55rem;
+    }
+    .score {
+      font-size:2.1rem;
+      font-weight:900;
+      color:#0ea5e9;
+    }
+    .btns { display:flex; gap:10px; flex-wrap:wrap; margin:12px 0; }
+    button {
+      border:0;
+      border-radius:18px;
+      padding:14px 18px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:1.4rem;
+      box-shadow:0 6px 0 #00000014;
+      transition:transform .08s ease, box-shadow .08s ease;
+    }
+    button:active { transform:translateY(3px); box-shadow:0 3px 0 #00000014; }
+    .primary { background:linear-gradient(135deg,#fb7185,#f472b6); color:white; }
+    .ghost { background:#e0f2fe; color:#0369a1; }
+    .pad {
+      margin-top:12px;
+      display:grid;
+      grid-template-columns:repeat(3,78px);
+      gap:9px;
+      justify-content:center;
+    }
+    .pad button {
+      width:78px;
+      height:70px;
+      padding:0;
+      font-size:2rem;
+      background:#fef3c7;
+      color:#92400e;
+    }
+    .pad .empty { visibility:hidden; }
+    .mini {
+      margin-top:10px;
+      text-align:center;
+      color:#64748b;
+      font-size:1.05rem;
+    }
+    .cute-note {
+      text-align:center;
+      font-size:1.35rem;
+      font-weight:800;
+      color:#64748b;
+      margin:8px 0 0;
+    }
+    @media (max-width:860px){
+      .layout{ grid-template-columns:1fr; }
+      .row { font-size:1.35rem; }
+      .pad { grid-template-columns:repeat(3,70px); }
+      .pad button { width:70px; height:64px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top">
+      <h1>語詞貪食蛇</h1>
+      <p class="cute-note">吃到正確字卡，蛇蛇就長大一點點 🐍</p>
+    </div>
+
+    <div class="layout">
+      <div class="card">
+        <canvas id="game" width="480" height="480" aria-label="語詞貪食蛇遊戲畫面"></canvas>
+      </div>
+
+      <aside class="card">
+        <div class="row"><span class="label">題目</span><strong id="prompt">載入中...</strong></div>
+        <div class="row"><span class="label">分數</span><span id="score" class="score">0</span></div>
+        <div class="btns">
+          <button class="primary" id="restart">重新開始</button>
+          <button class="ghost" id="pause">暫停</button>
+        </div>
+        <div class="pad" aria-label="方向控制">
+          <button class="empty" tabindex="-1"> </button>
+          <button data-dir="ArrowUp">↑</button>
+          <button class="empty" tabindex="-1"> </button>
+          <button data-dir="ArrowLeft">←</button>
+          <button data-dir="ArrowDown">↓</button>
+          <button data-dir="ArrowRight">→</button>
+        </div>
+        <p class="mini">方向鍵或按鈕都可以玩</p>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const cvs = document.getElementById('game');
+    const ctx = cvs.getContext('2d');
+    const GRID = 24, SIZE = 20;
+
+    const bank = [
+      { q: '「高興」的近義詞是？', correct: '開心', wrong: '難過' },
+      { q: '「迅速」的近義詞是？', correct: '快速', wrong: '緩慢' },
+      { q: '「明亮」的反義詞是？', correct: '昏暗', wrong: '耀眼' },
+      { q: '「勇敢」的反義詞是？', correct: '膽怯', wrong: '堅強' },
+      { q: '「節省」的近義詞是？', correct: '省下', wrong: '浪費' },
+      { q: '「專心」的反義詞是？', correct: '分心', wrong: '投入' },
+      { q: '「安靜」的反義詞是？', correct: '吵鬧', wrong: '寧靜' },
+      { q: '「聰明」的近義詞是？', correct: '機靈', wrong: '遲鈍' },
+      { q: '「炎熱」的反義詞是？', correct: '寒冷', wrong: '酷熱' },
+      { q: '「誠實」的反義詞是？', correct: '說謊', wrong: '真誠' },
+      { q: '「整齊」的反義詞是？', correct: '凌亂', wrong: '有序' },
+      { q: '「輕鬆」的近義詞是？', correct: '自在', wrong: '緊張' },
+      { q: '「勤勞」的反義詞是？', correct: '懶惰', wrong: '努力' },
+      { q: '「寬廣」的近義詞是？', correct: '遼闊', wrong: '狹小' },
+      { q: '「謙虛」的反義詞是？', correct: '驕傲', wrong: '低調' },
+      { q: '「清楚」的反義詞是？', correct: '模糊', wrong: '明白' },
+      { q: '「仔細」的近義詞是？', correct: '認真', wrong: '馬虎' },
+      { q: '「成功」的反義詞是？', correct: '失敗', wrong: '達成' },
+      { q: '「溫柔」的反義詞是？', correct: '粗暴', wrong: '和氣' },
+      { q: '「珍惜」的近義詞是？', correct: '愛惜', wrong: '浪費' },
+      { q: '「公開」的反義詞是？', correct: '祕密', wrong: '透明' },
+      { q: '「堅持」的近義詞是？', correct: '持續', wrong: '放棄' }
+    ];
+
+    let snake, dir, score, okCard, badCard, q, paused = false;
+
+    const randomCell = () => Math.floor(Math.random() * SIZE);
+    const same = (a,b) => a.x===b.x && a.y===b.y;
+
+    function chooseQuestion() {
+      q = bank[Math.floor(Math.random() * bank.length)];
+      document.getElementById('prompt').textContent = q.q;
+    }
+
+    function onSnake(cell) {
+      return snake.some(s => same(s, cell));
+    }
+
+    function spawnCards() {
+      do { okCard = { x: randomCell(), y: randomCell(), text: q.correct }; }
+      while (onSnake(okCard));
+      do { badCard = { x: randomCell(), y: randomCell(), text: q.wrong }; }
+      while (onSnake(badCard) || same(okCard, badCard));
+    }
+
+    function reset() {
+      snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+      dir = { x: 1, y: 0 };
+      score = 0;
+      paused = false;
+      document.getElementById('pause').textContent = '暫停';
+      chooseQuestion();
+      spawnCards();
+      document.getElementById('score').textContent = score;
+      draw();
+    }
+
+    function step() {
+      if (paused) return;
+      const head = {
+        x: (snake[0].x + dir.x + SIZE) % SIZE,
+        y: (snake[0].y + dir.y + SIZE) % SIZE
+      };
+      if (snake.some(s => same(s, head))) return reset();
+
+      snake.unshift(head);
+      if (same(head, okCard)) {
+        score += 1;
+        chooseQuestion();
+        spawnCards();
+      } else if (same(head, badCard)) {
+        score = Math.max(0, score - 1);
+        snake.pop();
+        spawnCards();
+      } else {
+        snake.pop();
+      }
+      document.getElementById('score').textContent = score;
+    }
+
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function drawBackground() {
+      ctx.fillStyle = '#fffaf0';
+      ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+      ctx.strokeStyle = '#fde68a';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= SIZE; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * GRID, 0);
+        ctx.lineTo(i * GRID, cvs.height);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(0, i * GRID);
+        ctx.lineTo(cvs.width, i * GRID);
+        ctx.stroke();
+      }
+
+      for (let i = 0; i < 20; i++) {
+        const x = (i * 73) % cvs.width;
+        const y = (i * 47) % cvs.height;
+        ctx.fillStyle = i % 2 ? '#dbeafe' : '#ffe4e6';
+        ctx.beginPath();
+        ctx.arc(x + 8, y + 8, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawSnake() {
+      snake.forEach((s, index) => {
+        const x = s.x * GRID + 2;
+        const y = s.y * GRID + 2;
+        const isHead = index === 0;
+
+        ctx.fillStyle = isHead ? '#86efac' : (index % 2 ? '#bbf7d0' : '#a7f3d0');
+        roundRect(x, y, GRID - 4, GRID - 4, 9);
+        ctx.fill();
+
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        if (!isHead) {
+          ctx.fillStyle = '#34d399';
+          ctx.beginPath();
+          ctx.arc(x + GRID / 2 - 1, y + GRID / 2 - 1, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      const head = snake[0];
+      const hx = head.x * GRID + 2;
+      const hy = head.y * GRID + 2;
+
+      ctx.fillStyle = '#14532d';
+      ctx.beginPath();
+      ctx.arc(hx + 8, hy + 9, 2.8, 0, Math.PI * 2);
+      ctx.arc(hx + 16, hy + 9, 2.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#fb7185';
+      ctx.beginPath();
+      ctx.arc(hx + 5, hy + 15, 2.4, 0, Math.PI * 2);
+      ctx.arc(hx + 19, hy + 15, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#14532d';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(hx + 12, hy + 13, 4, 0.15 * Math.PI, 0.85 * Math.PI);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#fb7185';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(hx + 22, hy + 12);
+      ctx.lineTo(hx + 28, hy + 10);
+      ctx.moveTo(hx + 28, hy + 10);
+      ctx.lineTo(hx + 31, hy + 7);
+      ctx.moveTo(hx + 28, hy + 10);
+      ctx.lineTo(hx + 32, hy + 12);
+      ctx.stroke();
+    }
+
+    function drawCard(card, kind) {
+      const px = card.x * GRID;
+      const py = card.y * GRID;
+      const isOk = kind === 'ok';
+
+      ctx.save();
+      ctx.shadowColor = '#00000022';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 3;
+      ctx.fillStyle = isOk ? '#fbbf24' : '#fb7185';
+      roundRect(px - 4, py - 5, GRID + 34, GRID + 10, 11);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 18px "Noto Sans TC", system-ui';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(card.text, px + 3, py + GRID / 2);
+
+      ctx.fillStyle = isOk ? '#16a34a' : '#be123c';
+      ctx.beginPath();
+      ctx.arc(px + GRID + 22, py + 8, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function draw() {
+      drawBackground();
+      drawCard(okCard, 'ok');
+      drawCard(badCard, 'bad');
+      drawSnake();
+
+      if (paused) {
+        ctx.fillStyle = '#ffffffcc';
+        roundRect(115, 194, 250, 88, 24);
+        ctx.fill();
+        ctx.fillStyle = '#ec4899';
+        ctx.font = 'bold 34px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('暫停中', 240, 238);
+        ctx.textAlign = 'left';
+      }
+    }
+
+    function setDirection(key) {
+      const map = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0] };
+      const v = map[key];
+      if (!v) return;
+      if (v[0] === -dir.x && v[1] === -dir.y) return;
+      dir = { x:v[0], y:v[1] };
+    }
+
+    document.addEventListener('keydown', e => setDirection(e.key));
+    document.querySelectorAll('[data-dir]').forEach(btn => {
+      btn.addEventListener('click', () => setDirection(btn.dataset.dir));
+    });
+
+    document.getElementById('restart').addEventListener('click', reset);
+    document.getElementById('pause').addEventListener('click', () => {
+      paused = !paused;
+      document.getElementById('pause').textContent = paused ? '繼續' : '暫停';
+      draw();
+    });
+
+    reset();
+    setInterval(() => { step(); draw(); }, 150);
+  </script>
+</body>
+</html>
