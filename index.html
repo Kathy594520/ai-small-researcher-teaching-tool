@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>🐍 語詞貪食蛇</title>
+  <style>
+    :root {
+      --bg: #fff5f5;
+      --card: #ffffff;
+      --main: #ff6b9d;
+      --text: #5a3e4a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      max-width: 980px;
+      width: 100%;
+      padding: 16px;
+    }
+    h1 {
+      font-size: clamp(2rem, 5vw, 2.8rem);
+      text-align: center;
+      margin-bottom: 16px;
+      color: var(--main);
+      letter-spacing: 2px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) 300px;
+      gap: 14px;
+      align-items: start;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 20px;
+      box-shadow: 0 4px 24px rgba(255, 107, 157, 0.12);
+      padding: 16px;
+    }
+    canvas {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #2a1f3d;
+      border-radius: 16px;
+      display: block;
+    }
+    .q-row {
+      margin: 10px 0;
+      font-size: 1.6rem;
+      line-height: 1.6;
+      padding: 14px;
+      background: #fef9f0;
+      border-radius: 14px;
+      border: 2px solid #ffd93d;
+    }
+    .row {
+      margin: 10px 0;
+      font-size: 1.4rem;
+      line-height: 1.6;
+    }
+    .score {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--main);
+    }
+    .btns {
+      display: flex;
+      gap: 10px;
+      margin: 12px 0;
+    }
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1.1rem;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    .primary {
+      background: var(--main);
+      color: white;
+    }
+    .ghost {
+      background: #fce4ec;
+      color: var(--main);
+    }
+    .pad {
+      display: grid;
+      grid-template-columns: repeat(3, 72px);
+      gap: 8px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .pad button {
+      width: 72px;
+      height: 72px;
+      padding: 0;
+      font-size: 1.8rem;
+      background: #fce4ec;
+      color: var(--main);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pad .empty {
+      visibility: hidden;
+    }
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🐍 語詞貪食蛇</h1>
+
+    <div class="layout">
+      <div class="card">
+        <canvas id="game" width="600" height="600" aria-label="語詞貪食蛇遊戲畫面"></canvas>
+      </div>
+
+      <aside class="card">
+        <div class="q-row">📖 <strong id="prompt">載入中...</strong></div>
+        <div class="row">⭐ 分數：<span id="score" class="score">0</span></div>
+        <div class="btns">
+          <button class="primary" id="restart">🔄 重新開始</button>
+          <button class="ghost" id="pause">⏸️ 暫停</button>
+        </div>
+        <div class="pad" aria-label="方向控制">
+          <button class="empty" tabindex="-1"></button>
+          <button data-dir="ArrowUp">↑</button>
+          <button class="empty" tabindex="-1"></button>
+          <button data-dir="ArrowLeft">←</button>
+          <button data-dir="ArrowDown">↓</button>
+          <button data-dir="ArrowRight">→</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const cvs = document.getElementById('game');
+    const ctx = cvs.getContext('2d');
+    const GRID = 40, SIZE = 15;
+
+    const bank = [
+      { q: '「高興」的近義詞是？', correct: '開心', wrong: '難過' },
+      { q: '「迅速」的近義詞是？', correct: '快速', wrong: '緩慢' },
+      { q: '「明亮」的反義詞是？', correct: '昏暗', wrong: '耀眼' },
+      { q: '「勇敢」的反義詞是？', correct: '膽怯', wrong: '堅強' },
+      { q: '「節省」的近義詞是？', correct: '省下', wrong: '浪費' },
+      { q: '「專心」的反義詞是？', correct: '分心', wrong: '投入' },
+      { q: '「安靜」的反義詞是？', correct: '吵鬧', wrong: '寧靜' },
+      { q: '「聰明」的近義詞是？', correct: '機靈', wrong: '遲鈍' },
+      { q: '「炎熱」的反義詞是？', correct: '寒冷', wrong: '酷熱' },
+      { q: '「誠實」的反義詞是？', correct: '說謊', wrong: '真誠' },
+      { q: '「整齊」的反義詞是？', correct: '凌亂', wrong: '有序' },
+      { q: '「輕鬆」的近義詞是？', correct: '自在', wrong: '緊張' },
+      { q: '「勤勞」的反義詞是？', correct: '懶惰', wrong: '努力' },
+      { q: '「寬廣」的近義詞是？', correct: '遼闊', wrong: '狹小' },
+      { q: '「謙虛」的反義詞是？', correct: '驕傲', wrong: '低調' },
+      { q: '「清楚」的反義詞是？', correct: '模糊', wrong: '明白' },
+      { q: '「仔細」的近義詞是？', correct: '認真', wrong: '馬虎' },
+      { q: '「成功」的反義詞是？', correct: '失敗', wrong: '達成' },
+      { q: '「溫柔」的反義詞是？', correct: '粗暴', wrong: '和氣' },
+      { q: '「珍惜」的近義詞是？', correct: '愛惜', wrong: '浪費' },
+      { q: '「公開」的反義詞是？', correct: '祕密', wrong: '透明' },
+      { q: '「堅持」的近義詞是？', correct: '持續', wrong: '放棄' }
+    ];
+
+    let snake, dir, score, okCard, badCard, q, paused = false;
+
+    const randomCell = () => Math.floor(Math.random() * SIZE);
+    const same = (a, b) => a.x === b.x && a.y === b.y;
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function chooseQuestion() {
+      q = bank[Math.floor(Math.random() * bank.length)];
+      document.getElementById('prompt').textContent = q.q;
+    }
+
+    function spawnCards() {
+      do { okCard = { x: randomCell(), y: randomCell(), text: q.correct }; }
+      while (snake.some(s => same(s, okCard)));
+      do { badCard = { x: randomCell(), y: randomCell(), text: q.wrong }; }
+      while (snake.some(s => same(s, badCard)) || same(okCard, badCard));
+    }
+
+    function reset() {
+      snake = [{ x: 7, y: 7 }];
+      dir = { x: 1, y: 0 };
+      score = 0;
+      paused = false;
+      document.getElementById('pause').textContent = '⏸️ 暫停';
+      chooseQuestion();
+      spawnCards();
+      document.getElementById('score').textContent = score;
+      draw();
+    }
+
+    function step() {
+      if (paused) return;
+      const head = {
+        x: (snake[0].x + dir.x + SIZE) % SIZE,
+        y: (snake[0].y + dir.y + SIZE) % SIZE
+      };
+      if (snake.some(s => same(s, head))) return reset();
+
+      snake.unshift(head);
+      if (same(head, okCard)) {
+        score += 1;
+        chooseQuestion();
+        spawnCards();
+      } else if (same(head, badCard)) {
+        score = Math.max(0, score - 1);
+        snake.pop();
+        spawnCards();
+      } else {
+        snake.pop();
+      }
+      document.getElementById('score').textContent = score;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+      const g = ctx.createRadialGradient(300, 300, 0, 300, 300, 425);
+      g.addColorStop(0, '#2a1f3d');
+      g.addColorStop(1, '#1a1228');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      for (let x = 0; x < SIZE; x++) {
+        for (let y = 0; y < SIZE; y++) {
+          ctx.beginPath();
+          ctx.arc(x * GRID + GRID/2, y * GRID + GRID/2, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      for (let i = snake.length - 1; i >= 0; i--) {
+        const s = snake[i];
+        const cx = s.x * GRID + GRID/2;
+        const cy = s.y * GRID + GRID/2;
+        const isHead = i === 0;
+        const r = isHead ? 18 : 16;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = isHead ? '#69db7c' : '#40c057';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(cx - 4, cy - 4, r * 0.3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.fill();
+
+        if (isHead) {
+          let e1x, e1y, e2x, e2y;
+          if (dir.x === 1) {
+            e1x = cx + 7; e1y = cy - 5;
+            e2x = cx + 7; e2y = cy + 5;
+          } else if (dir.x === -1) {
+            e1x = cx - 7; e1y = cy - 5;
+            e2x = cx - 7; e2y = cy + 5;
+          } else if (dir.y === -1) {
+            e1x = cx - 5; e1y = cy - 7;
+            e2x = cx + 5; e2y = cy - 7;
+          } else {
+            e1x = cx - 5; e1y = cy + 7;
+            e2x = cx + 5; e2y = cy + 7;
+          }
+
+          ctx.fillStyle = '#fff';
+          ctx.beginPath(); ctx.arc(e1x, e1y, 5, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(e2x, e2y, 5, 0, Math.PI * 2); ctx.fill();
+
+          ctx.fillStyle = '#1a1228';
+          ctx.beginPath(); ctx.arc(e1x + dir.x * 1.5, e1y + dir.y * 1.5, 2.5, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(e2x + dir.x * 1.5, e2y + dir.y * 1.5, 2.5, 0, Math.PI * 2); ctx.fill();
+
+          ctx.fillStyle = 'rgba(255,150,150,0.35)';
+          if (dir.x !== 0) {
+            ctx.beginPath(); ctx.arc(cx, cy - 8, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx, cy + 8, 5, 0, Math.PI * 2); ctx.fill();
+          } else {
+            ctx.beginPath(); ctx.arc(cx - 8, cy, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx + 8, cy, 5, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+      }
+
+      roundRect(ctx, okCard.x * GRID + 2, okCard.y * GRID + 2, GRID - 4, GRID - 4, 8);
+      ctx.fillStyle = '#ffd93d';
+      ctx.fill();
+
+      roundRect(ctx, badCard.x * GRID + 2, badCard.y * GRID + 2, GRID - 4, GRID - 4, 8);
+      ctx.fillStyle = '#ff8a8a';
+      ctx.fill();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 20px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(okCard.text, okCard.x * GRID + GRID/2, okCard.y * GRID + GRID/2);
+      ctx.fillText(badCard.text, badCard.x * GRID + GRID/2, badCard.y * GRID + GRID/2);
+    }
+
+    function setDirection(key) {
+      const map = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+      const v = map[key];
+      if (!v) return;
+      if (v[0] === -dir.x && v[1] === -dir.y) return;
+      dir = { x: v[0], y: v[1] };
+    }
+
+    document.addEventListener('keydown', e => setDirection(e.key));
+    document.querySelectorAll('[data-dir]').forEach(btn => {
+      btn.addEventListener('click', () => setDirection(btn.dataset.dir));
+    });
+
+    document.getElementById('restart').addEventListener('click', reset);
+    document.getElementById('pause').addEventListener('click', () => {
+      paused = !paused;
+      document.getElementById('pause').textContent = paused ? '▶️ 繼續' : '⏸️ 暫停';
+    });
+
+    reset();
+    setInterval(() => { step(); draw(); }, 300);
+  </script>
+</body>
+</html>
