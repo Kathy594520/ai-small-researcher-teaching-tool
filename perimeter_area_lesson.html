@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>📐 周長與面積 ─ 四年級數學概念動畫</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, 'Noto Sans TC', sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .player {
+      width: 100%;
+      max-width: 960px;
+      background: #16213e;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      overflow: hidden;
+      position: relative;
+    }
+    .stage {
+      position: relative;
+      min-height: 540px;
+      padding: 40px 48px 32px;
+    }
+    .slide {
+      display: none;
+      animation: fadeIn 0.6s ease;
+    }
+    .slide.active { display: block; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+    .slide h2 {
+      font-size: 2rem;
+      color: #ffd93d;
+      margin-bottom: 12px;
+    }
+    .slide .sub {
+      font-size: 1.1rem;
+      color: #a0a0c0;
+      margin-bottom: 24px;
+    }
+    .slide .content {
+      font-size: 1.2rem;
+      line-height: 1.8;
+    }
+    .highlight { color: #ffd93d; font-weight: 700; }
+    .highlight2 { color: #6bcbff; font-weight: 700; }
+    .highlight3 { color: #ff6b9d; font-weight: 700; }
+    .box {
+      background: rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin: 12px 0;
+      border-left: 4px solid #ffd93d;
+    }
+    .box.pink { border-left-color: #ff6b9d; }
+    .box.blue { border-left-color: #6bcbff; }
+
+    .canvas-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 16px 0;
+    }
+    canvas { border-radius: 12px; background: #0f0f23; }
+
+    .mis-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .mis-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+    }
+    .mis-card .label {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 6px;
+    }
+    .mis-card .value {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+    .mis-card .note {
+      font-size: 0.95rem;
+      color: #aaa;
+      margin-top: 6px;
+    }
+    .wrong { color: #ff6b9d; }
+    .correct { color: #6bcbff; }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 48px;
+      background: rgba(0,0,0,0.3);
+    }
+    .controls button {
+      background: none;
+      border: 2px solid rgba(255,255,255,0.2);
+      color: #e0e0e0;
+      border-radius: 10px;
+      padding: 8px 20px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: 0.2s;
+    }
+    .controls button:hover { border-color: #ffd93d; color: #ffd93d; }
+    .progress {
+      display: flex;
+      gap: 6px;
+    }
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transition: 0.3s;
+    }
+    .dot.active { background: #ffd93d; }
+    .dot.done { background: rgba(255,217,61,0.4); }
+    .slide-num { font-size: 0.9rem; color: #888; }
+
+    ul { padding-left: 24px; margin: 8px 0; }
+    ul li { margin: 6px 0; }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .tag.mis { background: rgba(255,107,157,0.2); color: #ff6b9d; }
+    .tag.tip { background: rgba(107,203,255,0.2); color: #6bcbff; }
+    .tag.key { background: rgba(255,217,61,0.2); color: #ffd93d; }
+
+    @media (max-width: 700px) {
+      .stage { padding: 24px 20px; min-height: 440px; }
+      .slide h2 { font-size: 1.5rem; }
+      .mis-grid { grid-template-columns: 1fr; }
+      .controls { padding: 12px 20px; flex-wrap: wrap; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+<div class="player">
+  <div class="stage" id="stage">
+
+    <!-- Slide 1: Title -->
+    <div class="slide active" data-slide="0">
+      <h2>📐 周長與面積</h2>
+      <div class="sub">國小四年級數學 · 108 課綱概念動畫</div>
+      <div class="canvas-wrap">
+        <canvas id="titleCanvas" width="640" height="280"></canvas>
+      </div>
+      <div class="content" style="text-align:center;color:#aaa;">
+        🔄 將自動播放，也可手動切換下方按鈕
+      </div>
+    </div>
+
+    <!-- Slide 2: 課綱目標 -->
+    <div class="slide" data-slide="1">
+      <h2>🎯 108 課綱學習目標</h2>
+      <div class="sub">四年級「周長與面積」單元</div>
+      <div class="content">
+        <div class="box">
+          <strong>學習表現：</strong> <span class="highlight2">n-Ⅱ-9</span><br>
+          理解長度、角度、面積、容量的常用單位與換算，培養量感與估測能力，並能做計算和應用解題。
+        </div>
+        <div class="box blue">
+          <strong>學習內容：</strong><br>
+          <span class="highlight2">S-3-1</span> 周長與面積的意義與計算<br>
+          <span class="highlight2">S-3-2</span> 正方形與長方形的周長與面積公式
+        </div>
+        <div class="box pink">
+          <strong>教學目標：</strong><br>
+          ① 理解周長與面積的意義與差異<br>
+          ② 能應用公式計算正方形與長方形<br>
+          ③ 能在生活中估測與應用
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 3: 什麼是周長 -->
+    <div class="slide" data-slide="2">
+      <h2>📏 什麼是周長？</h2>
+      <div class="sub">Perimeter ─ 圖形外圍一圈的長度</div>
+      <div class="canvas-wrap">
+        <canvas id="perimeterCanvas" width="640" height="260"></canvas>
+      </div>
+      <div class="content" style="margin-top:8px;">
+        <div class="box">
+          <span class="tag key">核心概念</span><br>
+          ▸ 周界：圖形<span class="highlight">外圍的邊界線</span><br>
+          ▸ 周長 = 周界的<span class="highlight">長度總和</span><br>
+          ▸ <span class="highlight2">長方形周長</span> = (長 + 寬) × 2<br>
+          ▸ <span class="highlight2">正方形周長</span> = 邊長 × 4
+        </div>
+        <div style="color:#888;font-size:1rem;margin-top:6px;">📌 單位：公分 (cm)、公尺 (m) ─ 一維的長度單位</div>
+      </div>
+    </div>
+
+    <!-- Slide 4: 什麼是面積 -->
+    <div class="slide" data-slide="3">
+      <h2>🔲 什麼是面積？</h2>
+      <div class="sub">Area ─ 圖形內部所占的空間大小</div>
+      <div class="canvas-wrap">
+        <canvas id="areaCanvas" width="640" height="260"></canvas>
+      </div>
+      <div class="content" style="margin-top:8px;">
+        <div class="box">
+          <span class="tag key">核心概念</span><br>
+          ▸ 面積 = 圖形<span class="highlight3">內部的大小</span><br>
+          ▸ 用「平方公分板」來測量<br>
+          ▸ <span class="highlight2">長方形面積</span> = 長 × 寬<br>
+          ▸ <span class="highlight2">正方形面積</span> = 邊長 × 邊長
+        </div>
+        <div style="color:#888;font-size:1rem;margin-top:6px;">📌 單位：平方公分 (cm²)、平方公尺 (m²) ─ 二維的空間單位</div>
+      </div>
+    </div>
+
+    <!-- Slide 5: 迷思1 周長越長面積越大？ -->
+    <div class="slide" data-slide="4">
+      <h2>⚠️ 迷思一：周長越長，面積越大？</h2>
+      <div class="sub">錯！周長相同，面積可以差很多</div>
+      <div class="canvas-wrap">
+        <canvas id="m1Canvas" width="640" height="200"></canvas>
+      </div>
+      <div class="mis-grid">
+        <div class="mis-card">
+          <div class="label">長 8cm × 寬 2cm</div>
+          <div class="value">周長 20cm</div>
+          <div class="value correct">面積 16cm²</div>
+        </div>
+        <div class="mis-card">
+          <div class="label">長 6cm × 寬 4cm</div>
+          <div class="value">周長 20cm</div>
+          <div class="value correct">面積 24cm²</div>
+        </div>
+      </div>
+      <div class="box pink">
+        <span class="tag mis">常見迷思</span>
+        <span class="highlight3"> ❌ 以為周長越長面積就越大</span><br>
+        <span class="highlight2"> ✅ 正確觀念：周長相等 → 面積不一定相等！</span>
+        <div style="color:#aaa;font-size:0.95rem;margin-top:4px;">同樣 20cm 周長，正方形 5×5 面積 25cm² 才是最大的！</div>
+      </div>
+    </div>
+
+    <!-- Slide 6: 迷思2 公式混淆 -->
+    <div class="slide" data-slide="5">
+      <h2>⚠️ 迷思二：周長公式 vs 面積公式</h2>
+      <div class="sub">「用加的還是用乘的？」</div>
+      <div class="mis-grid">
+        <div class="mis-card">
+          <div class="label" style="color:#6bcbff;">📏 周長（一維）</div>
+          <div class="value correct">長方形<br>(長+寬)×2</div>
+          <div class="note">用加的 → 把邊長加起來</div>
+        </div>
+        <div class="mis-card">
+          <div class="label" style="color:#ff6b9d;">🔲 面積（二維）</div>
+          <div class="value wrong">長方形<br>長 × 寬</div>
+          <div class="note">用乘的 → 長乘以寬</div>
+        </div>
+      </div>
+      <div class="box pink">
+        <span class="tag mis">最常見錯誤</span>
+        <span class="highlight3"> ❌ 面積也算成 (長+寬)×2</span><br>
+        <span class="highlight2"> ✅ 破解口訣：</span>
+        <span style="color:#fff;">「周長走<span class="highlight">一圈</span>，面積算<span class="highlight3">裡面</span>」</span><br>
+        <span style="color:#aaa;font-size:0.95rem;">周長用加法（走一圈加起來），面積用乘法（長×寬）</span>
+      </div>
+    </div>
+
+    <!-- Slide 7: 迷思3 單位 -->
+    <div class="slide" data-slide="6">
+      <h2>⚠️ 迷思三：單位搞混了</h2>
+      <div class="sub">公分 vs 平方公分，完全不一樣！</div>
+      <div class="mis-grid">
+        <div class="mis-card">
+          <div class="label" style="color:#6bcbff;">📏 周長單位</div>
+          <div class="value correct">公分、公尺</div>
+          <div class="note">一維（長度）<br>✏️ 線段的長度</div>
+        </div>
+        <div class="mis-card">
+          <div class="label" style="color:#ff6b9d;">🔲 面積單位</div>
+          <div class="value wrong">平方公分、平方公尺</div>
+          <div class="note">二維（空間）<br>✏️ 格子的大小</div>
+        </div>
+      </div>
+      <div class="box blue">
+        <span class="tag tip">記憶小技巧</span>
+        <span class="highlight2"> ✅ 看到「平方」→ 二維 → 面積</span><br>
+        <span style="color:#aaa;">「平方公分」就像「格子」的意思，一格就是 1cm²</span>
+      </div>
+    </div>
+
+    <!-- Slide 8: 迷思4 複合圖形 -->
+    <div class="slide" data-slide="7">
+      <h2>⚠️ 迷思四：複合圖形不會拆</h2>
+      <div class="sub">看到不規則形就慌了？</div>
+      <div class="canvas-wrap">
+        <canvas id="m4Canvas" width="640" height="200"></canvas>
+      </div>
+      <div class="content">
+        <div class="box blue">
+          <span class="tag tip">解題三步驟</span><br>
+          <span class="highlight2">① 拆：</span>把複合圖形拆成數個長方形 / 正方形<br>
+          <span class="highlight2">② 算：</span>分別算出每個圖形的面積<br>
+          <span class="highlight2">③ 加：</span>把各部分面積加起來
+        </div>
+        <div style="color:#ff6b9d;font-size:1rem;margin-top:4px;">⚠️ 注意：周長不能直接加總，要注意重疊的邊不要算進去！</div>
+      </div>
+    </div>
+
+    <!-- Slide 9: 總整理 -->
+    <div class="slide" data-slide="8">
+      <h2>📝 重點總整理</h2>
+      <div class="sub">周長與面積 ─ 四年級必考概念</div>
+      <div class="content">
+        <div class="box">
+          <span class="tag key">📏 周長</span><br>
+          ▸ 圖形外圍 <span class="highlight">一圈的長度</span><br>
+          ▸ <span class="highlight2">(長+寬)×2</span> 或 <span class="highlight2">邊長×4</span><br>
+          ▸ 單位：<span class="highlight2">公分</span>（一維）
+        </div>
+        <div class="box pink">
+          <span class="tag key">🔲 面積</span><br>
+          ▸ 圖形內部 <span class="highlight3">空間的大小</span><br>
+          ▸ <span class="highlight2">長×寬</span> 或 <span class="highlight2">邊長×邊長</span><br>
+          ▸ 單位：<span class="highlight2">平方公分</span>（二維）
+        </div>
+        <div class="box blue">
+          <span class="tag mis">❗ 千萬要記住</span><br>
+          ▸ 周長相等 <span class="highlight3">≠</span> 面積相等<br>
+          ▸ 計算前先問自己：「我要算的是<span class="highlight">周圍</span>還是<span class="highlight3">裡面</span>？」<br>
+          ▸ 寫答案時檢查單位：有「平方」兩個字嗎？
+        </div>
+        <div style="text-align:center;margin-top:16px;font-size:1.2rem;color:#ffd93d;">
+          🌟 恭喜學完周長與面積！試試看下面的練習吧！
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="controls">
+    <button id="prevBtn">◀ 上一頁</button>
+    <div class="progress" id="dots"></div>
+    <button id="nextBtn">下一頁 ▶</button>
+    <span class="slide-num" id="slideNum">1 / 9</span>
+  </div>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+  let autoTimer;
+
+  // Dots
+  const dotsEl = document.getElementById('dots');
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dotsEl.appendChild(dot);
+  }
+
+  function goTo(n) {
+    slides.forEach((s, i) => {
+      s.classList.toggle('active', i === n);
+      dotsEl.children[i].className = 'dot' + (i === n ? ' active' : (i < n ? ' done' : ''));
+    });
+    document.getElementById('slideNum').textContent = (n + 1) + ' / ' + total;
+    current = n;
+    // draw canvases for current slide
+    drawSlideCanvases(n);
+  }
+
+  document.getElementById('prevBtn').addEventListener('click', () => {
+    if (current > 0) goTo(current - 1);
+    resetAuto();
+  });
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    if (current < total - 1) goTo(current + 1);
+    resetAuto();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' && current < total - 1) { goTo(current + 1); resetAuto(); }
+    if (e.key === 'ArrowLeft' && current > 0) { goTo(current - 1); resetAuto(); }
+  });
+
+  function resetAuto() {
+    clearInterval(autoTimer);
+    autoTimer = setInterval(() => {
+      if (current < total - 1) goTo(current + 1);
+      else goTo(0);
+    }, 12000);
+  }
+  resetAuto();
+
+  // ----- Canvas drawings -----
+  function drawSlideCanvases(idx) {
+    const cbs = {
+      0: drawTitle,
+      2: drawPerimeter,
+      3: drawArea,
+      4: drawM1,
+      7: drawM4,
+    };
+    if (cbs[idx]) cbs[idx]();
+  }
+
+  // Title canvas
+  function drawTitle() {
+    const c = document.getElementById('titleCanvas');
+    if (!c) return;
+    const ctx = c.getContext('2d');
+    const W = c.width, H = c.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#0f0f23';
+    ctx.fillRect(0,0,W,H);
+
+    // Draw a rectangle showcase
+    const ox = 60, oy = 50, w = 200, h = 140;
+    ctx.strokeStyle = '#6bcbff';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(ox, oy, w, h);
+    // Perimeter label
+    ctx.strokeStyle = '#ffd93d';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6,4]);
+    ctx.strokeRect(ox-8, oy-8, w+16, h+16);
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ffd93d';
+    ctx.font = '14px system-ui';
+    ctx.fillText('周長 = (長+寬)×2', ox+20, oy-20);
+
+    // Area fill
+    ctx.fillStyle = 'rgba(107,203,255,0.15)';
+    ctx.fillRect(ox+2, oy+2, w-4, h-4);
+    ctx.fillStyle = 'rgba(107,203,255,0.3)';
+    ctx.font = 'bold 40px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('長 × 寬', ox + w/2, oy + h/2);
+
+    // Right side: square
+    const ox2 = 380, s = 140;
+    ctx.strokeStyle = '#ff6b9d';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(ox2, oy, s, s);
+    ctx.strokeStyle = '#ffd93d';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6,4]);
+    ctx.strokeRect(ox2-8, oy-8, s+16, s+16);
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ffd93d';
+    ctx.font = '14px system-ui';
+    ctx.textAlign = 'left';
+    ctx.fillText('周長 = 邊長×4', ox2+30, oy-20);
+
+    ctx.fillStyle = 'rgba(255,107,157,0.15)';
+    ctx.fillRect(ox2+2, oy+2, s-4, s-4);
+    ctx.fillStyle = 'rgba(255,107,157,0.3)';
+    ctx.font = 'bold 36px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('邊長²', ox2 + s/2, oy + s/2);
+
+    // Title text overlay
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 22px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('四年級數學 · 108 課綱', W/2, H - 18);
+  }
+
+  // Perimeter animation canvas
+  function drawPerimeter() {
+    const c = document.getElementById('perimeterCanvas');
+    if (!c) return;
+    const ctx = c.getContext('2d');
+    const W = c.width, H = c.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#0f0f23';
+    ctx.fillRect(0,0,W,H);
+
+    const ox = 60, oy = 30, w = 240, h = 160;
+    const t = Date.now() / 800;
+    const phase = (t % 1);
+
+    // Animated perimeter drawing
+    const perimeter = 2*(w+h);
+    const totalLen = perimeter;
+    let drawn = phase * totalLen;
+
+    ctx.strokeStyle = '#ffd93d';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    // Top edge
+    const segs = [
+      [ox, oy, ox+w, oy],
+      [ox+w, oy, ox+w, oy+h],
+      [ox+w, oy+h, ox, oy+h],
+      [ox, oy+h, ox, oy],
+    ];
+    let accumulated = 0;
+    ctx.beginPath();
+    ctx.moveTo(ox, oy);
+    let started = false;
+    let done = false;
+    for (const [x1,y1,x2,y2] of segs) {
+      const segLen = Math.abs(x2-x1) + Math.abs(y2-y1);
+      if (done) break;
+      if (drawn >= accumulated + segLen) {
+        if (!started) { ctx.moveTo(x1,y1); started = true; }
+        ctx.lineTo(x2,y2);
+      } else {
+        if (!started) { ctx.moveTo(x1,y1); started = true; }
+        const frac = (drawn - accumulated) / segLen;
+        const px = x1 + (x2-x1) * frac;
+        const py = y1 + (y2-y1) * frac;
+        ctx.lineTo(px, py);
+        done = true;
+      }
+      accumulated += segLen;
+    }
+    ctx.stroke();
+
+    // Fill the rectangle
+    ctx.fillStyle = 'rgba(255,217,61,0.08)';
+    ctx.fillRect(ox+1, oy+1, w-2, h-2);
+
+    // Labels
+    ctx.fillStyle = '#6bcbff';
+    ctx.font = '16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    // Top label "長"
+    ctx.fillText(w + ' 公分', ox + w/2, oy - 8);
+    // Side label "寬"
+    ctx.save();
+    ctx.translate(ox - 8, oy + h/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(h + ' 公分', 0, 0);
+    ctx.restore();
+
+    // Formula display
+    ctx.fillStyle = '#ffd93d';
+    ctx.font = 'bold 24px system-ui';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('周長 = ( ' + w + ' + ' + h + ' ) × 2 = ' + (2*(w+h)) + ' 公分', 340, 50);
+
+    ctx.fillStyle = '#aaa';
+    ctx.font = '18px system-ui';
+    ctx.fillText('🔄 看著黃色線繞圖形一周⋯⋯', 340, 100);
+    ctx.fillStyle = '#888';
+    ctx.font = '15px system-ui';
+    ctx.fillText('周長就是「外圍走一圈」的長度總和', 340, 140);
+  }
+
+  // Area canvas
+  function drawArea() {
+    const c = document.getElementById('areaCanvas');
+    if (!c) return;
+    const ctx = c.getContext('2d');
+    const W = c.width, H = c.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#0f0f23';
+    ctx.fillRect(0,0,W,H);
+
+    const ox = 40, oy = 20, cols = 8, rows = 5, cell = 28;
+
+    // Draw grid with fill animation
+    const t = Date.now() / 500;
+    const totalCells = cols * rows;
+    const filled = Math.floor((t % totalCells)) + 1;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c2 = 0; c2 < cols; c2++) {
+        const idx = r * cols + c2;
+        const x = ox + c2 * cell;
+        const y = oy + r * cell;
+        if (idx < filled) {
+          ctx.fillStyle = 'rgba(107,203,255,0.5)';
+          ctx.fillRect(x, y, cell-1, cell-1);
+          ctx.fillStyle = 'rgba(107,203,255,0.8)';
+          ctx.font = (cell > 20) ? '11px system-ui' : '8px system-ui';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('1', x + cell/2, y + cell/2);
+        }
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, cell-1, cell-1);
+      }
+    }
+
+    // Labels
+    ctx.fillStyle = '#6bcbff';
+    ctx.font = '16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(cols + ' 格', ox + cols*cell/2, oy - 6);
+    ctx.save();
+    ctx.translate(ox - 6, oy + rows*cell/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(rows + ' 格', 0, 0);
+    ctx.restore();
+
+    // Formula
+    ctx.fillStyle = '#ff6b9d';
+    ctx.font = 'bold 24px system-ui';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('面積 = ' + cols + ' × ' + rows + ' = ' + (cols*rows) + ' 平方公分', 310, 30);
+
+    ctx.fillStyle = '#aaa';
+    ctx.font = '18px system-ui';
+    ctx.fillText('🔲 一格一格數數看⋯⋯', 310, 80);
+    ctx.fillStyle = '#888';
+    ctx.font = '15px system-ui';
+    ctx.fillText('面積就是「內部有幾格」', 310, 120);
+    ctx.fillStyle = '#888';
+    ctx.font = '15px system-ui';
+    ctx.fillText('長 × 寬 = 橫的格數 × 直的排數', 310, 150);
+  }
+
+  // Misconception 1: same perimeter, different area
+  function drawM1() {
+    const c = document.getElementById('m1Canvas');
+    if (!c) return;
+    const ctx = c.getContext('2d');
+    const W = c.width, H = c.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#0f0f23';
+    ctx.fillRect(0,0,W,H);
+
+    // Rectangle A: long thin
+    const ax = 20, ay = 20, aw = 160, ah = 40;
+    ctx.strokeStyle = '#ffd93d';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(ax, ay, aw, ah);
+    ctx.fillStyle = 'rgba(255,217,61,0.1)';
+    ctx.fillRect(ax+1, ay+1, aw-2, ah-2);
+    ctx.fillStyle = '#ffd93d';
+    ctx.font = '14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('長8 × 寬2', ax+aw/2, ay+ah+22);
+    ctx.fillStyle = '#ff6b9d';
+    ctx.fillText('面積 16cm²', ax+aw/2, ay+ah+44);
+
+    // Rectangle B: squarish
+    const bx = 240, by = 20, bw = 120, bh = 80;
+    ctx.strokeStyle = '#ffd93d';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = 'rgba(255,217,61,0.1)';
+    ctx.fillRect(bx+1, by+1, bw-2, bh-2);
+    ctx.fillStyle = '#ffd93d';
+    ctx.font = '14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('長6 × 寬4', bx+bw/2, by+bh+22);
+    ctx.fillStyle = '#6bcbff';
+    ctx.fillText('面積 24cm²', bx+bw/2, by+bh+44);
+
+    // Square C
+    const cx = 420, cy = 20, cs = 70;
+    ctx.strokeStyle = '#ffd93d';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(cx, cy, cs, cs);
+    ctx.fillStyle = 'rgba(255,217,61,0.1)';
+    ctx.fillRect(cx+1, cy+1, cs-2, cs-2);
+    ctx.fillStyle = '#ffd93d';
+    ctx.font = '14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('邊長5', cx+cs/2, cy+cs+22);
+    ctx.fillStyle = '#6bcbff';
+    ctx.fillText('面積 25cm²', cx+cs/2, cy+cs+44);
+
+    // Annotation
+    ctx.fillStyle = '#ffd93d';
+    ctx.font = 'bold 16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('三個圖形周長都是 20cm ➔ 面積卻不一樣！', W/2, H - 10);
+  }
+
+  // Misconception 4: compound shape
+  function drawM4() {
+    const c = document.getElementById('m4Canvas');
+    if (!c) return;
+    const ctx = c.getContext('2d');
+    const W = c.width, H = c.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#0f0f23';
+    ctx.fillRect(0,0,W,H);
+
+    // Compound shape: an L-shape
+    // Step 1: Show the compound shape
+    ctx.fillStyle = 'rgba(107,203,255,0.15)';
+    ctx.strokeStyle = '#6bcbff';
+    ctx.lineWidth = 3;
+
+    // L-shape: 5x4 block + 3x2 block
+    // Main rect 5x3
+    ctx.fillRect(30, 20, 140, 84);
+    ctx.strokeRect(30, 20, 140, 84);
+    // Extension 2x2 sticking out right
+    ctx.fillRect(170, 48, 56, 56);
+    ctx.strokeRect(170, 48, 56, 56);
+
+    // Dimension lines
+    ctx.fillStyle = '#888';
+    ctx.font = '12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('5cm', 100, 112);
+
+    // Show split
+    ctx.setLineDash([4,4]);
+    ctx.strokeStyle = '#ffd93d';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(170, 20);
+    ctx.lineTo(170, 104);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Right side: show the two rectangles separated
+    // Rect A
+    ctx.fillStyle = 'rgba(107,203,255,0.2)';
+    ctx.strokeStyle = '#6bcbff';
+    ctx.lineWidth = 2;
+    ctx.fillRect(300, 20, 120, 84);
+    ctx.strokeRect(300, 20, 120, 84);
+    ctx.fillStyle = '#6bcbff';
+    ctx.font = 'bold 16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('5×3 = 15cm²', 360, 68);
+
+    // Rect B
+    ctx.fillStyle = 'rgba(255,107,157,0.2)';
+    ctx.strokeStyle = '#ff6b9d';
+    ctx.lineWidth = 2;
+    ctx.fillRect(440, 48, 56, 56);
+    ctx.strokeRect(440, 48, 56, 56);
+    ctx.fillStyle = '#ff6b9d';
+    ctx.font = 'bold 16px system-ui';
+    ctx.fillText('2×2 = 4cm²', 468, 92);
+
+    // Plus sign
+    ctx.fillStyle = '#ffd93d';
+    ctx.font = 'bold 28px system-ui';
+    ctx.fillText('+', 432, 72);
+
+    // Equals
+    ctx.fillText('= 19cm²', 510, 72);
+
+    // Labels
+    ctx.fillStyle = '#aaa';
+    ctx.font = '14px system-ui';
+    ctx.textAlign = 'left';
+    ctx.fillText('🔍 將 L 形拆成兩個長方形', 30, H - 10);
+    ctx.fillText('分別計算再加總', 400, H - 10);
+  }
+
+  // Init
+  drawSlideCanvases(0);
+</script>
+</body>
+</html>
