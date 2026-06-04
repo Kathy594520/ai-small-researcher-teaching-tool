@@ -1,363 +1,612 @@
-<!doctype html>
-<html lang="zh-Hant">
+<!DOCTYPE html>
+<html lang="zh-TW">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>🐍 語詞貪食蛇</title>
-  <style>
-    :root {
-      --bg: #fff5f5;
-      --card: #ffffff;
-      --main: #ff6b9d;
-      --text: #5a3e4a;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .container {
-      max-width: 980px;
-      width: 100%;
-      padding: 16px;
-    }
-    h1 {
-      font-size: clamp(2rem, 5vw, 2.8rem);
-      text-align: center;
-      margin-bottom: 16px;
-      color: var(--main);
-      letter-spacing: 2px;
-    }
-    .layout {
-      display: grid;
-      grid-template-columns: minmax(320px, 1fr) 300px;
-      gap: 14px;
-      align-items: start;
-    }
-    .card {
-      background: var(--card);
-      border-radius: 20px;
-      box-shadow: 0 4px 24px rgba(255, 107, 157, 0.12);
-      padding: 16px;
-    }
-    canvas {
-      width: 100%;
-      aspect-ratio: 1;
-      background: #2a1f3d;
-      border-radius: 16px;
-      display: block;
-    }
-    .q-row {
-      margin: 10px 0;
-      font-size: 1.6rem;
-      line-height: 1.6;
-      padding: 14px;
-      background: #fef9f0;
-      border-radius: 14px;
-      border: 2px solid #ffd93d;
-    }
-    .row {
-      margin: 10px 0;
-      font-size: 1.4rem;
-      line-height: 1.6;
-    }
-    .score {
-      font-size: 2.2rem;
-      font-weight: 700;
-      color: var(--main);
-    }
-    .btns {
-      display: flex;
-      gap: 10px;
-      margin: 12px 0;
-    }
-    button {
-      border: 0;
-      border-radius: 14px;
-      padding: 12px 20px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 1.1rem;
-      transition: transform 0.15s, box-shadow 0.15s;
-    }
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-    }
-    button:active {
-      transform: translateY(0);
-    }
-    .primary {
-      background: var(--main);
-      color: white;
-    }
-    .ghost {
-      background: #fce4ec;
-      color: var(--main);
-    }
-    .pad {
-      display: grid;
-      grid-template-columns: repeat(3, 72px);
-      gap: 8px;
-      justify-content: center;
-      margin-top: 10px;
-    }
-    .pad button {
-      width: 72px;
-      height: 72px;
-      padding: 0;
-      font-size: 1.8rem;
-      background: #fce4ec;
-      color: var(--main);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .pad .empty {
-      visibility: hidden;
-    }
-    @media (max-width: 860px) {
-      .layout { grid-template-columns: 1fr; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920,height=1080">
+<title>周長與面積 - 教學影片</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"></script>
+<style>
+@font-face { font-family:'GenSeki TW'; src:url('assets/fonts/GenSekiGothic2TW-H.otf') format('opentype'); font-weight:900; font-display:block; }
+@font-face { font-family:'GenSeki TW'; src:url('assets/fonts/GenSekiGothic2TW-B.otf') format('opentype'); font-weight:700; font-display:block; }
+@font-face { font-family:'GenSeki TW'; src:url('assets/fonts/GenSekiGothic2TW-M.otf') format('opentype'); font-weight:500; font-display:block; }
+:root {
+  --paper: #FAF7EE; --paper-2: #F2EDDC; --ink: #1A1A1A;
+  --teal: #0E7C7B; --coral: #E36414; --gold: #C8941F;
+  --fs-hero: 160px; --fs-title: 100px; --fs-sub: 72px; --fs-body: 48px; --fs-note: 28px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:1920px; height:1080px; overflow:hidden; font-family:'GenSeki TW',sans-serif; background:var(--ink); }
+#slides { position:relative; width:1920px; height:1080px; }
+.slide {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  display:none; padding:0; overflow:hidden;
+}
+.slide.active { display:flex; flex-direction:column; justify-content:center; align-items:center; }
+.slide.cover { background:var(--ink); justify-content:center; align-items:center; }
+.slide.light { background:var(--paper); }
+/* Grid paper background */
+.grid-bg { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; opacity:0.15; }
+/* Content cards */
+.content-area { position:relative; width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:80px 100px 140px; z-index:1; }
+.card { background:white; border-radius:20px; padding:40px 60px; box-shadow:0 4px 20px rgba(0,0,0,0.06); }
+.chip {
+  position:absolute; top:36px; left:60px; z-index:2;
+  background:var(--teal); color:white; padding:6px 18px; border-radius:6px;
+  font-size:22px; font-weight:700; letter-spacing:1px;
+}
+.progress-bar { position:absolute; bottom:0; left:0; height:5px; background:var(--teal); transition:width 0.3s; z-index:10; }
+.subtitle {
+  position:absolute; bottom:55px; left:50%; transform:translateX(-50%); z-index:10;
+  max-width:82%; background:rgba(26,26,26,0.92); color:white;
+  padding:14px 32px; border-radius:12px; font-size:28px; font-weight:700;
+  text-align:center; line-height:1.4; display:none;
+}
+.subtitle.show { display:block; }
+.hero { font-size:var(--fs-hero); font-weight:900; line-height:1.1; }
+.title { font-size:var(--fs-title); font-weight:900; line-height:1.15; }
+.sub { font-size:var(--fs-sub); font-weight:700; line-height:1.25; }
+.body { font-size:var(--fs-body); font-weight:500; line-height:1.35; }
+.note { font-size:var(--fs-note); font-weight:500; line-height:1.4; }
+.teal { color:var(--teal); } .coral { color:var(--coral); } .gold { color:var(--gold); }
+/* Layout helpers */
+.col2 { display:flex; gap:80px; width:100%; justify-content:center; align-items:center; }
+.col2 > * { flex:1; max-width:44%; text-align:center; }
+.row { display:flex; align-items:center; gap:30px; }
+/* Animations */
+@keyframes fadeInUp { from { opacity:0; transform:translateY(40px); } to { opacity:1; transform:translateY(0); } }
+@keyframes popIn { from { transform:scale(0); opacity:0; } to { transform:scale(1); opacity:1; } }
+@keyframes drawLine { to { stroke-dashoffset:0; } }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+.anim-fade { animation:fadeInUp 0.7s ease both; }
+.anim-pop { animation:popIn 0.5s ease both; }
+.delay-1 { animation-delay:0.3s; } .delay-2 { animation-delay:0.6s; }
+.delay-3 { animation-delay:0.9s; } .delay-4 { animation-delay:1.2s; }
+.delay-5 { animation-delay:1.5s; } .delay-6 { animation-delay:1.8s; }
+/* SVG containers */
+.svg-wrap { width:100%; display:flex; justify-content:center; align-items:center; }
+.svg-wrap svg { max-width:92%; max-height:75%; }
+/* Formula highlight box */
+.formula-box { background:var(--teal); color:white; padding:20px 60px; border-radius:16px; display:inline-block; }
+.formula-box.coral-bg { background:var(--coral); }
+/* Start screen */
+#startScreen {
+  position:absolute; top:0; left:0; width:1920px; height:1080px;
+  background:var(--ink); color:white; display:flex;
+  flex-direction:column; justify-content:center; align-items:center; cursor:pointer; z-index:100;
+}
+#startScreen.hidden { display:none; }
+/* Mistake boxes */
+.mistake-box { background:#FFF0F0; border:4px solid #E74C3C; border-radius:16px; padding:24px; }
+.correct-box { background:#F0FFF0; border:4px solid #27AE60; border-radius:16px; padding:24px; }
+/* Comparison box */
+.compare-card { background:white; border-radius:16px; padding:32px; box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+/* Section accent bar */
+.accent-bar { width:80px; height:6px; border-radius:3px; margin-bottom:20px; }
+.accent-bar.teal { background:var(--teal); } .accent-bar.coral { background:var(--coral); }
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>🐍 語詞貪食蛇</h1>
+<div id="startScreen" onclick="this.classList.add('hidden');startPlay()">
+  <div class="hero" style="margin-bottom:16px;letter-spacing:4px">周長與面積</div>
+  <div style="font-size:36px;color:var(--teal);font-weight:700;margin-bottom:80px">四年級數學</div>
+  <div style="width:120px;height:4px;background:var(--teal);border-radius:2px"></div>
+  <div style="margin-top:80px;font-size:32px;color:#555;font-weight:500">點擊開始 ▶</div>
+</div>
 
-    <div class="layout">
-      <div class="card">
-        <canvas id="game" width="600" height="600" aria-label="語詞貪食蛇遊戲畫面"></canvas>
+<div id="slides">
+
+<!-- ========== P1: 哪個操場比較大？ ========== -->
+<div class="slide cover" data-i="1">
+  <div class="hero anim-fade" style="margin-bottom:8px">哪個操場比較大？</div>
+  <div class="sub anim-fade delay-1" style="font-size:48px;color:var(--gold);margin-bottom:40px">跑一圈？還是鋪草皮？</div>
+  <div class="svg-wrap anim-fade delay-2">
+    <svg width="1200" height="420" viewBox="0 0 1200 420">
+      <defs>
+        <pattern id="grass" width="20" height="20" patternUnits="userSpaceOnUse">
+          <rect width="20" height="20" fill="#2ECC71" fill-opacity="0.12"/>
+          <circle cx="10" cy="10" r="1.5" fill="#27AE60" opacity="0.3"/>
+        </pattern>
+        <pattern id="track" width="10" height="10" patternUnits="userSpaceOnUse">
+          <rect width="10" height="10" fill="#E74C3C" fill-opacity="0.06"/>
+        </pattern>
+      </defs>
+      <!-- Left: running track -->
+      <rect x="60" y="30" width="460" height="320" rx="20" fill="url(#track)" stroke="var(--coral)" stroke-width="6"/>
+      <rect x="80" y="50" width="420" height="280" rx="12" fill="#FFF8F0" stroke="var(--coral)" stroke-width="2" stroke-dasharray="8,4"/>
+      <path d="M80,50 L500,50 L500,330 L80,330 Z" fill="none" stroke="var(--coral)" stroke-width="5"
+            stroke-dasharray="1800" stroke-dashoffset="1800">
+        <animate attributeName="stroke-dashoffset" from="1800" to="0" dur="2s" fill="freeze"/>
+      </path>
+      <text x="290" y="400" text-anchor="middle" font-size="34" fill="var(--coral)" font-weight="700">🏃 跑一圈 → 周長</text>
+      <!-- Right: grass field -->
+      <rect x="640" y="30" width="460" height="320" rx="20" fill="url(#grass)" stroke="var(--teal)" stroke-width="4"/>
+      <g opacity="0">
+        <animate attributeName="opacity" from="0" to="1" begin="1.5s" dur="0.8s" fill="freeze"/>
+        <rect x="660" y="50" width="100" height="80" rx="4" fill="var(--teal)" fill-opacity="0.25" stroke="var(--teal)" stroke-width="1"/>
+        <rect x="770" y="50" width="100" height="80" rx="4" fill="var(--teal)" fill-opacity="0.25" stroke="var(--teal)" stroke-width="1"/>
+        <rect x="880" y="50" width="100" height="80" rx="4" fill="var(--teal)" fill-opacity="0.25" stroke="var(--teal)" stroke-width="1"/>
+        <rect x="990" y="50" width="80" height="80" rx="4" fill="var(--teal)" fill-opacity="0.25" stroke="var(--teal)" stroke-width="1"/>
+        <rect x="660" y="140" width="100" height="80" rx="4" fill="var(--teal)" fill-opacity="0.25" stroke="var(--teal)" stroke-width="1"/>
+        <rect x="770" y="140" width="100" height="80" rx="4" fill="var(--teal)" fill-opacity="0.25" stroke="var(--teal)" stroke-width="1"/>
+        <rect x="880" y="140" width="100" height="80" rx="4" fill="var(--teal)" fill-opacity="0.25" stroke="var(--teal)" stroke-width="1"/>
+        <rect x="990" y="140" width="80" height="80" rx="4" fill="var(--teal)" fill-opacity="0.25" stroke="var(--teal)" stroke-width="1"/>
+      </g>
+      <text x="870" y="400" text-anchor="middle" font-size="34" fill="var(--teal)" font-weight="700">🌿 鋪草皮 → 面積</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ========== P2: 周長 vs 面積 ========== -->
+<div class="slide light" data-i="2">
+  <span class="chip">01 / 13 — 概念釐清</span>
+  <svg class="grid-bg" width="1920" height="1080"><defs><pattern id="g2" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0L0 0 0 40" fill="none" stroke="#1A1A1A" stroke-width="0.5" opacity="0.08"/></pattern></defs><rect width="1920" height="1080" fill="url(#g2)"/></svg>
+  <div class="content-area">
+    <div class="title anim-fade" style="margin-bottom:50px;font-size:96px">周長 vs 面積</div>
+    <div class="col2">
+      <div class="compare-card anim-fade delay-1" style="border-top:8px solid var(--coral)">
+        <div style="font-size:var(--sub);color:var(--coral);font-weight:900;margin-bottom:20px">周長</div>
+        <svg width="320" height="220" viewBox="0 0 320 220">
+          <rect x="10" y="10" width="300" height="200" rx="8" fill="#FFF5F0" stroke="var(--coral)" stroke-width="5">
+            <animate attributeName="stroke-dashoffset" from="1020" to="0" dur="1.5s" fill="freeze"/>
+          </rect>
+          <text x="160" y="130" text-anchor="middle" font-size="48" fill="var(--coral)" font-weight="900" opacity="0">
+            繞一圈
+            <animate attributeName="opacity" from="0" to="1" begin="1.5s" dur="0.4s" fill="freeze"/>
+          </text>
+          <line x1="10" y1="10" x2="310" y2="10" stroke="var(--coral)" stroke-width="5" opacity="0">
+            <animate attributeName="opacity" from="0" to="1" begin="0.3s" dur="0.3s" fill="freeze"/>
+          </line>
+          <line x1="310" y1="10" x2="310" y2="210" stroke="var(--coral)" stroke-width="5" opacity="0">
+            <animate attributeName="opacity" from="0" to="1" begin="0.6s" dur="0.3s" fill="freeze"/>
+          </line>
+          <line x1="310" y1="210" x2="10" y2="210" stroke="var(--coral)" stroke-width="5" opacity="0">
+            <animate attributeName="opacity" from="0" to="1" begin="0.9s" dur="0.3s" fill="freeze"/>
+          </line>
+          <line x1="10" y1="210" x2="10" y2="10" stroke="var(--coral)" stroke-width="5" opacity="0">
+            <animate attributeName="opacity" from="0" to="1" begin="1.2s" dur="0.3s" fill="freeze"/>
+          </line>
+        </svg>
+        <div class="body" style="margin-top:24px;color:var(--coral);font-weight:900">一維 · 公分</div>
       </div>
-
-      <aside class="card">
-        <div class="q-row">📖 <strong id="prompt">載入中...</strong></div>
-        <div class="row">⭐ 分數：<span id="score" class="score">0</span></div>
-        <div class="btns">
-          <button class="primary" id="restart">🔄 重新開始</button>
-          <button class="ghost" id="pause">⏸️ 暫停</button>
-        </div>
-        <div class="pad" aria-label="方向控制">
-          <button class="empty" tabindex="-1"></button>
-          <button data-dir="ArrowUp">↑</button>
-          <button class="empty" tabindex="-1"></button>
-          <button data-dir="ArrowLeft">←</button>
-          <button data-dir="ArrowDown">↓</button>
-          <button data-dir="ArrowRight">→</button>
-        </div>
-      </aside>
+      <div class="compare-card anim-fade delay-2" style="border-top:8px solid var(--teal)">
+        <div style="font-size:var(--sub);color:var(--teal);font-weight:900;margin-bottom:20px">面積</div>
+        <svg width="320" height="220" viewBox="0 0 320 220">
+          <rect x="10" y="10" width="300" height="200" rx="8" fill="#F0FAFA" stroke="var(--teal)" stroke-width="3"/>
+          <g opacity="0">
+            <animate attributeName="opacity" from="0" to="1" begin="1.5s" dur="0.8s" fill="freeze"/>
+            <rect x="18" y="18" width="70" height="60" rx="2" fill="var(--teal)" fill-opacity="0.2" stroke="var(--teal)" stroke-width="1"/>
+            <rect x="92" y="18" width="70" height="60" rx="2" fill="var(--teal)" fill-opacity="0.2" stroke="var(--teal)" stroke-width="1"/>
+            <rect x="166" y="18" width="70" height="60" rx="2" fill="var(--teal)" fill-opacity="0.2" stroke="var(--teal)" stroke-width="1"/>
+            <rect x="240" y="18" width="65" height="60" rx="2" fill="var(--teal)" fill-opacity="0.2" stroke="var(--teal)" stroke-width="1"/>
+            <rect x="18" y="82" width="70" height="60" rx="2" fill="var(--teal)" fill-opacity="0.2" stroke="var(--teal)" stroke-width="1"/>
+            <rect x="92" y="82" width="70" height="60" rx="2" fill="var(--teal)" fill-opacity="0.2" stroke="var(--teal)" stroke-width="1"/>
+            <rect x="166" y="82" width="70" height="60" rx="2" fill="var(--teal)" fill-opacity="0.2" stroke="var(--teal)" stroke-width="1"/>
+            <rect x="240" y="82" width="65" height="60" rx="2" fill="var(--teal)" fill-opacity="0.2" stroke="var(--teal)" stroke-width="1"/>
+            <rect x="18" y="146" width="70" height="60" rx="2" fill="var(--teal)" fill-opacity="0.2" stroke="var(--teal)" stroke-width="1"/>
+            <rect x="92" y="146" width="70" height="60" rx="2" fill="var(--teal)" fill-opacity="0.2" stroke="var(--teal)" stroke-width="1"/>
+            <rect x="166" y="146" width="70" height="60" rx="2" fill="var(--teal)" fill-opacity="0.2" stroke="var(--teal)" stroke-width="1"/>
+            <rect x="240" y="146" width="65" height="60" rx="2" fill="var(--teal)" fill-opacity="0.2" stroke="var(--teal)" stroke-width="1"/>
+          </g>
+          <text x="160" y="130" text-anchor="middle" font-size="48" fill="var(--teal)" font-weight="900" opacity="0">
+            鋪滿面
+            <animate attributeName="opacity" from="0" to="1" begin="2.2s" dur="0.4s" fill="freeze"/>
+          </text>
+        </svg>
+        <div class="body" style="margin-top:24px;color:var(--teal);font-weight:900">二維 · 平方公分</div>
+      </div>
     </div>
   </div>
+</div>
 
-  <script>
-    const cvs = document.getElementById('game');
-    const ctx = cvs.getContext('2d');
-    const GRID = 40, SIZE = 15;
+<!-- ========== P3: 周長是什麼 ========== -->
+<div class="slide light" data-i="3">
+  <span class="chip">02 / 13 — 周長</span>
+  <svg class="grid-bg" width="1920" height="1080"><rect width="1920" height="1080" fill="url(#g2)"/></svg>
+  <div class="content-area">
+    <div class="title anim-fade" style="margin-bottom:12px;font-size:90px">周長是什麼？</div>
+    <div class="accent-bar teal anim-fade delay-1" style="margin-bottom:30px"></div>
+    <div class="body anim-fade delay-1" style="margin-bottom:30px;color:var(--teal);font-weight:700">圖形外圍一圈的長度</div>
+    <div class="svg-wrap anim-fade delay-2">
+      <svg width="650" height="380" viewBox="0 0 650 380">
+        <rect x="60" y="40" width="530" height="300" rx="12" fill="white" stroke="#ddd" stroke-width="2"/>
+        <!-- Animated perimeter -->
+        <path d="M60,40 L590,40 L590,340 L60,340 Z" fill="none" stroke="var(--coral)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"
+              stroke-dasharray="2000" stroke-dashoffset="2000">
+          <animate attributeName="stroke-dashoffset" from="2000" to="0" dur="2.5s" fill="freeze"/>
+        </path>
+        <!-- Side labels with arrows -->
+        <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="0.6s" dur="0.4s" fill="freeze"/>
+          <line x1="60" y1="16" x2="590" y2="16" stroke="var(--teal)" stroke-width="3" marker-end="url(#arrowT)"/>
+          <text x="325" y="10" text-anchor="middle" font-size="42" fill="var(--teal)" font-weight="900">長</text>
+        </g>
+        <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="1.2s" dur="0.4s" fill="freeze"/>
+          <line x1="614" y1="40" x2="614" y2="340" stroke="var(--coral)" stroke-width="3"/>
+          <text x="628" y="205" text-anchor="middle" font-size="42" fill="var(--coral)" font-weight="900">寬</text>
+        </g>
+        <defs>
+          <marker id="arrowT" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="var(--teal)"/></marker>
+        </defs>
+      </svg>
+    </div>
+    <div class="body anim-fade delay-3" style="margin-top:20px">四邊加起來 ＝ 周長</div>
+  </div>
+</div>
 
-    const bank = [
-      { q: '「高興」的近義詞是？', correct: '開心', wrong: '難過' },
-      { q: '「迅速」的近義詞是？', correct: '快速', wrong: '緩慢' },
-      { q: '「明亮」的反義詞是？', correct: '昏暗', wrong: '耀眼' },
-      { q: '「勇敢」的反義詞是？', correct: '膽怯', wrong: '堅強' },
-      { q: '「節省」的近義詞是？', correct: '省下', wrong: '浪費' },
-      { q: '「專心」的反義詞是？', correct: '分心', wrong: '投入' },
-      { q: '「安靜」的反義詞是？', correct: '吵鬧', wrong: '寧靜' },
-      { q: '「聰明」的近義詞是？', correct: '機靈', wrong: '遲鈍' },
-      { q: '「炎熱」的反義詞是？', correct: '寒冷', wrong: '酷熱' },
-      { q: '「誠實」的反義詞是？', correct: '說謊', wrong: '真誠' },
-      { q: '「整齊」的反義詞是？', correct: '凌亂', wrong: '有序' },
-      { q: '「輕鬆」的近義詞是？', correct: '自在', wrong: '緊張' },
-      { q: '「勤勞」的反義詞是？', correct: '懶惰', wrong: '努力' },
-      { q: '「寬廣」的近義詞是？', correct: '遼闊', wrong: '狹小' },
-      { q: '「謙虛」的反義詞是？', correct: '驕傲', wrong: '低調' },
-      { q: '「清楚」的反義詞是？', correct: '模糊', wrong: '明白' },
-      { q: '「仔細」的近義詞是？', correct: '認真', wrong: '馬虎' },
-      { q: '「成功」的反義詞是？', correct: '失敗', wrong: '達成' },
-      { q: '「溫柔」的反義詞是？', correct: '粗暴', wrong: '和氣' },
-      { q: '「珍惜」的近義詞是？', correct: '愛惜', wrong: '浪費' },
-      { q: '「公開」的反義詞是？', correct: '祕密', wrong: '透明' },
-      { q: '「堅持」的近義詞是？', correct: '持續', wrong: '放棄' }
-    ];
+<!-- ========== P4: 周長公式 ========== -->
+<div class="slide light" data-i="4">
+  <span class="chip">02 / 13 — 周長公式</span>
+  <svg class="grid-bg" width="1920" height="1080"><rect width="1920" height="1080" fill="url(#g2)"/></svg>
+  <div class="content-area">
+    <div class="title anim-fade" style="margin-bottom:16px;font-size:82px">周長公式</div>
+    <div class="accent-bar coral anim-fade delay-1" style="margin-bottom:30px"></div>
+    <div class="svg-wrap anim-fade delay-1">
+      <svg width="700" height="320" viewBox="0 0 700 320">
+        <rect x="100" y="40" width="500" height="220" rx="10" fill="white" stroke="var(--ink)" stroke-width="3"/>
+        <text x="350" y="28" text-anchor="middle" font-size="44" fill="var(--teal)" font-weight="900">長</text>
+        <text x="350" y="310" text-anchor="middle" font-size="44" fill="var(--teal)" font-weight="900">長</text>
+        <text x="630" y="155" text-anchor="middle" font-size="44" fill="var(--coral)" font-weight="900">寬</text>
+        <text x="70" y="155" text-anchor="middle" font-size="44" fill="var(--coral)" font-weight="900">寬</text>
+        <text x="350" y="170" text-anchor="middle" font-size="36" fill="#999" font-weight="500">長 + 寬 + 長 + 寬</text>
+      </svg>
+    </div>
+    <div class="formula-box anim-pop delay-3" style="margin-top:30px;font-size:60px;font-weight:900">
+      $= (長 + 寬) \\times 2$
+    </div>
+  </div>
+</div>
 
-    let snake, dir, score, okCard, badCard, q, paused = false;
+<!-- ========== P5: 面積是什麼 ========== -->
+<div class="slide light" data-i="5">
+  <span class="chip">03 / 13 — 面積</span>
+  <svg class="grid-bg" width="1920" height="1080"><rect width="1920" height="1080" fill="url(#g2)"/></svg>
+  <div class="content-area">
+    <div class="title anim-fade" style="margin-bottom:12px;font-size:84px">面積是什麼？</div>
+    <div class="accent-bar teal anim-fade delay-1" style="margin-bottom:20px"></div>
+    <div class="body anim-fade delay-1" style="margin-bottom:24px;color:var(--teal);font-weight:700">用 1 平方公分鋪滿來數</div>
+    <div class="svg-wrap anim-fade delay-2">
+      <svg width="550" height="360" viewBox="0 0 550 360">
+        <rect x="25" y="15" width="500" height="320" rx="10" fill="white" stroke="var(--ink)" stroke-width="3"/>
+        <g id="grid5"></g>
+      </svg>
+    </div>
+  </div>
+</div>
 
-    const randomCell = () => Math.floor(Math.random() * SIZE);
-    const same = (a, b) => a.x === b.x && a.y === b.y;
+<!-- ========== P6: 面積公式 ========== -->
+<div class="slide light" data-i="6">
+  <span class="chip">03 / 13 — 面積公式</span>
+  <svg class="grid-bg" width="1920" height="1080"><rect width="1920" height="1080" fill="url(#g2)"/></svg>
+  <div class="content-area">
+    <div class="title anim-fade" style="margin-bottom:16px;font-size:84px">面積公式</div>
+    <div class="accent-bar teal anim-fade delay-1" style="margin-bottom:20px"></div>
+    <div class="svg-wrap anim-fade delay-1">
+      <svg width="550" height="360" viewBox="0 0 550 360">
+        <rect x="25" y="15" width="500" height="320" rx="10" fill="white" stroke="var(--ink)" stroke-width="3"/>
+        <g id="grid6"></g>
+      </svg>
+    </div>
+    <div class="formula-box anim-pop delay-4" style="margin-top:24px;font-size:56px;font-weight:900">
+      $面積 = 長 \\times 寬$
+    </div>
+  </div>
+</div>
 
-    function roundRect(ctx, x, y, w, h, r) {
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.lineTo(x + w - r, y);
-      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-      ctx.lineTo(x + w, y + h - r);
-      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-      ctx.lineTo(x + r, y + h);
-      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-      ctx.lineTo(x, y + r);
-      ctx.quadraticCurveTo(x, y, x + r, y);
-      ctx.closePath();
-    }
+<!-- ========== P7: 對比 ========== -->
+<div class="slide light" data-i="7">
+  <span class="chip">04 / 13 — 周長 vs 面積</span>
+  <svg class="grid-bg" width="1920" height="1080"><rect width="1920" height="1080" fill="url(#g2)"/></svg>
+  <div class="content-area">
+    <div class="title anim-fade" style="font-size:72px;margin-bottom:20px">同一個長方形，兩種算法</div>
+    <div class="accent-bar gold anim-fade delay-1" style="margin-bottom:24px"></div>
+    <div class="svg-wrap anim-fade delay-1">
+      <svg width="1100" height="420" viewBox="0 0 1100 420">
+        <!-- Center rectangle -->
+        <rect x="380" y="100" width="340" height="200" rx="8" fill="white" stroke="var(--ink)" stroke-width="4"/>
+        <text x="550" y="170" text-anchor="middle" font-size="44" font-weight="900" fill="var(--teal)">5 cm</text>
+        <text x="550" y="250" text-anchor="middle" font-size="36" fill="#999">×</text>
+        <text x="720" y="210" text-anchor="middle" font-size="44" font-weight="900" fill="var(--coral)">3 cm</text>
+        <text x="550" y="340" text-anchor="middle" font-size="36" fill="var(--teal)" font-weight="700">5 cm</text>
+        <text x="365" y="210" text-anchor="middle" font-size="44" fill="var(--coral)" font-weight="900">3 cm</text>
+        <!-- Left: Perimeter -->
+        <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="0.8s" dur="0.5s" fill="freeze"/>
+          <rect x="30" y="40" width="290" height="140" rx="14" fill="white" stroke="var(--coral)" stroke-width="4" style="box-shadow:0 4px 12px rgba(0,0,0,0.1)"/>
+          <text x="175" y="85" text-anchor="middle" font-size="38" fill="var(--coral)" font-weight="900">周長</text>
+          <text x="175" y="135" text-anchor="middle" font-size="34" font-weight="700" fill="var(--ink)">(5 + 3) × 2</text>
+          <text x="175" y="172" text-anchor="middle" font-size="40" fill="var(--coral)" font-weight="900">= 16 cm</text>
+        </g>
+        <!-- Right: Area -->
+        <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="1.6s" dur="0.5s" fill="freeze"/>
+          <rect x="780" y="40" width="290" height="140" rx="14" fill="white" stroke="var(--teal)" stroke-width="4"/>
+          <text x="925" y="85" text-anchor="middle" font-size="38" fill="var(--teal)" font-weight="900">面積</text>
+          <text x="925" y="135" text-anchor="middle" font-size="34" font-weight="700" fill="var(--ink)">5 × 3</text>
+          <text x="925" y="172" text-anchor="middle" font-size="40" fill="var(--teal)" font-weight="900">= 15 cm²</text>
+        </g>
+      </svg>
+    </div>
+    <div class="body anim-fade delay-3" style="margin-top:16px;color:#666">數字不同，單位不同，一定要分清楚！</div>
+  </div>
+</div>
 
-    function chooseQuestion() {
-      q = bank[Math.floor(Math.random() * bank.length)];
-      document.getElementById('prompt').textContent = q.q;
-    }
+<!-- ========== P8: 迷思① ========== -->
+<div class="slide light" data-i="8">
+  <span class="chip">05 / 13 — 迷思澄清</span>
+  <svg class="grid-bg" width="1920" height="1080"><rect width="1920" height="1080" fill="url(#g2)"/></svg>
+  <div class="content-area">
+    <div class="title anim-fade" style="font-size:68px;margin-bottom:12px">迷思①：不要看到就相乘</div>
+    <div class="accent-bar coral anim-fade delay-1" style="margin-bottom:30px"></div>
+    <div class="col2 anim-fade delay-1">
+      <div class="mistake-box" style="text-align:center">
+        <div style="font-size:56px;color:#E74C3C;font-weight:900;margin-bottom:12px">✗</div>
+        <div style="font-size:40px;font-weight:700;margin-bottom:8px">長 8cm、寬 3cm</div>
+        <div style="font-size:48px;color:#E74C3C;font-weight:900">8 × 3 = 24</div>
+        <div style="font-size:28px;color:#E74C3C;margin-top:8px">問周長？卻算成面積</div>
+      </div>
+      <div class="correct-box" style="text-align:center">
+        <div style="font-size:56px;color:#27AE60;font-weight:900;margin-bottom:12px">✓</div>
+        <div style="font-size:40px;font-weight:700;margin-bottom:8px">長 8cm、寬 3cm</div>
+        <div style="font-size:48px;color:#27AE60;font-weight:900">(8+3)×2 = 22</div>
+        <div style="font-size:28px;color:#27AE60;margin-top:8px">周長 = 22 cm</div>
+      </div>
+    </div>
+  </div>
+</div>
 
-    function spawnCards() {
-      do { okCard = { x: randomCell(), y: randomCell(), text: q.correct }; }
-      while (snake.some(s => same(s, okCard)));
-      do { badCard = { x: randomCell(), y: randomCell(), text: q.wrong }; }
-      while (snake.some(s => same(s, badCard)) || same(okCard, badCard));
-    }
+<!-- ========== P9: 迷思② ========== -->
+<div class="slide light" data-i="9">
+  <span class="chip">05 / 13 — 迷思澄清</span>
+  <svg class="grid-bg" width="1920" height="1080"><rect width="1920" height="1080" fill="url(#g2)"/></svg>
+  <div class="content-area">
+    <div class="title anim-fade" style="font-size:64px;margin-bottom:12px">迷思②：周長一樣，面積不一定一樣</div>
+    <div class="accent-bar gold anim-fade delay-1" style="margin-bottom:30px"></div>
+    <div class="svg-wrap anim-fade delay-1">
+      <svg width="1100" height="380" viewBox="0 0 1100 380">
+        <!-- Rect 1: 9×1 -->
+        <g><animate attributeName="opacity" from="0" to="1" begin="0s" dur="0.5s" fill="freeze"/>
+          <rect x="30" y="130" width="300" height="45" rx="6" fill="var(--teal)" fill-opacity="0.15" stroke="var(--teal)" stroke-width="3"/>
+          <text x="180" y="90" text-anchor="middle" font-size="34" font-weight="700">9 × 1</text>
+          <text x="180" y="225" text-anchor="middle" font-size="30" fill="#666">周長 20 cm</text>
+          <text x="180" y="270" text-anchor="middle" font-size="42" fill="var(--coral)" font-weight="900">面積 = 9</text>
+        </g>
+        <!-- Rect 2: 6×4 -->
+        <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="0.6s" dur="0.5s" fill="freeze"/>
+          <rect x="390" y="100" width="220" height="120" rx="6" fill="var(--teal)" fill-opacity="0.15" stroke="var(--teal)" stroke-width="3"/>
+          <text x="500" y="75" text-anchor="middle" font-size="34" font-weight="700">6 × 4</text>
+          <text x="500" y="260" text-anchor="middle" font-size="30" fill="#666">周長 20 cm</text>
+          <text x="500" y="305" text-anchor="middle" font-size="42" fill="var(--coral)" font-weight="900">面積 = 24</text>
+        </g>
+        <!-- Rect 3: 5×5 -->
+        <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="1.2s" dur="0.5s" fill="freeze"/>
+          <rect x="730" y="100" width="180" height="180" rx="6" fill="var(--teal)" fill-opacity="0.15" stroke="var(--teal)" stroke-width="3"/>
+          <text x="820" y="75" text-anchor="middle" font-size="34" font-weight="700">5 × 5</text>
+          <text x="820" y="320" text-anchor="middle" font-size="30" fill="#666">周長 20 cm</text>
+          <text x="820" y="365" text-anchor="middle" font-size="42" fill="var(--coral)" font-weight="900">面積 = 25</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</div>
 
-    function reset() {
-      snake = [{ x: 7, y: 7 }];
-      dir = { x: 1, y: 0 };
-      score = 0;
-      paused = false;
-      document.getElementById('pause').textContent = '⏸️ 暫停';
-      chooseQuestion();
-      spawnCards();
-      document.getElementById('score').textContent = score;
-      draw();
-    }
+<!-- ========== P10: 迷思③ ========== -->
+<div class="slide light" data-i="10">
+  <span class="chip">05 / 13 — 迷思澄清</span>
+  <svg class="grid-bg" width="1920" height="1080"><rect width="1920" height="1080" fill="url(#g2)"/></svg>
+  <div class="content-area">
+    <div class="title anim-fade" style="font-size:72px;margin-bottom:12px">迷思③：單位不要混！</div>
+    <div class="accent-bar teal anim-fade delay-1" style="margin-bottom:40px"></div>
+    <div class="col2">
+      <div class="compare-card anim-fade delay-1" style="border-top:8px solid var(--coral);text-align:center">
+        <div style="font-size:52px;color:var(--coral);font-weight:900;margin-bottom:16px">周長</div>
+        <svg width="260" height="160" viewBox="0 0 260 160">
+          <rect x="10" y="10" width="240" height="140" rx="8" fill="#FFF5F0" stroke="var(--coral)" stroke-width="8"/>
+          <text x="130" y="100" text-anchor="middle" font-size="56" fill="var(--coral)" font-weight="900">cm</text>
+        </svg>
+        <div class="body" style="margin-top:16px;color:var(--coral);font-weight:700">公分（一維長度）</div>
+      </div>
+      <div class="compare-card anim-fade delay-2" style="border-top:8px solid var(--teal);text-align:center">
+        <div style="font-size:52px;color:var(--teal);font-weight:900;margin-bottom:16px">面積</div>
+        <svg width="260" height="160" viewBox="0 0 260 160">
+          <rect x="10" y="10" width="240" height="140" rx="8" fill="#F0FAFA" stroke="var(--teal)" stroke-width="4"/>
+          <rect x="20" y="20" width="40" height="30" rx="2" fill="var(--teal)" fill-opacity="0.15" stroke="var(--teal)" stroke-width="1"/>
+          <rect x="64" y="20" width="40" height="30" rx="2" fill="var(--teal)" fill-opacity="0.15" stroke="var(--teal)" stroke-width="1"/>
+          <rect x="108" y="20" width="40" height="30" rx="2" fill="var(--teal)" fill-opacity="0.15" stroke="var(--teal)" stroke-width="1"/>
+          <rect x="152" y="20" width="40" height="30" rx="2" fill="var(--teal)" fill-opacity="0.15" stroke="var(--teal)" stroke-width="1"/>
+          <rect x="196" y="20" width="40" height="30" rx="2" fill="var(--teal)" fill-opacity="0.15" stroke="var(--teal)" stroke-width="1"/>
+          <rect x="20" y="54" width="40" height="30" rx="2" fill="var(--teal)" fill-opacity="0.15" stroke="var(--teal)" stroke-width="1"/>
+          <rect x="64" y="54" width="40" height="30" rx="2" fill="var(--teal)" fill-opacity="0.15" stroke="var(--teal)" stroke-width="1"/>
+          <rect x="108" y="54" width="40" height="30" rx="2" fill="var(--teal)" fill-opacity="0.15" stroke="var(--teal)" stroke-width="1"/>
+          <rect x="152" y="54" width="40" height="30" rx="2" fill="var(--teal)" fill-opacity="0.15" stroke="var(--teal)" stroke-width="1"/>
+          <rect x="196" y="54" width="40" height="30" rx="2" fill="var(--teal)" fill-opacity="0.15" stroke="var(--teal)" stroke-width="1"/>
+          <text x="130" y="120" text-anchor="middle" font-size="44" fill="var(--teal)" font-weight="900">cm²</text>
+        </svg>
+        <div class="body" style="margin-top:16px;color:var(--teal);font-weight:700">平方公分（二維面積）</div>
+      </div>
+    </div>
+  </div>
+</div>
 
-    function step() {
-      if (paused) return;
-      const head = {
-        x: (snake[0].x + dir.x + SIZE) % SIZE,
-        y: (snake[0].y + dir.y + SIZE) % SIZE
-      };
-      if (snake.some(s => same(s, head))) return reset();
+<!-- ========== P11: 複合圖形 ========== -->
+<div class="slide light" data-i="11">
+  <span class="chip">06 / 13 — 複合圖形</span>
+  <svg class="grid-bg" width="1920" height="1080"><rect width="1920" height="1080" fill="url(#g2)"/></svg>
+  <div class="content-area">
+    <div class="title anim-fade" style="font-size:64px;margin-bottom:16px">複合圖形</div>
+    <div class="accent-bar teal anim-fade delay-1" style="margin-bottom:24px"></div>
+    <div class="svg-wrap anim-fade delay-1">
+      <svg width="700" height="420" viewBox="0 0 700 420">
+        <!-- L-shape -->
+        <path d="M120,60 L500,60 L500,240 L320,240 L320,380 L120,380 Z"
+              fill="white" stroke="var(--ink)" stroke-width="3" rx="4"/>
+        <!-- Red perimeter trace -->
+        <path d="M120,60 L500,60 L500,240 L320,240 L320,380 L120,380 Z"
+              fill="none" stroke="var(--coral)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"
+              stroke-dasharray="1600" stroke-dashoffset="1600">
+          <animate attributeName="stroke-dashoffset" from="1600" to="0" dur="2.5s" fill="freeze"/>
+        </path>
+        <!-- Dotted cut line -->
+        <line x1="120" y1="240" x2="320" y2="240" stroke="var(--teal)" stroke-width="4" stroke-dasharray="10,8" opacity="0">
+          <animate attributeName="opacity" from="0" to="1" begin="2.8s" dur="0.5s" fill="freeze"/>
+        </line>
+        <!-- Area labels -->
+        <text x="310" y="170" text-anchor="middle" font-size="36" fill="var(--teal)" font-weight="900" opacity="0">
+          面積①
+          <animate attributeName="opacity" from="0" to="1" begin="3.3s" dur="0.4s" fill="freeze"/>
+        </text>
+        <text x="220" y="330" text-anchor="middle" font-size="36" fill="var(--teal)" font-weight="900" opacity="0">
+          面積②
+          <animate attributeName="opacity" from="0" to="1" begin="3.8s" dur="0.4s" fill="freeze"/>
+        </text>
+        <text x="310" y="250" text-anchor="middle" font-size="28" fill="var(--teal)" font-weight="700" opacity="0">
+          ✂️ 切
+          <animate attributeName="opacity" from="0" to="1" begin="3s" dur="0.4s" fill="freeze"/>
+        </text>
+      </svg>
+    </div>
+    <div class="body anim-fade delay-4" style="margin-top:16px">
+      <span style="background:var(--teal);color:white;padding:6px 20px;border-radius:30px;font-weight:700">切割法</span>
+      <span style="margin:0 20px;color:#ccc">|</span>
+      <span style="background:var(--coral);color:white;padding:6px 20px;border-radius:30px;font-weight:700">補大扣小</span>
+    </div>
+  </div>
+</div>
 
-      snake.unshift(head);
-      if (same(head, okCard)) {
-        score += 1;
-        chooseQuestion();
-        spawnCards();
-      } else if (same(head, badCard)) {
-        score = Math.max(0, score - 1);
-        snake.pop();
-        spawnCards();
-      } else {
-        snake.pop();
-      }
-      document.getElementById('score').textContent = score;
-    }
+<!-- ========== P12: 總複習 ========== -->
+<div class="slide light" data-i="12">
+  <span class="chip">07 / 13 — 總複習</span>
+  <svg class="grid-bg" width="1920" height="1080"><rect width="1920" height="1080" fill="url(#g2)"/></svg>
+  <div class="content-area">
+    <div class="title anim-fade" style="font-size:60px;margin-bottom:12px">重點整理</div>
+    <div class="accent-bar gold anim-fade delay-1" style="margin-bottom:24px"></div>
+    <div class="svg-wrap anim-fade delay-1">
+      <svg width="1000" height="480" viewBox="0 0 1000 480">
+        <line x1="500" y1="200" x2="200" y2="70" stroke="#ddd" stroke-width="3"><animate attributeName="opacity" from="0" to="1" begin="0.5s" dur="0.3s" fill="freeze"/></line>
+        <line x1="500" y1="200" x2="800" y2="70" stroke="#ddd" stroke-width="3"><animate attributeName="opacity" from="0" to="1" begin="0.5s" dur="0.3s" fill="freeze"/></line>
+        <line x1="500" y1="200" x2="200" y2="370" stroke="#ddd" stroke-width="3"><animate attributeName="opacity" from="0" to="1" begin="0.5s" dur="0.3s" fill="freeze"/></line>
+        <line x1="500" y1="200" x2="800" y2="370" stroke="#ddd" stroke-width="3"><animate attributeName="opacity" from="0" to="1" begin="0.5s" dur="0.3s" fill="freeze"/></line>
+        <!-- Center node -->
+        <circle cx="500" cy="200" r="85" fill="var(--teal)"><animate attributeName="r" from="0" to="85" begin="0s" dur="0.5s" fill="freeze"/></circle>
+        <text x="500" y="180" text-anchor="middle" font-size="32" fill="white" font-weight="900" opacity="0">周長<animate attributeName="opacity" from="0" to="1" begin="0.3s" dur="0.3s" fill="freeze"/></text>
+        <text x="500" y="215" text-anchor="middle" font-size="28" fill="white" font-weight="700" opacity="0">vs 面積<animate attributeName="opacity" from="0" to="1" begin="0.3s" dur="0.3s" fill="freeze"/></text>
+        <!-- TL: definition -->
+        <rect x="70" y="25" width="260" height="85" rx="12" fill="white" stroke="var(--coral)" stroke-width="3" opacity="0"><animate attributeName="opacity" from="0" to="1" begin="0.8s" dur="0.4s" fill="freeze"/></rect>
+        <text x="200" y="60" text-anchor="middle" font-size="30" fill="var(--coral)" font-weight="900" opacity="0">定義<animate attributeName="opacity" from="0" to="1" begin="1s" dur="0.3s" fill="freeze"/></text>
+        <text x="200" y="90" text-anchor="middle" font-size="22" fill="var(--ink)" opacity="0">繞一圈 vs 鋪滿面<animate attributeName="opacity" from="0" to="1" begin="1.2s" dur="0.3s" fill="freeze"/></text>
+        <!-- TR: formula -->
+        <rect x="670" y="25" width="260" height="85" rx="12" fill="white" stroke="var(--teal)" stroke-width="3" opacity="0"><animate attributeName="opacity" from="0" to="1" begin="1.4s" dur="0.4s" fill="freeze"/></rect>
+        <text x="800" y="60" text-anchor="middle" font-size="30" fill="var(--teal)" font-weight="900" opacity="0">公式<animate attributeName="opacity" from="0" to="1" begin="1.6s" dur="0.3s" fill="freeze"/></text>
+        <text x="800" y="90" text-anchor="middle" font-size="22" fill="var(--ink)" opacity="0">(長+寬)×2 vs 長×寬<animate attributeName="opacity" from="0" to="1" begin="1.8s" dur="0.3s" fill="freeze"/></text>
+        <!-- BL: unit -->
+        <rect x="70" y="325" width="260" height="85" rx="12" fill="white" stroke="var(--coral)" stroke-width="3" opacity="0"><animate attributeName="opacity" from="0" to="1" begin="2s" dur="0.4s" fill="freeze"/></rect>
+        <text x="200" y="360" text-anchor="middle" font-size="30" fill="var(--coral)" font-weight="900" opacity="0">單位<animate attributeName="opacity" from="0" to="1" begin="2.2s" dur="0.3s" fill="freeze"/></text>
+        <text x="200" y="390" text-anchor="middle" font-size="22" fill="var(--ink)" opacity="0">cm vs cm²<animate attributeName="opacity" from="0" to="1" begin="2.4s" dur="0.3s" fill="freeze"/></text>
+        <!-- BR: tips -->
+        <rect x="670" y="325" width="260" height="85" rx="12" fill="white" stroke="var(--teal)" stroke-width="3" opacity="0"><animate attributeName="opacity" from="0" to="1" begin="2.6s" dur="0.4s" fill="freeze"/></rect>
+        <text x="800" y="360" text-anchor="middle" font-size="30" fill="var(--teal)" font-weight="900" opacity="0">提醒<animate attributeName="opacity" from="0" to="1" begin="2.8s" dur="0.3s" fill="freeze"/></text>
+        <text x="800" y="390" text-anchor="middle" font-size="22" fill="var(--ink)" opacity="0">看清楚題目！<animate attributeName="opacity" from="0" to="1" begin="3s" dur="0.3s" fill="freeze"/></text>
+      </svg>
+    </div>
+  </div>
+</div>
 
-    function draw() {
-      ctx.clearRect(0, 0, cvs.width, cvs.height);
+<!-- ========== P13: 小挑戰 ========== -->
+<div class="slide cover" data-i="13">
+  <div class="hero anim-fade" style="font-size:90px;margin-bottom:8px">小挑戰</div>
+  <div style="font-size:40px;color:var(--gold);font-weight:700;margin-bottom:30px">你來試試看！</div>
+  <div class="svg-wrap anim-fade delay-1">
+    <svg width="500" height="220" viewBox="0 0 500 220">
+      <defs><linearGradient id="chGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#1A1A1A"/><stop offset="100%" stop-color="#333"/></linearGradient></defs>
+      <rect x="60" y="10" width="380" height="180" rx="14" fill="url(#chGrad)" stroke="white" stroke-width="4"/>
+      <text x="250" y="80" text-anchor="middle" font-size="50" fill="white" font-weight="900">7 cm</text>
+      <text x="250" y="150" text-anchor="middle" font-size="40" fill="#aaa">×</text>
+      <text x="420" y="110" text-anchor="middle" font-size="50" fill="white" font-weight="900">4 cm</text>
+    </svg>
+  </div>
+  <div class="sub anim-fade delay-2" style="font-size:44px;margin-top:16px">周長 = ？ 面積 = ？</div>
+  <div class="anim-fade delay-4" style="margin-top:20px">
+    <div style="font-size:38px;color:var(--teal);font-weight:700">
+      周長 = (7+4)×2 = <span style="color:var(--coral)">22 cm</span>
+      &nbsp; &nbsp; &nbsp;
+      面積 = 7×4 = <span style="color:var(--coral)">28 cm²</span>
+    </div>
+  </div>
+</div>
 
-      const g = ctx.createRadialGradient(300, 300, 0, 300, 300, 425);
-      g.addColorStop(0, '#2a1f3d');
-      g.addColorStop(1, '#1a1228');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, cvs.width, cvs.height);
+</div><!-- /slides -->
 
-      ctx.fillStyle = 'rgba(255,255,255,0.04)';
-      for (let x = 0; x < SIZE; x++) {
-        for (let y = 0; y < SIZE; y++) {
-          ctx.beginPath();
-          ctx.arc(x * GRID + GRID/2, y * GRID + GRID/2, 1.5, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
+<div class="progress-bar" id="progressBar" style="width:0%"></div>
+<div class="subtitle" id="subtitle"></div>
+<audio id="audioPlayer" preload="auto"></audio>
 
-      for (let i = snake.length - 1; i >= 0; i--) {
-        const s = snake[i];
-        const cx = s.x * GRID + GRID/2;
-        const cy = s.y * GRID + GRID/2;
-        const isHead = i === 0;
-        const r = isHead ? 18 : 16;
+<script>
+const PAGES = [
+  { i:1, dur:32, sub:"" },
+  { i:2, dur:25, sub:"周長＝繞一圈，面積＝鋪滿面。周長用公分，面積用平方公分。" },
+  { i:3, dur:24, sub:"周長＝圖形外圍一圈的長度。把四邊加起來就對了！" },
+  { i:4, dur:24, sub:"長方形周長＝長＋寬＋長＋寬＝(長＋寬)×2" },
+  { i:5, dur:22, sub:"面積＝內部區域的大小。用 1 平方公分鋪滿來數！" },
+  { i:6, dur:20, sub:"長方形面積＝長×寬。每排有幾個 × 有幾排！" },
+  { i:7, dur:29, sub:"周長 (5+3)×2＝16 公分。面積 5×3＝15 平方公分。完全不一樣！" },
+  { i:8, dur:19, sub:"題目問周長？就用周長公式！不要看到長和寬就直接乘！" },
+  { i:9, dur:30, sub:"周長 20cm → 9×1＝9、6×4＝24、5×5＝25。周長相同，面積不一定相同！" },
+  { i:10, dur:24, sub:"周長用「公分」。面積用「平方公分」。不要寫錯！" },
+  { i:11, dur:30, sub:"周長要算外圍每一段。面積可以切割相加或補大扣小。" },
+  { i:12, dur:30, sub:"周長是繞一圈，面積是鋪滿面。分清楚，就不會錯！" },
+  { i:13, dur:18, sub:"一個長方形，長 7 公分、寬 4 公分。周長？面積？試試看！" }
+];
+let current = 0, timer = null;
+const slides = document.querySelectorAll('#slides .slide');
+const sub = document.getElementById('subtitle');
+const audio = document.getElementById('audioPlayer');
+const progressBar = document.getElementById('progressBar');
+const renderMode = new URLSearchParams(location.search).get('render') === 'true';
 
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fillStyle = isHead ? '#69db7c' : '#40c057';
-        ctx.fill();
+function pad(n) { return String(n).padStart(2,'0'); }
 
-        ctx.beginPath();
-        ctx.arc(cx - 4, cy - 4, r * 0.3, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.25)';
-        ctx.fill();
+function buildGrid(containerId, rows, cols, x0, y0, w, h, gap, color) {
+  var g = document.getElementById(containerId);
+  if (!g) return;
+  for(var r=0; r<rows; r++) for(var c=0; c<cols; c++){
+    var rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x', x0 + c*(w+gap));
+    rect.setAttribute('y', y0 + r*(h+gap));
+    rect.setAttribute('width', w); rect.setAttribute('height', h); rect.setAttribute('rx','2');
+    rect.setAttribute('fill', color); rect.setAttribute('opacity','0');
+    var delay = 0.04 * (r*cols + c);
+    rect.innerHTML = '<animate attributeName="opacity" from="0" to="0.2" begin="'+delay+'s" dur="0.3s" fill="freeze"/>';
+    g.appendChild(rect);
+  }
+}
 
-        if (isHead) {
-          let e1x, e1y, e2x, e2y;
-          if (dir.x === 1) {
-            e1x = cx + 7; e1y = cy - 5;
-            e2x = cx + 7; e2y = cy + 5;
-          } else if (dir.x === -1) {
-            e1x = cx - 7; e1y = cy - 5;
-            e2x = cx - 7; e2y = cy + 5;
-          } else if (dir.y === -1) {
-            e1x = cx - 5; e1y = cy - 7;
-            e2x = cx + 5; e2y = cy - 7;
-          } else {
-            e1x = cx - 5; e1y = cy + 7;
-            e2x = cx + 5; e2y = cy + 7;
-          }
+function showSlide(i) {
+  if (i >= PAGES.length) return;
+  current = i;
+  slides.forEach(s => s.classList.remove('active'));
+  var el = slides[i];
+  if (el) { el.classList.add('active'); }
+  sub.textContent = PAGES[i].sub;
+  sub.classList.toggle('show', !!PAGES[i].sub);
+  var src = 'assets/narration/page-' + pad(PAGES[i].i) + '.mp3';
+  audio.src = src;
+  audio.currentTime = 0;
+  if (!renderMode) audio.play();
+  progressBar.style.width = ((i+1)/PAGES.length*100) + '%';
+  if (timer) clearTimeout(timer);
+  timer = setTimeout(function(){ showSlide(i+1); }, PAGES[i].dur * 1000);
+  if (typeof renderMathInElement === 'function' && el) {
+    renderMathInElement(el, {delimiters:[{left:'$',right:'$',display:false}]});
+  }
+}
 
-          ctx.fillStyle = '#fff';
-          ctx.beginPath(); ctx.arc(e1x, e1y, 5, 0, Math.PI * 2); ctx.fill();
-          ctx.beginPath(); ctx.arc(e2x, e2y, 5, 0, Math.PI * 2); ctx.fill();
+function startPlay() {
+  showSlide(0);
+}
 
-          ctx.fillStyle = '#1a1228';
-          ctx.beginPath(); ctx.arc(e1x + dir.x * 1.5, e1y + dir.y * 1.5, 2.5, 0, Math.PI * 2); ctx.fill();
-          ctx.beginPath(); ctx.arc(e2x + dir.x * 1.5, e2y + dir.y * 1.5, 2.5, 0, Math.PI * 2); ctx.fill();
+// Build grid visuals
+buildGrid('grid5',6,9,33,22,52,49,3,'var(--teal)');
+buildGrid('grid6',6,9,33,22,52,49,3,'var(--teal)');
 
-          ctx.fillStyle = 'rgba(255,150,150,0.35)';
-          if (dir.x !== 0) {
-            ctx.beginPath(); ctx.arc(cx, cy - 8, 5, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(cx, cy + 8, 5, 0, Math.PI * 2); ctx.fill();
-          } else {
-            ctx.beginPath(); ctx.arc(cx - 8, cy, 5, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(cx + 8, cy, 5, 0, Math.PI * 2); ctx.fill();
-          }
-        }
-      }
-
-      roundRect(ctx, okCard.x * GRID + 2, okCard.y * GRID + 2, GRID - 4, GRID - 4, 8);
-      ctx.fillStyle = '#ffd93d';
-      ctx.fill();
-
-      roundRect(ctx, badCard.x * GRID + 2, badCard.y * GRID + 2, GRID - 4, GRID - 4, 8);
-      ctx.fillStyle = '#ff8a8a';
-      ctx.fill();
-
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 20px system-ui';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(okCard.text, okCard.x * GRID + GRID/2, okCard.y * GRID + GRID/2);
-      ctx.fillText(badCard.text, badCard.x * GRID + GRID/2, badCard.y * GRID + GRID/2);
-    }
-
-    function setDirection(key) {
-      const map = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
-      const v = map[key];
-      if (!v) return;
-      if (v[0] === -dir.x && v[1] === -dir.y) return;
-      dir = { x: v[0], y: v[1] };
-    }
-
-    document.addEventListener('keydown', e => setDirection(e.key));
-    document.querySelectorAll('[data-dir]').forEach(btn => {
-      btn.addEventListener('click', () => setDirection(btn.dataset.dir));
-    });
-
-    document.getElementById('restart').addEventListener('click', reset);
-    document.getElementById('pause').addEventListener('click', () => {
-      paused = !paused;
-      document.getElementById('pause').textContent = paused ? '▶️ 繼續' : '⏸️ 暫停';
-    });
-
-    reset();
-    setInterval(() => { step(); draw(); }, 300);
-  </script>
+if (renderMode) { startPlay(); }
+</script>
 </body>
 </html>
