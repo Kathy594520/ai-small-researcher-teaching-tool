@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>屎殼郎大冒險 🐞 糞金龜成長之旅</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <div id="loading-screen">
+    <div class="loader-beetle">🐞</div>
+    <div class="loader-text">糞金龜正在挖洞...</div>
+    <div class="loader-bar"><div class="loader-fill"></div></div>
+  </div>
+
+  <div id="main-menu" class="screen hidden">
+    <div class="title-area">
+      <div class="title-beetle">🐞</div>
+      <h1 class="game-title">屎殼郎大冒險</h1>
+      <p class="subtitle">糞金龜成長之旅 · 多人合作遊戲</p>
+    </div>
+    <div class="lifecycle-nav">
+      <div class="stage-btn" data-mode="egg" style="--stage-color: #FFD93D;">
+        <div class="stage-icon">🥚</div>
+        <div class="stage-name">卵</div>
+        <div class="stage-desc">排列遊戲</div>
+      </div>
+      <div class="stage-arrow">→</div>
+      <div class="stage-btn" data-mode="larva" style="--stage-color: #6BCB77;">
+        <div class="stage-icon">🐛</div>
+        <div class="stage-name">幼蟲</div>
+        <div class="stage-desc">滾屎球</div>
+      </div>
+      <div class="stage-arrow">→</div>
+      <div class="stage-btn" data-mode="pupa" style="--stage-color: #FF6B6B;">
+        <div class="stage-icon">🫘</div>
+        <div class="stage-name">蛹</div>
+        <div class="stage-desc">溫暖的家</div>
+      </div>
+      <div class="stage-arrow">→</div>
+      <div class="stage-btn" data-mode="adult" style="--stage-color: #4D96FF;">
+        <div class="stage-icon">🐞</div>
+        <div class="stage-name">成蟲</div>
+        <div class="stage-desc">旅行冒險</div>
+      </div>
+    </div>
+    <div class="menu-buttons">
+      <button class="btn-main" onclick="showScreen('room'); setTimeout(onShowRoom, 100)">🎮 建立遊戲</button>
+      <button class="btn-main btn-secondary" onclick="showScreen('join')">🔑 加入遊戲</button>
+      <button class="btn-main btn-lottery" onclick="showScreen('lottery'); setTimeout(onShowLottery, 100)">🎁 抽獎去</button>
+    </div>
+    <div class="player-stats">
+      <span>⭐ 積分: <strong id="total-points">0</strong></span>
+      <span>🏆 彩蛋: <strong id="total-eggs">0</strong></span>
+    </div>
+  </div>
+
+  <div id="room-screen" class="screen hidden">
+    <div class="screen-header">
+      <button class="btn-back" onclick="showScreen('menu')">← 返回</button>
+      <h2>🎮 建立遊戲房間</h2>
+    </div>
+    <div class="room-content">
+      <div class="invite-code-box">
+        <p>📋 邀請碼</p>
+        <div class="code-display" id="invite-code">------</div>
+        <button class="btn-small" onclick="generateInviteCode()">🔄 產生新碼</button>
+        <button class="btn-small" onclick="copyInviteCode()">📋 複製</button>
+      </div>
+      <div class="room-players">
+        <h3>👥 玩家列表</h3>
+        <div id="player-list">
+          <div class="player-slot active"><span>🐞 你</span><span class="ready-badge">✅ 已準備</span></div>
+          <div class="player-slot"><span>⬜ 等待玩家2...</span></div>
+          <div class="player-slot"><span>⬜ 等待玩家3...</span></div>
+          <div class="player-slot"><span>⬜ 等待玩家4...</span></div>
+        </div>
+      </div>
+      <div class="room-actions">
+        <button class="btn-main" onclick="startMultiplayerGame()">🚀 開始遊戲</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="join-screen" class="screen hidden">
+    <div class="screen-header">
+      <button class="btn-back" onclick="showScreen('menu')">← 返回</button>
+      <h2>🔑 加入遊戲</h2>
+    </div>
+    <div class="join-content">
+      <div class="input-group">
+        <label>輸入邀請碼</label>
+        <input type="text" id="join-code-input" maxlength="6" placeholder="例如: BUG123">
+      </div>
+      <div class="input-group">
+        <label>你的名字</label>
+        <input type="text" id="player-name-input" placeholder="輸入暱稱" value="小糞鬥士">
+      </div>
+      <button class="btn-main" onclick="joinGame()">🔗 加入房間</button>
+    </div>
+  </div>
+
+  <div id="lottery-screen" class="screen hidden">
+    <div class="screen-header">
+      <button class="btn-back" onclick="showScreen('menu')">← 返回</button>
+      <h2>🎁 彩蛋抽獎</h2>
+    </div>
+    <div class="lottery-content">
+      <div class="lottery-info">
+        <p>⭐ 你的積分: <strong id="lottery-points">0</strong></p>
+        <p>🥚 彩蛋數量: <strong id="lottery-eggs">0</strong></p>
+        <p class="lottery-hint">🎯 每次抽獎消耗 1 顆彩蛋 + 100 積分</p>
+      </div>
+      <div class="lottery-machine">
+        <div class="lottery-display" id="lottery-display">
+          <div class="egg-row" id="egg-row">
+            <div class="egg-item" data-index="0">🥚</div>
+            <div class="egg-item" data-index="1">🥚</div>
+            <div class="egg-item" data-index="2">🥚</div>
+          </div>
+        </div>
+        <button class="btn-main btn-lottery" onclick="spinLottery()">🎰 抽獎！</button>
+        <div id="lottery-result" class="lottery-result hidden"></div>
+      </div>
+      <div class="prize-list">
+        <h3>🏆 獎品列表</h3>
+        <div class="prize-item legendary">💎 傳說糞金龜造型</div>
+        <div class="prize-item rare">🌟 稀有翅膀特效</div>
+        <div class="prize-item rare">🌈 彩色屎球外觀</div>
+        <div class="prize-item uncommon">🎀 可愛蝴蝶結裝飾</div>
+        <div class="prize-item common">🍀 幸運草背景</div>
+        <div class="prize-item common">🎈 氣球道具</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="game-screen" class="screen hidden">
+    <div class="game-hud">
+      <button class="btn-back" onclick="exitGame()">← 退出</button>
+      <div class="hud-mode" id="hud-mode-name">模式名稱</div>
+      <div class="hud-players" id="hud-players">👤 1P</div>
+      <div class="hud-score">⭐ <span id="hud-score">0</span></div>
+      <div class="hud-timer">⏱️ <span id="hud-timer">0</span>s</div>
+    </div>
+    <div id="game-canvas-container">
+      <canvas id="gameCanvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<script src="js/game.js"></script>
+<script src="js/modes.js"></script>
+<script src="js/systems.js"></script>
+</body>
+</html>
