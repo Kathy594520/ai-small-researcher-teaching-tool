@@ -4,22 +4,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>班級自治小黑板</title>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    
     
     <!-- 設定 Import Map -->
-    <script type="importmap">
-    {
-        "imports": {
-            "react": "https://esm.sh/react@18.2.0",
-            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-            "lucide-react": "https://esm.sh/lucide-react@0.292.0"
-        }
-    }
-    </script>
-    
-    <!-- Babel Standalone -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
     <script>
         tailwind.config = {
             theme: {
@@ -52,9 +39,12 @@
         }
     </script>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap');
+    <script src="./routines_offline_assets/tailwind.js"></script>
+    <script src="./routines_offline_assets/react.development.js"></script>
+    <script src="./routines_offline_assets/react-dom.development.js"></script>
+    <script src="./routines_offline_assets/babel.min.js"></script>
 
+    <style>
         body {
             background-color: #f0e6d2;
             background-image: 
@@ -62,6 +52,7 @@
                 linear-gradient(90deg, #e5dcc5 1px, transparent 1px);
             background-size: 20px 20px;
             color: #2c2c2c;
+            font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
         }
 
         /* 復古捲軸 */
@@ -129,22 +120,67 @@
     <div class="noise-overlay"></div>
 
     <!-- 主程式邏輯 -->
-    <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useRef } from 'react';
-        import { createRoot } from 'react-dom/client';
-        import { 
-            Users, AlertCircle, Settings, RotateCcw, FileSpreadsheet, Star, Heart, 
-            Plus, Minus, ChevronLeft, ChevronRight, Check, Edit3, Trash2, 
-            Sparkles, Utensils, Award, Eraser, ClipboardList, X, Save, 
-            AlignVerticalJustifyStart, AlignHorizontalJustifyStart, AlertTriangle, BookOpen,
-            Clock, Calendar, PenTool, ExternalLink, Image as ImageIcon, Paperclip, Upload,
-            Maximize, ZoomIn, ZoomOut
-        } from 'lucide-react';
+    <script type="text/plain" id="app-code">
+        const { useState, useEffect, useRef } = React;
+        const createRoot = ReactDOM.createRoot;
+
+        const makeIcon = (glyph) => ({ size = 24, className = "", style = {}, ...props }) => (
+            <span
+                {...props}
+                aria-hidden="true"
+                className={"inline-flex items-center justify-center leading-none select-none " + className}
+                style={{
+                    width: size,
+                    height: size,
+                    fontSize: Math.max(10, size * 0.8),
+                    lineHeight: 1,
+                    ...style
+                }}
+            >
+                {glyph}
+            </span>
+        );
+
+        const Users = makeIcon('👥');
+        const AlertCircle = makeIcon('!');
+        const Settings = makeIcon('⚙');
+        const RotateCcw = makeIcon('↻');
+        const FileSpreadsheet = makeIcon('▦');
+        const Star = makeIcon('★');
+        const Heart = makeIcon('♥');
+        const Plus = makeIcon('+');
+        const Minus = makeIcon('−');
+        const ChevronLeft = makeIcon('‹');
+        const ChevronRight = makeIcon('›');
+        const Check = makeIcon('✓');
+        const Edit3 = makeIcon('✎');
+        const Trash2 = makeIcon('🗑');
+        const Sparkles = makeIcon('✦');
+        const Utensils = makeIcon('🍽');
+        const Award = makeIcon('🏅');
+        const Eraser = makeIcon('⌫');
+        const ClipboardList = makeIcon('☰');
+        const X = makeIcon('×');
+        const Save = makeIcon('💾');
+        const AlignVerticalJustifyStart = makeIcon('↕');
+        const AlignHorizontalJustifyStart = makeIcon('↔');
+        const AlertTriangle = makeIcon('⚠');
+        const BookOpen = makeIcon('📖');
+        const Clock = makeIcon('🕒');
+        const Calendar = makeIcon('📅');
+        const PenTool = makeIcon('✒');
+        const ExternalLink = makeIcon('↗');
+        const ImageIcon = makeIcon('🖼');
+        const Paperclip = makeIcon('📎');
+        const Upload = makeIcon('⤴');
+        const Maximize = makeIcon('▢');
+        const ZoomIn = makeIcon('＋');
+        const ZoomOut = makeIcon('－');
 
         // ---------------------------------------------------------------------------
         // 使用者設定區：直接鎖定注音字體網址 (.ttf/.woff)
         // ---------------------------------------------------------------------------
-        const DEFAULT_ZHUYIN_FONT_URL = "https://raw.githubusercontent.com/Kathy594520/-/main/BpmfZihiOnly-R.ttf"; 
+        const DEFAULT_ZHUYIN_FONT_URL = null; 
 
         const App = () => {
             // ---------------------------------------------------------------------------
@@ -164,7 +200,25 @@
             const [isEditingNote, setIsEditingNote] = useState(false);
             
             // 進階功能狀態：剪貼簿與拖曳
-            const [leftPanelMode, setLeftPanelMode] = useState('students'); // 'students' | 'scrapbook'
+            const [leftPanelMode, setLeftPanelMode] = useState('students'); // 'students' | 'scrapbook' | 'homework'
+            const [homeworkData, setHomeworkData] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('class_homework_data');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        if (parsed && Array.isArray(parsed.assignments)) {
+                            return {
+                                assignments: parsed.assignments,
+                                activeId: parsed.activeId ?? parsed.assignments[0]?.id ?? null
+                            };
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to load homework data", e);
+                }
+                return { assignments: [], activeId: null };
+            });
+            const [homeworkForm, setHomeworkForm] = useState({ title: "", dueDate: "", description: "" });
             const [scrapbookImages, setScrapbookImages] = useState(() => {
                 try {
                     const saved = localStorage.getItem('class_scrapbook_images');
@@ -244,7 +298,7 @@
 
             const getFontFamily = (type) => {
                 switch (type) {
-                case 'zhuyin': return "'ZhuyinCustom', 'Noto Serif TC', serif"; // 使用自訂字體
+                case 'zhuyin': return "'Noto Serif TC', serif"; // 離線回退字體
                 case 'kai': return "'標楷體', 'DFKai-SB', 'KaiTi', 'BiauKai', serif";
                 case 'rounded': return "'Varela Round', 'M PLUS Rounded 1c', 'Microsoft JhengHei', '微軟正黑體', sans-serif";
                 case 'sans': default: return "'Noto Sans TC', sans-serif";
@@ -288,6 +342,7 @@
             useEffect(() => { localStorage.setItem('class_notebook_font_size', notebookFontSize); }, [notebookFontSize]);
             useEffect(() => { localStorage.setItem('class_font_type', fontType); }, [fontType]);
             useEffect(() => { localStorage.setItem('class_clock_style', clockStyleIndex); }, [clockStyleIndex]);
+            useEffect(() => { localStorage.setItem('class_homework_data', JSON.stringify(homeworkData)); }, [homeworkData]);
             // 移除 font URL 的 local storage 寫入，因為已寫死
             
             // 剪貼簿存儲
@@ -382,6 +437,60 @@
                     });
                     return newList.sort((a, b) => a.id - b.id);
                 });
+            };
+
+            const homeworkAssignments = homeworkData.assignments || [];
+            const currentHomework = homeworkAssignments.find(item => item.id === homeworkData.activeId) || homeworkAssignments[0] || null;
+            const submittedCount = currentHomework ? students.filter(student => currentHomework.submissions?.[student.id]).length : 0;
+
+            const createHomeworkAssignment = () => {
+                const title = homeworkForm.title.trim();
+                if (!title) return;
+
+                const id = Date.now();
+                const nextItem = {
+                    id,
+                    title,
+                    dueDate: homeworkForm.dueDate,
+                    description: homeworkForm.description.trim(),
+                    submissions: {},
+                    createdAt: new Date().toISOString()
+                };
+
+                setHomeworkData(prev => ({
+                    assignments: [nextItem, ...prev.assignments],
+                    activeId: id
+                }));
+                setHomeworkForm({ title: "", dueDate: "", description: "" });
+            };
+
+            const removeHomeworkAssignment = (id) => {
+                setHomeworkData(prev => {
+                    const assignments = prev.assignments.filter(item => item.id !== id);
+                    const nextActiveId = prev.activeId === id ? (assignments[0]?.id ?? null) : prev.activeId;
+                    return { assignments, activeId: nextActiveId };
+                });
+            };
+
+            const toggleHomeworkSubmission = (studentId) => {
+                if (!currentHomework) return;
+                setHomeworkData(prev => ({
+                    ...prev,
+                    assignments: prev.assignments.map(item => {
+                        if (item.id !== currentHomework.id) return item;
+                        const submissions = { ...(item.submissions || {}) };
+                        submissions[studentId] = !submissions[studentId];
+                        return { ...item, submissions };
+                    })
+                }));
+            };
+
+            const clearHomeworkSubmissions = () => {
+                if (!currentHomework) return;
+                setHomeworkData(prev => ({
+                    ...prev,
+                    assignments: prev.assignments.map(item => item.id === currentHomework.id ? { ...item, submissions: {} } : item)
+                }));
             };
 
             // ---------------------------------------------------------------------------
@@ -751,6 +860,13 @@
                             >
                                 <ImageIcon className="w-3 h-3" /> 剪貼
                             </button>
+                            <div className="w-[1px] bg-retro-ink"></div>
+                            <button 
+                                onClick={() => setLeftPanelMode('homework')}
+                                className={`px-3 py-1 text-xs font-bold font-mono transition-colors flex items-center gap-1 ${leftPanelMode === 'homework' ? 'bg-retro-ink text-white' : 'text-retro-ink hover:bg-gray-100'}`}
+                            >
+                                <ClipboardList className="w-3 h-3" /> 作業繳交
+                            </button>
                         </div>
                     </div>
 
@@ -801,7 +917,7 @@
                         <button onClick={() => setShowSettings(false)} className="w-8 h-8 flex items-center justify-center border-2 border-retro-ink bg-white hover:bg-retro-red hover:text-white transition-colors">✕</button>
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto p-6 space-y-8 retro-scrollbar bg-[url('https://www.transparenttextures.com/patterns/lined-paper.png')]">
+                    <div className="flex-1 overflow-y-auto p-6 space-y-8 retro-scrollbar bg-[#f7f1e3]">
                         {/* 時間與字體設定 */}
                         <div className="bg-white p-4 border-2 border-retro-ink shadow-hard relative">
                             <div className="absolute -top-3 left-3 bg-retro-ink text-white px-2 text-xs font-mono">TIME & FONT</div>
@@ -943,7 +1059,7 @@
                         ref={scrapbookRef}
                     >
                         {/* 軟木塞背景紋理 */}
-                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cork-board.png')] opacity-70 pointer-events-none"></div>
+                        <div className="absolute inset-0 bg-[#b08968] opacity-35 pointer-events-none"></div>
 
                         {/* 名冊模式：顯示時鐘與名單 */}
                         {leftPanelMode === 'students' && (
@@ -1088,6 +1204,145 @@
                                 </div>
                             </div>
                         )}
+                        
+                        {/* 作業繳交 */}
+                        {leftPanelMode === 'homework' && (
+                            <div className="flex-1 flex flex-col relative z-10 h-full">
+                                <div className="flex justify-between items-center px-4 py-2 border-b-4 border-[#5d4037] bg-[#fcfbf9]/80 backdrop-blur-sm shadow-md z-30">
+                                    <h3 className="font-black text-retro-ink flex items-center gap-2 font-serif">
+                                        <ClipboardList className="w-4 h-4" /> 作業繳交
+                                    </h3>
+                                    <button
+                                        onClick={clearHomeworkSubmissions}
+                                        className="flex items-center gap-1 bg-white border-2 border-retro-ink px-2 py-1 text-xs font-bold shadow-hard-sm hover:translate-y-1 hover:shadow-none transition-all"
+                                        disabled={!currentHomework}
+                                    >
+                                        <Check className="w-3 h-3" /> 清空勾選
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                    <div className="bg-white border-2 border-retro-ink shadow-hard p-4 space-y-3">
+                                        <div className="text-sm font-black text-retro-ink flex items-center gap-2">
+                                            <ClipboardList className="w-4 h-4" /> 新增作業
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={homeworkForm.title}
+                                            onChange={(e) => setHomeworkForm(prev => ({ ...prev, title: e.target.value }))}
+                                            placeholder="作業名稱"
+                                            className="w-full px-3 py-2 border-2 border-retro-ink bg-retro-paper outline-none font-bold"
+                                        />
+                                        <input
+                                            type="date"
+                                            value={homeworkForm.dueDate}
+                                            onChange={(e) => setHomeworkForm(prev => ({ ...prev, dueDate: e.target.value }))}
+                                            className="w-full px-3 py-2 border-2 border-retro-ink bg-retro-paper outline-none font-mono"
+                                        />
+                                        <textarea
+                                            value={homeworkForm.description}
+                                            onChange={(e) => setHomeworkForm(prev => ({ ...prev, description: e.target.value }))}
+                                            placeholder="作業說明"
+                                            className="w-full min-h-24 px-3 py-2 border-2 border-retro-ink bg-retro-paper outline-none resize-none font-serif"
+                                        />
+                                        <button
+                                            onClick={createHomeworkAssignment}
+                                            className="w-full py-2 bg-retro-ink text-white border-2 border-retro-ink font-bold shadow-hard-sm hover:bg-black transition-colors"
+                                        >
+                                            新增作業
+                                        </button>
+                                    </div>
+
+                                    <div className="bg-[#fcfbf9] border-2 border-retro-ink shadow-hard p-4">
+                                        <div className="text-sm font-black text-retro-ink mb-3 flex items-center gap-2">
+                                            <BookOpen className="w-4 h-4" /> 作業列表
+                                        </div>
+                                        {homeworkAssignments.length === 0 ? (
+                                            <div className="text-center text-gray-400 py-6 text-sm border-2 border-dashed border-gray-300 font-serif">
+                                                尚未建立作業
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {homeworkAssignments.map((item) => (
+                                                    <div
+                                                        key={item.id}
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        onClick={() => setHomeworkData(prev => ({ ...prev, activeId: item.id }))}
+                                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setHomeworkData(prev => ({ ...prev, activeId: item.id })); }}
+                                                        className={`w-full text-left p-3 border-2 transition-all cursor-pointer ${currentHomework?.id === item.id ? 'border-retro-ink bg-yellow-50 shadow-hard-sm' : 'border-gray-300 bg-white hover:border-retro-ink'}`}
+                                                    >
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <div>
+                                                                <div className="font-bold text-retro-ink">{item.title}</div>
+                                                                <div className="text-xs text-gray-500 font-mono">
+                                                                    {item.dueDate ? `截止 ${item.dueDate}` : '未設定截止日'}
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); removeHomeworkAssignment(item.id); }}
+                                                                className="text-retro-red hover:scale-110 transition-transform"
+                                                                title="刪除"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                        {item.description ? (
+                                                            <div className="mt-2 text-sm text-gray-700 line-clamp-2">{item.description}</div>
+                                                        ) : null}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="bg-white border-2 border-retro-ink shadow-hard p-4">
+                                        <div className="flex items-center justify-between gap-2 mb-3">
+                                            <div className="text-sm font-black text-retro-ink flex items-center gap-2">
+                                                <Users className="w-4 h-4" /> 繳交狀態
+                                            </div>
+                                            <div className="text-xs font-mono text-gray-500">
+                                                {currentHomework ? `${submittedCount}/${students.length}` : '0/0'}
+                                            </div>
+                                        </div>
+                                        {currentHomework ? (
+                                            students.length === 0 ? (
+                                                <div className="text-center text-gray-400 py-6 text-sm border-2 border-dashed border-gray-300 font-serif">
+                                                    先建立名冊再勾選
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-2 gap-2 max-h-[320px] overflow-y-auto retro-scrollbar pr-1">
+                                                    {students.map((student) => {
+                                                        const done = !!currentHomework.submissions?.[student.id];
+                                                        return (
+                                                            <button
+                                                                key={student.id}
+                                                                onClick={() => toggleHomeworkSubmission(student.id)}
+                                                                className={`text-left p-2 border-2 transition-all ${done ? 'bg-green-50 border-retro-green text-retro-green' : 'bg-white border-gray-300 hover:border-retro-ink text-retro-ink'}`}
+                                                            >
+                                                                <div className="flex items-center justify-between gap-2">
+                                                                    <div className="font-bold truncate">
+                                                                        <span className="font-mono text-xs opacity-60 mr-1">{student.id}</span>
+                                                                        {student.name || '未命名'}
+                                                                    </div>
+                                                                    <div className={`w-5 h-5 border-2 flex items-center justify-center ${done ? 'bg-retro-green border-retro-green text-white' : 'border-gray-300'}`}>
+                                                                        {done ? <Check className="w-3 h-3" /> : null}
+                                                                    </div>
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )
+                                        ) : (
+                                            <div className="text-center text-gray-400 py-6 text-sm border-2 border-dashed border-gray-300 font-serif">
+                                                先新增一份作業
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* 分隔條 */}
@@ -1107,7 +1362,7 @@
                         
                         {/* 黑板背景 */}
                         <div className="absolute inset-0 bg-[#263238] z-0">
-                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30"></div>
+                             <div className="absolute inset-0 bg-white/5 opacity-30"></div>
                              {/* 粉筆灰髒跡 */}
                              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5 pointer-events-none"></div>
                         </div>
@@ -1318,6 +1573,26 @@
 
         const root = createRoot(document.getElementById('root'));
         root.render(<App />);
+    </script>
+
+    <script>
+        (function () {
+            function runApp() {
+                if (!window.Babel || !window.React || !window.ReactDOM) {
+                    setTimeout(runApp, 25);
+                    return;
+                }
+                const source = document.getElementById('app-code');
+                if (!source) return;
+                const compiled = Babel.transform(source.textContent, {
+                    presets: [['react', { runtime: 'classic' }], 'env']
+                }).code;
+                const script = document.createElement('script');
+                script.text = compiled;
+                document.body.appendChild(script);
+            }
+            runApp();
+        })();
     </script>
 </body>
 
