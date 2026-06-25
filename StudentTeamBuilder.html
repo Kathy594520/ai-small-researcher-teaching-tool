@@ -84,7 +84,7 @@
 <body class="bg-gray-50 font-sans text-gray-800">
     <div id="root"></div>
 
-    <script type="text/babel">
+    <script type="text/plain" id="app-source">
         const { useState, useEffect } = React;
 
         // --- Icons Components (SVG) ---
@@ -751,6 +751,13 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+    </script>
+    <script>
+        const appSource = document.getElementById('app-source')?.textContent || '';
+        const compiled = Babel.transform(appSource, {
+            presets: [['react', { runtime: 'classic' }]],
+        }).code;
+        new Function(compiled)();
     </script>
 </body>
 </html>
