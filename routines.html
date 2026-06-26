@@ -8,42 +8,66 @@
     
     <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide-react.js" crossorigin></script>
+    
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
     
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
-        /* 隱藏捲軸 */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        /* 淡入動畫 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes fade-in {
             from { opacity: 0; transform: translateY(5px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-in {
-            animation: fade-in 0.3s ease-out forwards;
-        }
+        .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        // 修正重點：利用解構賦值，直接從全域物件中提取所需的 Hook 與圖示元件
         const { useState, useEffect, useRef } = React;
         const { createRoot } = ReactDOM;
-        const { 
-            Users, AlertCircle, Settings, RotateCcw, FileSpreadsheet, Star, Heart, 
-            Plus, Minus, ChevronLeft, ChevronRight, Check, Edit3, Trash2, 
-            Sparkles, Utensils, Award, Eraser, ClipboardList, X, Save, 
-            AlignVerticalJustifyStart, AlignHorizontalJustifyStart, AlertTriangle, BookOpen 
-        } = lucideReact;
+
+        // ---------------------------------------------------------------------------
+        // 圖示映射器：完美銜接原本的圖示，無須修改後續的 UI 程式碼
+        // ---------------------------------------------------------------------------
+        const Icon = ({ name, className }) => {
+            return React.createElement('iconify-icon', {
+                icon: `lucide:${name}`,
+                class: className,
+                style: { verticalAlign: 'middle', display: 'inline-flex', justifyContent: 'center', alignItems: 'center' }
+            });
+        };
+
+        const Users = (p) => <Icon name="users" {...p} />;
+        const AlertCircle = (p) => <Icon name="alert-circle" {...p} />;
+        const Settings = (p) => <Icon name="settings" {...p} />;
+        const RotateCcw = (p) => <Icon name="rotate-ccw" {...p} />;
+        const FileSpreadsheet = (p) => <Icon name="file-spreadsheet" {...p} />;
+        const Heart = (p) => <Icon name="heart" {...p} />;
+        const Plus = (p) => <Icon name="plus" {...p} />;
+        const Minus = (p) => <Icon name="minus" {...p} />;
+        const ChevronLeft = (p) => <Icon name="chevron-left" {...p} />;
+        const ChevronRight = (p) => <Icon name="chevron-right" {...p} />;
+        const Check = (p) => <Icon name="check" {...p} />;
+        const Edit3 = (p) => <Icon name="edit-3" {...p} />;
+        const Trash2 = (p) => <Icon name="trash-2" {...p} />;
+        const Sparkles = (p) => <Icon name="sparkles" {...p} />;
+        const Utensils = (p) => <Icon name="utensils" {...p} />;
+        const Eraser = (p) => <Icon name="eraser" {...p} />;
+        const ClipboardList = (p) => <Icon name="clipboard-list" {...p} />;
+        const X = (p) => <Icon name="x" {...p} />;
+        const Save = (p) => <Icon name="save" {...p} />;
+        const AlignVerticalJustifyStart = (p) => <Icon name="align-vertical-justify-start" {...p} />;
+        const AlignHorizontalJustifyStart = (p) => <Icon name="align-horizontal-justify-start" {...p} />;
+        const AlertTriangle = (p) => <Icon name="alert-triangle" {...p} />;
+        const BookOpen = (p) => <Icon name="book-open" {...p} />;
+
+        // 保留原本的「填滿」設計感，改用 Phosphor Icons 的實心版本
+        const Star = (p) => React.createElement('iconify-icon', { icon: 'ph:star-fill', class: p.className, style: { verticalAlign: 'middle', display: 'inline-flex' } });
+        const Award = (p) => React.createElement('iconify-icon', { icon: 'ph:medal-fill', class: p.className, style: { verticalAlign: 'middle', display: 'inline-flex' } });
 
         const App = () => {
             // ---------------------------------------------------------------------------
@@ -56,33 +80,24 @@
             const [lateThreshold, setLateThreshold] = useState(DEFAULT_LATE_TIME);
             const [classNameTitle, setClassNameTitle] = useState(() => localStorage.getItem('class_title') || "班級自治小黑板");
             
-            // UI 狀態
             const [showSettings, setShowSettings] = useState(false);
             const [showBatchEdit, setShowBatchEdit] = useState(false);
             const [batchInput, setBatchInput] = useState(""); 
             const [isEditingNote, setIsEditingNote] = useState(false);
             
-            // 確認視窗狀態
             const [confirmConfig, setConfirmConfig] = useState({
-                show: false,
-                title: "",
-                message: "",
-                action: null,
-                type: "danger"
+                show: false, title: "", message: "", action: null, type: "danger"
             });
             
-            // 模式與視圖
             const [checkInMode, setCheckInMode] = useState('attendance');
             const [viewMode, setViewMode] = useState('split');
 
-            // 持久化設定
             const [writingMode, setWritingMode] = useState(() => localStorage.getItem('class_note_writing_mode') || 'horizontal');
             const [clockStyleIndex, setClockStyleIndex] = useState(() => parseInt(localStorage.getItem('class_clock_style') || '0', 10));
             const [splitRatio, setSplitRatio] = useState(() => parseFloat(localStorage.getItem('class_split_ratio') || '50'));
             const [notebookFontSize, setNotebookFontSize] = useState(() => parseInt(localStorage.getItem('class_notebook_font_size') || '32', 10));
             const [fontType, setFontType] = useState(() => localStorage.getItem('class_font_type') || 'sans');
             
-            // 聯絡簿資料
             const [notesData, setNotesData] = useState(() => {
                 const saved = localStorage.getItem('class_notes_data');
                 if (saved) { try { return JSON.parse(saved); } catch (e) { console.error(e); } }
@@ -105,7 +120,6 @@
             };
             const currentFontFamily = getFontFamily(fontType);
 
-            // 標準時鐘樣式
             const CLOCK_STYLES = [
                 { id: 'simple', name: '簡約白', text: 'text-slate-800' },
                 { id: 'orange', name: '活力橘', text: 'text-orange-600' },
@@ -118,8 +132,6 @@
             // ---------------------------------------------------------------------------
             // 邏輯處理
             // ---------------------------------------------------------------------------
-
-            // 初始化與數據讀取
             useEffect(() => {
                 const savedStudents = localStorage.getItem('class_students_v2'); 
                 if (savedStudents) {
@@ -140,11 +152,7 @@
                 }
             }, []);
 
-            // 儲存資料
-            useEffect(() => { 
-                localStorage.setItem('class_students_v2', JSON.stringify(students)); 
-            }, [students]);
-            
+            useEffect(() => { localStorage.setItem('class_students_v2', JSON.stringify(students)); }, [students]);
             useEffect(() => { localStorage.setItem('class_title', classNameTitle); }, [classNameTitle]);
             useEffect(() => { localStorage.setItem('class_notes_data', JSON.stringify(notesData)); }, [notesData]);
             useEffect(() => { localStorage.setItem('class_note_writing_mode', writingMode); }, [writingMode]);
@@ -153,7 +161,6 @@
             useEffect(() => { localStorage.setItem('class_font_type', fontType); }, [fontType]);
             useEffect(() => { localStorage.setItem('class_clock_style', clockStyleIndex); }, [clockStyleIndex]);
 
-            // 時間與遲到檢測
             useEffect(() => {
                 const timer = setInterval(() => {
                 const now = new Date();
@@ -223,7 +230,6 @@
                 });
             };
 
-            // 確認視窗邏輯
             const executeConfirmAction = () => {
                 if (confirmConfig.action) {
                 confirmConfig.action();
@@ -281,9 +287,6 @@
                 });
             };
 
-            // ---------------------------------------------------------------------------
-            // 批次編輯功能
-            // ---------------------------------------------------------------------------
             const openBatchEdit = () => {
                 const textList = students.map(s => `${s.id} ${s.name}`).join('\n');
                 setBatchInput(textList);
@@ -323,7 +326,6 @@
 
                 if (newStudents.length > 0) {
                     newStudents.sort((a, b) => a.id - b.id);
-                    
                     setStudents(prev => {
                         const prevMap = new Map(prev.map(s => [s.id, s]));
                         return newStudents.map(newS => {
@@ -332,7 +334,6 @@
                             return newS;
                         });
                     });
-                    
                     setShowBatchEdit(false);
                 } else {
                     alert("格式無法識別。\n請使用：[座號] [姓名]\n例如：1 王小明");
@@ -426,10 +427,10 @@
 
                     <div className="flex bg-slate-50 p-1.5 rounded-xl shadow-inner border border-slate-100 gap-2 overflow-x-auto no-scrollbar min-w-0">
                         <ModeButton active={checkInMode === 'attendance'} onClick={() => setCheckInMode('attendance')} icon={<Users className="w-3.5 h-3.5" />} label="上學打卡" color="text-indigo-600 bg-indigo-100" />
-                        <ModeButton active={checkInMode === 'brushing'} onClick={() => setCheckInMode('brushing')} icon={<Sparkles className="w-3.5 h-3.5" />} label="完成潔牙" color="text-teal-600 bg-teal-100" />
+                        <ModeButton active={checkInMode === 'brushing'} onClick={() => setCheckInMode('brushing')} icon={<Sparkles className="w-3.5 h-3.5 text-teal-500" />} label="完成潔牙" color="text-teal-600 bg-teal-100" />
                         <ModeButton active={checkInMode === 'lunch'} onClick={() => setCheckInMode('lunch')} icon={<Utensils className="w-3.5 h-3.5" />} label="午餐整理" color="text-orange-600 bg-orange-100" />
-                        <ModeButton active={checkInMode === 'duty'} onClick={() => setCheckInMode('duty')} icon={<Award className="w-3.5 h-3.5" />} label="本日值日" color="text-purple-600 bg-purple-100" />
-                        <ModeButton active={checkInMode === 'correction'} onClick={() => setCheckInMode('correction')} icon={<BookOpen className="w-3.5 h-3.5" />} label="作業訂正" color="text-pink-600 bg-pink-100" />
+                        <ModeButton active={checkInMode === 'duty'} onClick={() => setCheckInMode('duty')} icon={<Award className="w-3.5 h-3.5 text-purple-500" />} label="本日值日" color="text-purple-600 bg-purple-100" />
+                        <ModeButton active={checkInMode === 'correction'} onClick={() => setCheckInMode('correction')} icon={<BookOpen className="w-3.5 h-3.5 text-pink-500" />} label="作業訂正" color="text-pink-600 bg-pink-100" />
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
@@ -612,7 +613,7 @@
                         {students.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4 cursor-pointer group" onClick={() => setShowSettings(true)}>
                             <div className="bg-white p-8 rounded-full border-4 border-dashed border-slate-300 group-hover:border-indigo-300 group-hover:scale-110 transition-all shadow-sm">
-                                <Users className="w-16 h-16 opacity-50 group-hover:text-indigo-400 transition-colors" />
+                                <Users className="w-16 h-16 opacity-50 text-slate-300 group-hover:text-indigo-400 transition-colors" />
                             </div>
                             <div className="text-center">
                                 <p className="text-2xl font-black text-slate-500 group-hover:text-indigo-500 transition-colors">目前沒有學生資料</p>
@@ -645,7 +646,7 @@
                         
                         <div className="flex justify-between items-center p-6 border-b border-white/10 border-dashed text-white/90 z-10">
                         <div className="flex items-center gap-3">
-                            <Star className="w-8 h-8 text-yellow-300 fill-yellow-300 animate-pulse drop-shadow-md" />
+                            <Star className="w-8 h-8 text-yellow-300 animate-pulse drop-shadow-md" />
                             <h2 className="text-3xl font-black tracking-widest font-serif text-[#f0f0f0] drop-shadow-md">聯絡簿</h2>
                         </div>
                         <div className="flex items-center gap-3 bg-white/10 rounded-2xl p-1.5 shadow-inner">
@@ -761,10 +762,10 @@
                     break;
                 default: break;
                 }
-            } else if (mode === 'brushing' && student.brushing) { bgClass = "bg-teal-50 hover:bg-teal-100"; borderClass = "border-teal-200"; textClass = "text-teal-700"; statusIcon = <Sparkles className="w-5 h-5 text-teal-500 fill-teal-200" />; }
+            } else if (mode === 'brushing' && student.brushing) { bgClass = "bg-teal-50 hover:bg-teal-100"; borderClass = "border-teal-200"; textClass = "text-teal-700"; statusIcon = <Sparkles className="w-5 h-5 text-teal-500" />; }
                 else if (mode === 'lunch' && student.lunch) { bgClass = "bg-orange-50 hover:bg-orange-100"; borderClass = "border-orange-200"; textClass = "text-orange-700"; statusIcon = <Utensils className="w-5 h-5 text-orange-500" />; }
-                else if (mode === 'duty' && student.isDuty) { bgClass = "bg-purple-50 hover:bg-purple-100"; borderClass = "border-purple-300 ring-2 ring-purple-200"; textClass = "text-purple-700"; statusIcon = <Award className="w-6 h-6 text-purple-500 fill-purple-200 animate-bounce" />; }
-                else if (mode === 'correction' && student.correction) { bgClass = "bg-pink-50 hover:bg-pink-100"; borderClass = "border-pink-300 ring-2 ring-pink-200"; textClass = "text-pink-700"; statusIcon = <BookOpen className="w-5 h-5 text-pink-500 fill-pink-200" />; }
+                else if (mode === 'duty' && student.isDuty) { bgClass = "bg-purple-50 hover:bg-purple-100"; borderClass = "border-purple-300 ring-2 ring-purple-200"; textClass = "text-purple-700"; statusIcon = <Award className="w-6 h-6 text-purple-500 animate-bounce" />; }
+                else if (mode === 'correction' && student.correction) { bgClass = "bg-pink-50 hover:bg-pink-100"; borderClass = "border-pink-300 ring-2 ring-pink-200"; textClass = "text-pink-700"; statusIcon = <BookOpen className="w-5 h-5 text-pink-500" />; }
 
             return (
                 <button 
