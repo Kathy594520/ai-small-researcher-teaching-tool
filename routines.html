@@ -1,108 +1,795 @@
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>班級自治小黑板</title>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        retro: {
-                            bg: '#f0e6d2',
-                            paper: '#fffbf0',
-                            ink: '#2c2c2c',
-                            red: '#c0392b',
-                            blue: '#2980b9',
-                            green: '#27ae60',
-                            board: '#2d3436',
-                            wood: '#8e44ad',
-                            line: '#bdc3c7'
-                        }
-                    },
-                    boxShadow: {
-                        'hard': '4px 4px 0px 0px rgba(0,0,0,1)',
-                        'hard-sm': '2px 2px 0px 0px rgba(0,0,0,1)',
-                        'inner-hard': 'inset 2px 2px 0px 0px rgba(0,0,0,0.1)'
-                    },
-                    fontFamily: {
-                        serif: ['"Noto Serif TC"', '"Songti TC"', 'serif'],
-                        mono: ['"Courier New"', 'monospace'],
-                        sans: ['"Noto Sans TC"', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
-    <script src="./tailwind.js"></script>
-    <script src="./react.development.js"></script>
-    <script src="./react-dom.development.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide-react.js" crossorigin></script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <style>
-        body {
-            background-color: #f0e6d2;
-            background-image:
-                linear-gradient(#e5dcc5 1px, transparent 1px),
-                linear-gradient(90deg, #e5dcc5 1px, transparent 1px);
-            background-size: 20px 20px;
-            color: #2c2c2c;
-            font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+        /* 隱藏捲軸 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
         }
-        .retro-scrollbar::-webkit-scrollbar {
-            width: 12px;
-            height: 12px;
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
-        .retro-scrollbar::-webkit-scrollbar-track {
-            background: #e0d0b0;
-            border-left: 2px solid #2c2c2c;
+        /* 淡入動畫 */
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .retro-scrollbar::-webkit-scrollbar-thumb {
-            background: #2c2c2c;
-            border: 2px solid #e0d0b0;
-        }
-        .polaroid {
-            background: white;
-            padding: 10px 10px 30px 10px;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-            transition: box-shadow 0.2s, transform 0.1s;
-            cursor: grab;
-        }
-        .polaroid:active {
-            cursor: grabbing;
-            z-index: 50 !important;
-            box-shadow: 10px 10px 20px rgba(0,0,0,0.4);
-        }
-        .polaroid:hover {
-            z-index: 40;
-        }
-        @keyframes stamp-in {
-            0% { opacity: 0; transform: scale(1.5) rotate(15deg); }
-            100% { opacity: 1; transform: scale(1) rotate(-5deg); }
-        }
-        .animate-stamp {
-            animation: stamp-in 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        }
-        .noise-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 9999;
-            opacity: 0.03;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-        }
-        .writing-vertical {
-            writing-mode: vertical-rl;
-            text-orientation: upright;
+        .animate-fade-in {
+            animation: fade-in 0.3s ease-out forwards;
         }
     </style>
 </head>
 <body>
     <div id="root"></div>
-    <div class="noise-overlay"></div>
-    <script src="./routines.preload.js"></script>
-    <script src="./routines.app.min.js"></script>
-    <script src="./routines.patch.js"></script>
+
+    <script type="text/babel">
+        // 修正重點：利用解構賦值，直接從全域物件中提取所需的 Hook 與圖示元件
+        const { useState, useEffect, useRef } = React;
+        const { createRoot } = ReactDOM;
+        const { 
+            Users, AlertCircle, Settings, RotateCcw, FileSpreadsheet, Star, Heart, 
+            Plus, Minus, ChevronLeft, ChevronRight, Check, Edit3, Trash2, 
+            Sparkles, Utensils, Award, Eraser, ClipboardList, X, Save, 
+            AlignVerticalJustifyStart, AlignHorizontalJustifyStart, AlertTriangle, BookOpen 
+        } = lucideReact;
+
+        const App = () => {
+            // ---------------------------------------------------------------------------
+            // 狀態設定
+            // ---------------------------------------------------------------------------
+            const DEFAULT_LATE_TIME = "07:50";
+
+            const [students, setStudents] = useState([]);
+            const [currentTime, setCurrentTime] = useState(new Date());
+            const [lateThreshold, setLateThreshold] = useState(DEFAULT_LATE_TIME);
+            const [classNameTitle, setClassNameTitle] = useState(() => localStorage.getItem('class_title') || "班級自治小黑板");
+            
+            // UI 狀態
+            const [showSettings, setShowSettings] = useState(false);
+            const [showBatchEdit, setShowBatchEdit] = useState(false);
+            const [batchInput, setBatchInput] = useState(""); 
+            const [isEditingNote, setIsEditingNote] = useState(false);
+            
+            // 確認視窗狀態
+            const [confirmConfig, setConfirmConfig] = useState({
+                show: false,
+                title: "",
+                message: "",
+                action: null,
+                type: "danger"
+            });
+            
+            // 模式與視圖
+            const [checkInMode, setCheckInMode] = useState('attendance');
+            const [viewMode, setViewMode] = useState('split');
+
+            // 持久化設定
+            const [writingMode, setWritingMode] = useState(() => localStorage.getItem('class_note_writing_mode') || 'horizontal');
+            const [clockStyleIndex, setClockStyleIndex] = useState(() => parseInt(localStorage.getItem('class_clock_style') || '0', 10));
+            const [splitRatio, setSplitRatio] = useState(() => parseFloat(localStorage.getItem('class_split_ratio') || '50'));
+            const [notebookFontSize, setNotebookFontSize] = useState(() => parseInt(localStorage.getItem('class_notebook_font_size') || '32', 10));
+            const [fontType, setFontType] = useState(() => localStorage.getItem('class_font_type') || 'sans');
+            
+            // 聯絡簿資料
+            const [notesData, setNotesData] = useState(() => {
+                const saved = localStorage.getItem('class_notes_data');
+                if (saved) { try { return JSON.parse(saved); } catch (e) { console.error(e); } }
+                const todayKey = new Date().toISOString().split('T')[0];
+                return { [todayKey]: "\n\n\n\n\n" };
+            });
+
+            const [notebookDate, setNotebookDate] = useState(new Date());
+            const splitContainerRef = useRef(null);
+
+            // ---------------------------------------------------------------------------
+            // 字體與樣式系統
+            // ---------------------------------------------------------------------------
+            const getFontFamily = (type) => {
+                switch (type) {
+                case 'kai': return "'標楷體', 'DFKai-SB', 'KaiTi', 'BiauKai', serif";
+                case 'rounded': return "'Varela Round', 'M PLUS Rounded 1c', 'Microsoft JhengHei', '微軟正黑體', sans-serif";
+                case 'sans': default: return "'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', ui-sans-serif, system-ui, sans-serif";
+                }
+            };
+            const currentFontFamily = getFontFamily(fontType);
+
+            // 標準時鐘樣式
+            const CLOCK_STYLES = [
+                { id: 'simple', name: '簡約白', text: 'text-slate-800' },
+                { id: 'orange', name: '活力橘', text: 'text-orange-600' },
+                { id: 'blue', name: '天空藍', text: 'text-sky-600' },
+                { id: 'purple', name: '優雅紫', text: 'text-purple-600' },
+                { id: 'dark', name: '科技黑', text: 'text-emerald-600' }
+            ];
+            const currentClockStyle = CLOCK_STYLES[clockStyleIndex % CLOCK_STYLES.length];
+
+            // ---------------------------------------------------------------------------
+            // 邏輯處理
+            // ---------------------------------------------------------------------------
+
+            // 初始化與數據讀取
+            useEffect(() => {
+                const savedStudents = localStorage.getItem('class_students_v2'); 
+                if (savedStudents) {
+                try {
+                    const parsed = JSON.parse(savedStudents);
+                    if (Array.isArray(parsed)) {
+                        const uniqueStudents = Array.from(new Map(parsed.map(item => [item.id, item])).values());
+                        uniqueStudents.sort((a, b) => a.id - b.id);
+                        setStudents(uniqueStudents);
+                    } else {
+                        setStudents([]);
+                    }
+                } catch(e) {
+                    setStudents([]);
+                }
+                } else {
+                setStudents([]);
+                }
+            }, []);
+
+            // 儲存資料
+            useEffect(() => { 
+                localStorage.setItem('class_students_v2', JSON.stringify(students)); 
+            }, [students]);
+            
+            useEffect(() => { localStorage.setItem('class_title', classNameTitle); }, [classNameTitle]);
+            useEffect(() => { localStorage.setItem('class_notes_data', JSON.stringify(notesData)); }, [notesData]);
+            useEffect(() => { localStorage.setItem('class_note_writing_mode', writingMode); }, [writingMode]);
+            useEffect(() => { localStorage.setItem('class_split_ratio', splitRatio); }, [splitRatio]);
+            useEffect(() => { localStorage.setItem('class_notebook_font_size', notebookFontSize); }, [notebookFontSize]);
+            useEffect(() => { localStorage.setItem('class_font_type', fontType); }, [fontType]);
+            useEffect(() => { localStorage.setItem('class_clock_style', clockStyleIndex); }, [clockStyleIndex]);
+
+            // 時間與遲到檢測
+            useEffect(() => {
+                const timer = setInterval(() => {
+                const now = new Date();
+                setCurrentTime(now);
+                checkLateStatus(now);
+                }, 1000);
+                return () => clearInterval(timer);
+            }, [lateThreshold]);
+
+            const checkLateStatus = (now) => {
+                const [h, m] = lateThreshold.split(':').map(Number);
+                const thresholdDate = new Date(now);
+                thresholdDate.setHours(h, m, 0, 0);
+                const resetDate = new Date(now);
+                resetDate.setHours(17, 0, 0, 0);
+                const isLateAlertPeriod = now >= thresholdDate && now < resetDate;
+
+                setStudents(prev => prev.map(s => {
+                if (s.status === 'idle' && isLateAlertPeriod) return { ...s, status: 'late_absent' };
+                if (s.status === 'late_absent' && !isLateAlertPeriod) return { ...s, status: 'idle' };
+                return s;
+                }));
+            };
+
+            const handleStudentClick = (id) => {
+                setStudents(prev => prev.map(s => {
+                if (s.id !== id) return s;
+                
+                switch (checkInMode) {
+                    case 'attendance': {
+                    const now = new Date();
+                    const timeString = now.toTimeString().slice(0, 5);
+                    const [h, m] = lateThreshold.split(':').map(Number);
+                    const thresholdDate = new Date(now);
+                    thresholdDate.setHours(h, m, 0, 0);
+                    const isLate = now >= thresholdDate;
+                    const resetDate = new Date(now);
+                    resetDate.setHours(17, 0, 0, 0);
+                    const isLateAlertPeriod = now >= thresholdDate && now < resetDate;
+
+                    if (s.status === 'present' || s.status === 'late_arrived') {
+                        return { ...s, status: isLateAlertPeriod ? 'late_absent' : 'idle', arrivalTime: null };
+                    }
+                    return { ...s, status: isLate ? 'late_arrived' : 'present', arrivalTime: timeString };
+                    }
+                    case 'brushing': return { ...s, brushing: !s.brushing };
+                    case 'lunch': return { ...s, lunch: !s.lunch };
+                    case 'duty': return { ...s, isDuty: !s.isDuty };
+                    case 'correction': return { ...s, correction: !s.correction }; 
+                    default: return s;
+                }
+                }));
+            };
+
+            const updateStudentData = (originalId, field, value) => {
+                setStudents(prev => {
+                    const newList = prev.map(s => {
+                        if (s.id !== originalId) return s;
+                        if (field === 'name') return { ...s, name: value };
+                        if (field === 'id') {
+                            const newId = parseInt(value, 10);
+                            if (!isNaN(newId) && newId > 0) return { ...s, id: newId };
+                        }
+                        return s;
+                    });
+                    return newList.sort((a, b) => a.id - b.id);
+                });
+            };
+
+            // 確認視窗邏輯
+            const executeConfirmAction = () => {
+                if (confirmConfig.action) {
+                confirmConfig.action();
+                }
+                setConfirmConfig({ ...confirmConfig, show: false });
+            };
+
+            const cancelConfirmAction = () => {
+                setConfirmConfig({ ...confirmConfig, show: false });
+            };
+
+            const confirmRemoveStudent = (e, id) => {
+                e.stopPropagation();
+                setConfirmConfig({
+                show: true,
+                title: "刪除學生",
+                message: `確定要刪除座號 ${id} 嗎？此操作無法復原。`,
+                type: "danger",
+                action: () => {
+                    setStudents(prev => prev.filter(s => s.id !== id));
+                }
+                });
+            };
+
+            const confirmClearNote = () => {
+                setConfirmConfig({
+                show: true,
+                title: "擦黑板",
+                message: "確定要清空目前的聯絡簿內容嗎？",
+                type: "warning",
+                action: () => {
+                    updateCurrentNote("\n\n\n\n\n"); 
+                }
+                });
+            };
+
+            const confirmResetMode = () => {
+                setConfirmConfig({
+                show: true,
+                title: `重置${getModeName(checkInMode)}`,
+                message: `確定要重置所有學生的「${getModeName(checkInMode)}」狀態嗎？`,
+                type: "warning",
+                action: () => {
+                    setStudents(prev => prev.map(s => {
+                    switch (checkInMode) {
+                        case 'attendance': return { ...s, status: s.status === 'empty' ? 'empty' : 'idle', arrivalTime: null };
+                        case 'brushing': return { ...s, brushing: false };
+                        case 'lunch': return { ...s, lunch: false };
+                        case 'duty': return { ...s, isDuty: false };
+                        case 'correction': return { ...s, correction: false };
+                        default: return s;
+                    }
+                    }));
+                }
+                });
+            };
+
+            // ---------------------------------------------------------------------------
+            // 批次編輯功能
+            // ---------------------------------------------------------------------------
+            const openBatchEdit = () => {
+                const textList = students.map(s => `${s.id} ${s.name}`).join('\n');
+                setBatchInput(textList);
+                setShowBatchEdit(true);
+            };
+
+            const saveBatchEdit = () => {
+                const lines = batchInput.split(/\r\n|\n|\r/).filter(line => line.trim() !== '');
+                const newStudents = [];
+                const usedIds = new Set();
+
+                lines.forEach(line => {
+                    const match = line.trim().match(/^(\d+)[\s,，.]+(.*)$/);
+                    let id, name;
+
+                    if (match) {
+                        id = parseInt(match[1], 10);
+                        name = match[2].trim();
+                    } else {
+                        return; 
+                    }
+
+                    if (!isNaN(id) && id > 0 && name) {
+                        if (usedIds.has(id)) {
+                            const index = newStudents.findIndex(s => s.id === id);
+                            if (index !== -1) newStudents[index].name = name;
+                        } else {
+                            newStudents.push({
+                                id: id,
+                                name: name,
+                                status: 'idle', arrivalTime: null, brushing: false, lunch: false, isDuty: false, correction: false
+                            });
+                            usedIds.add(id);
+                        }
+                    }
+                });
+
+                if (newStudents.length > 0) {
+                    newStudents.sort((a, b) => a.id - b.id);
+                    
+                    setStudents(prev => {
+                        const prevMap = new Map(prev.map(s => [s.id, s]));
+                        return newStudents.map(newS => {
+                            const oldS = prevMap.get(newS.id);
+                            if (oldS) return { ...oldS, name: newS.name };
+                            return newS;
+                        });
+                    });
+                    
+                    setShowBatchEdit(false);
+                } else {
+                    alert("格式無法識別。\n請使用：[座號] [姓名]\n例如：1 王小明");
+                }
+            };
+
+            const addStudent = () => {
+                setStudents(prev => {
+                    const maxId = prev.length > 0 ? Math.max(...prev.map(s => s.id)) : 0;
+                    return [...prev, { 
+                        id: maxId + 1, 
+                        name: "", 
+                        status: 'idle', arrivalTime: null, brushing: false, lunch: false, isDuty: false, correction: false
+                    }].sort((a, b) => a.id - b.id);
+                });
+            };
+
+            const getModeName = (mode) => {
+                const map = { 
+                attendance: '上學打卡', 
+                brushing: '潔牙紀錄', 
+                lunch: '午餐整理', 
+                duty: '值日生',
+                correction: '作業訂正'
+                };
+                return map[mode];
+            };
+
+            const handleExportCSV = () => {
+                const dateStr = currentTime.toLocaleDateString('zh-TW');
+                let csvContent = "\ufeff日期,座號,姓名,打卡狀態,到校時間,潔牙,午餐整理,值日生,作業訂正\n";
+                const statusMap = { 'idle': '未到', 'present': '準時', 'late_absent': '遲到未到', 'late_arrived': '遲到已到' };
+                
+                const sortedStudents = [...students].sort((a, b) => a.id - b.id);
+                
+                sortedStudents.forEach(s => {
+                csvContent += `${dateStr},${s.id},${s.name},${statusMap[s.status] || '未到'},${s.arrivalTime || '--'},${s.brushing?'V':''},${s.lunch?'V':''},${s.isDuty?'V':''},${s.correction?'V':''}\n`;
+                });
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = `班級紀錄表_${dateStr.replace(/\//g, '-')}.csv`;
+                link.click();
+            };
+
+            const getNoteDateKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            const currentNoteKey = getNoteDateKey(notebookDate);
+            const currentNoteContent = notesData[currentNoteKey] || ""; 
+            const updateCurrentNote = (content) => setNotesData(prev => ({ ...prev, [currentNoteKey]: content }));
+            
+            const noteLines = currentNoteContent.split('\n');
+            
+            const toggleClockStyle = () => setClockStyleIndex(prev => (prev + 1) % CLOCK_STYLES.length);
+            const getGridColsClass = () => {
+                const n = students.length;
+                if (n === 0) return "grid-cols-1"; 
+                if (n <= 30) return "grid-cols-5";
+                if (n <= 42) return "grid-cols-6";
+                if (n <= 56) return "grid-cols-8";
+                return "grid-cols-10";
+            };
+
+            const handleDragStart = (e) => { e.preventDefault(); document.addEventListener('mousemove', handleDragMove); document.addEventListener('mouseup', handleDragEnd); };
+            const handleDragMove = (e) => {
+                if (splitContainerRef.current) {
+                const rect = splitContainerRef.current.getBoundingClientRect();
+                const newRatio = Math.max(20, Math.min(((e.clientX - rect.left) / rect.width) * 100, 80));
+                setSplitRatio(newRatio);
+                }
+            };
+            const handleDragEnd = () => { document.removeEventListener('mousemove', handleDragMove); document.removeEventListener('mouseup', handleDragEnd); };
+
+            return (
+                <div className="h-screen bg-[#F3F0FF] font-sans text-slate-800 flex flex-col overflow-hidden relative selection:bg-pink-200">
+                <div className="absolute top-[-10%] left-[-5%] w-[400px] h-[400px] bg-purple-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+                <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-100 rounded-full blur-3xl opacity-50 pointer-events-none delay-700"></div>
+
+                <div className="bg-white border-b border-slate-200 shadow-sm px-4 py-3 flex justify-between items-center z-20 shrink-0 mx-2 mt-2 rounded-2xl">
+                    <div className="flex items-center gap-3 group min-w-[200px]">
+                        <div className="bg-indigo-50 p-2 rounded-xl shadow-sm border border-indigo-100 shrink-0">
+                        <Users className="w-6 h-6 text-indigo-500" />
+                        </div>
+                        <input 
+                        type="text" 
+                        value={classNameTitle} 
+                        onChange={(e) => setClassNameTitle(e.target.value)}
+                        placeholder="請輸入班級名稱"
+                        className="text-xl 2xl:text-2xl font-black text-slate-700 bg-transparent border-b-2 border-transparent hover:border-indigo-300 focus:border-indigo-500 outline-none w-full transition-all placeholder-slate-400"
+                        />
+                    </div>
+
+                    <div className="flex bg-slate-50 p-1.5 rounded-xl shadow-inner border border-slate-100 gap-2 overflow-x-auto no-scrollbar min-w-0">
+                        <ModeButton active={checkInMode === 'attendance'} onClick={() => setCheckInMode('attendance')} icon={<Users className="w-3.5 h-3.5" />} label="上學打卡" color="text-indigo-600 bg-indigo-100" />
+                        <ModeButton active={checkInMode === 'brushing'} onClick={() => setCheckInMode('brushing')} icon={<Sparkles className="w-3.5 h-3.5" />} label="完成潔牙" color="text-teal-600 bg-teal-100" />
+                        <ModeButton active={checkInMode === 'lunch'} onClick={() => setCheckInMode('lunch')} icon={<Utensils className="w-3.5 h-3.5" />} label="午餐整理" color="text-orange-600 bg-orange-100" />
+                        <ModeButton active={checkInMode === 'duty'} onClick={() => setCheckInMode('duty')} icon={<Award className="w-3.5 h-3.5" />} label="本日值日" color="text-purple-600 bg-purple-100" />
+                        <ModeButton active={checkInMode === 'correction'} onClick={() => setCheckInMode('correction')} icon={<BookOpen className="w-3.5 h-3.5" />} label="作業訂正" color="text-pink-600 bg-pink-100" />
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center bg-slate-50 p-1 rounded-xl border border-slate-100 shadow-sm hidden md:flex">
+                        {['split', 'checkin', 'notebook'].map(m => (
+                            <button key={m} onClick={() => setViewMode(m)} className={`px-3 py-1.5 rounded-lg transition-all text-xs font-bold ${viewMode === m ? 'bg-white shadow text-slate-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}>
+                            {m === 'split' ? '分屏' : m === 'checkin' ? '僅打卡' : '聯絡簿'}
+                            </button>
+                        ))}
+                        </div>
+                        <div className="w-px h-6 bg-slate-300 mx-1"></div>
+                        <div className="flex items-center gap-2">
+                        <button onClick={() => setShowSettings(!showSettings)} className="p-2 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm rounded-xl text-slate-600 transition-all active:scale-95" title="設定與學生名單"><Settings className="w-5 h-5" /></button>
+                        <button onClick={handleExportCSV} className="p-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 shadow-sm rounded-xl text-emerald-600 transition-all active:scale-95" title="下載報表"><FileSpreadsheet className="w-5 h-5" /></button>
+                        <button onClick={confirmResetMode} className="p-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 shadow-sm rounded-xl text-rose-500 transition-all active:scale-95" title={`重置${getModeName(checkInMode)}`}><RotateCcw className="w-5 h-5" /></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className={`fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform transition-transform duration-300 ease-in-out z-50 flex flex-col ${showSettings ? 'translate-x-0' : 'translate-x-full'}`}>
+                    <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 className="font-black text-slate-700 flex items-center gap-2"><Settings className="w-5 h-5 text-indigo-500" /> 設定與名單管理</h3>
+                    <button onClick={() => setShowSettings(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-400">✕</button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-5 space-y-6">
+                    <div className="space-y-4">
+                        <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">遲到時間門檻</label>
+                        <input type="time" value={lateThreshold} onChange={(e) => setLateThreshold(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-200" />
+                        </div>
+                        <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">顯示字體</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {['sans', 'kai', 'rounded'].map(ft => (
+                                <button key={ft} onClick={() => setFontType(ft)} className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${fontType === ft ? 'bg-indigo-500 text-white border-indigo-500 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                                {ft === 'sans' ? '預設黑體' : ft === 'kai' ? '標楷體' : '微軟正黑/圓體'}
+                                </button>
+                            ))}
+                        </div>
+                        </div>
+                    </div>
+                    <div className="border-t border-slate-100"></div>
+                    <div>
+                        <div className="flex justify-between items-end mb-3">
+                        <h4 className="font-bold text-slate-700 flex items-center gap-2"><Users className="w-4 h-4 text-orange-500" /> 學生名單管理</h4>
+                        <div className="flex gap-1">
+                            <button onClick={openBatchEdit} className="text-xs bg-green-50 text-green-700 px-2 py-1.5 rounded-lg hover:bg-green-100 flex items-center gap-1 transition-colors border border-green-200 shadow-sm">
+                            <ClipboardList className="w-3 h-3" /> 貼上名單
+                            </button>
+                            <button onClick={addStudent} className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1.5 rounded-lg hover:bg-indigo-100 flex items-center gap-1 transition-colors border border-indigo-200 shadow-sm">
+                            <Plus className="w-3 h-3" /> 手動新增
+                            </button>
+                        </div>
+                        </div>
+                        <div className="space-y-2 pb-10">
+                        {students.length === 0 ? (
+                            <div className="text-center text-slate-400 py-8 text-sm border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
+                            目前沒有學生資料<br/>請點擊上方按鈕建立名單
+                            </div>
+                        ) : (
+                            students.map((s) => (
+                            <div key={s.id} className="flex items-center gap-2 group animate-fade-in">
+                                <input 
+                                type="number" 
+                                value={s.id} 
+                                onChange={(e) => updateStudentData(s.id, 'id', e.target.value)} 
+                                className="w-14 h-10 px-1 py-2 text-sm border border-slate-200 rounded-lg text-center font-mono font-bold bg-white focus:border-indigo-500 outline-none shadow-sm leading-normal"
+                                title="座號"
+                                />
+                                <input 
+                                type="text" 
+                                value={s.name} 
+                                onChange={(e) => updateStudentData(s.id, 'name', e.target.value)} 
+                                className="flex-1 h-10 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:border-indigo-500 outline-none transition-colors bg-white shadow-sm leading-normal" 
+                                placeholder="姓名"
+                                />
+                                <button 
+                                    onClick={(e) => confirmRemoveStudent(e, s.id)} 
+                                    className="p-2.5 rounded-lg text-xs font-bold transition-colors bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border border-red-100 shadow-sm" 
+                                    title="刪除學生"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                            ))
+                        )}
+                        </div>
+                    </div>
+                    </div>
+                </div>
+                
+                {showBatchEdit && (
+                    <div className="fixed inset-0 z-[60] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[80vh] border border-slate-200">
+                        <div className="p-5 border-b border-slate-100 flex justify-between items-center">
+                            <h3 className="text-lg font-black text-slate-700 flex items-center gap-2">
+                            <ClipboardList className="w-5 h-5 text-green-500" />
+                            批次貼上名單
+                            </h3>
+                            <button onClick={() => setShowBatchEdit(false)} className="p-1.5 hover:bg-slate-100 rounded-full"><X className="w-5 h-5 text-slate-400" /></button>
+                        </div>
+                        <div className="p-6 flex-1 flex flex-col gap-3">
+                            <p className="text-sm text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            請直接從 Excel 或 Word 複製名單貼上。<br/>
+                            <span className="font-bold text-slate-600">格式：</span>座號 (空格) 姓名<br/>
+                            <span className="text-xs text-slate-400">例如：1 王小明</span>
+                            </p>
+                            <textarea 
+                            value={batchInput}
+                            onChange={(e) => setBatchInput(e.target.value)}
+                            className="w-full flex-1 min-h-[300px] p-4 border border-slate-200 rounded-2xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none font-mono text-sm leading-relaxed resize-none bg-slate-50"
+                            placeholder={`1 王小明\n2 陳大文\n3 張三`}
+                            />
+                        </div>
+                        <div className="p-5 border-t border-slate-100 bg-slate-50 rounded-b-3xl flex justify-end gap-3">
+                            <button onClick={() => setShowBatchEdit(false)} className="px-5 py-2 text-slate-500 hover:bg-white hover:shadow-sm rounded-xl font-bold transition-all">取消</button>
+                            <button onClick={saveBatchEdit} className="px-6 py-2 bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg shadow-indigo-200 rounded-xl font-bold transition-all active:scale-95 flex items-center gap-2">
+                            <Save className="w-4 h-4" /> 確認儲存
+                            </button>
+                        </div>
+                    </div>
+                    </div>
+                )}
+
+                {confirmConfig.show && (
+                    <div className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden scale-100 transition-all border border-slate-200">
+                        <div className={`p-5 border-b border-slate-100 flex items-center gap-3 ${confirmConfig.type === 'danger' ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'}`}>
+                            <div className={`p-2 rounded-full ${confirmConfig.type === 'danger' ? 'bg-red-100' : 'bg-orange-100'}`}>
+                                <AlertTriangle className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-xl font-black">{confirmConfig.title}</h3>
+                        </div>
+                        <div className="p-7">
+                            <p className="text-slate-600 font-medium leading-relaxed text-lg">{confirmConfig.message}</p>
+                        </div>
+                        <div className="p-5 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+                            <button onClick={cancelConfirmAction} className="px-5 py-2.5 text-slate-500 hover:bg-slate-100 rounded-xl font-bold transition-all">取消</button>
+                            <button 
+                            onClick={executeConfirmAction} 
+                            className={`px-7 py-2.5 text-white rounded-xl font-bold shadow-lg transition-transform active:scale-95 ${confirmConfig.type === 'danger' ? 'bg-red-500 hover:bg-red-600 shadow-red-200' : 'bg-orange-500 hover:bg-orange-600 shadow-orange-200'}`}
+                            >
+                            確認
+                            </button>
+                        </div>
+                    </div>
+                    </div>
+                )}
+
+                <div ref={splitContainerRef} className="flex-1 flex flex-col lg:flex-row overflow-hidden p-3 gap-3">
+                    <div 
+                    className={`flex flex-col bg-white rounded-[2.5rem] shadow-xl border-4 border-white overflow-hidden relative transition-all duration-300 ease-in-out ${viewMode === 'notebook' ? 'hidden' : ''}`}
+                    style={viewMode === 'split' && typeof window !== 'undefined' && window.innerWidth >= 1024 ? { width: `calc(${splitRatio}% - 0.75rem)`, flex: 'none' } : { flex: 1 }}
+                    >
+                    <div className="flex-none flex flex-col items-center justify-center py-6 border-b border-slate-100 gap-3 cursor-pointer group/clock relative overflow-hidden" onClick={toggleClockStyle}>
+                        <div className="absolute inset-0 bg-slate-50/50 pointer-events-none"></div>
+                        
+                        <div className={`font-mono font-black tracking-widest leading-none select-none transition-all duration-300 relative z-10 ${currentClockStyle.text} group-hover/clock:scale-105`} 
+                            style={{ fontSize: '8rem' }}>
+                            {currentTime.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        
+                        <div className="flex items-center justify-center gap-4 mt-2 w-full px-4 relative z-10">
+                            <div className="flex items-center gap-2 text-xl font-bold text-slate-500 bg-white px-6 py-2 rounded-xl shadow-sm border border-slate-200">
+                                <AlertCircle className="w-6 h-6 text-orange-500" />
+                                <span>遲到: {lateThreshold}</span>
+                            </div>
+
+                            <div className={`text-xl font-black px-6 py-2 rounded-xl shadow-sm border border-slate-200 flex items-center gap-2 ${
+                            checkInMode === 'attendance' ? 'bg-indigo-100 text-indigo-600' :
+                            checkInMode === 'brushing' ? 'bg-teal-100 text-teal-600' :
+                            checkInMode === 'lunch' ? 'bg-orange-100 text-orange-600' : 
+                            checkInMode === 'correction' ? 'bg-pink-100 text-pink-600' : 'bg-purple-100 text-purple-600'}`}>
+                                {getModeName(checkInMode)}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 p-2 overflow-hidden z-10 h-full">
+                        {students.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4 cursor-pointer group" onClick={() => setShowSettings(true)}>
+                            <div className="bg-white p-8 rounded-full border-4 border-dashed border-slate-300 group-hover:border-indigo-300 group-hover:scale-110 transition-all shadow-sm">
+                                <Users className="w-16 h-16 opacity-50 group-hover:text-indigo-400 transition-colors" />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-2xl font-black text-slate-500 group-hover:text-indigo-500 transition-colors">目前沒有學生資料</p>
+                                <p className="text-base text-slate-400 mt-2">請點擊此處或右上角設定匯入名單</p>
+                            </div>
+                        </div>
+                        ) : (
+                        <div 
+                            className={`grid ${getGridColsClass()} gap-2 h-full`} 
+                            style={{ fontFamily: currentFontFamily, gridAutoRows: 'minmax(0, 1fr)' }}
+                        >
+                            {students.map((student) => <StudentButton key={student.id} student={student} mode={checkInMode} fontFamily={currentFontFamily} onClick={() => handleStudentClick(student.id)} />)}
+                        </div>
+                        )}
+                    </div>
+                    </div>
+
+                    {viewMode === 'split' && (
+                    <div className="hidden lg:flex w-4 cursor-col-resize items-center justify-center hover:bg-black/5 rounded-full transition-colors z-30 -ml-2 -mr-2" onMouseDown={handleDragStart}>
+                        <div className="w-1 h-12 bg-slate-300 rounded-full shadow-sm"></div>
+                    </div>
+                    )}
+
+                    <div 
+                    className={`flex flex-col relative justify-center items-center rounded-[2.5rem] shadow-xl overflow-hidden transition-all duration-300 ease-in-out ${viewMode === 'checkin' ? 'hidden' : ''}`}
+                    style={viewMode === 'split' && typeof window !== 'undefined' && window.innerWidth >= 1024 ? { width: `calc(${100 - splitRatio}% - 0.75rem)`, flex: 'none' } : { flex: 1 }}
+                    >
+                    <div className={`w-full h-full bg-[#2d4035] border-[16px] border-[#a0522d] rounded-[2.5rem] shadow-[inset_0_0_80px_rgba(0,0,0,0.5),0_20px_60px_-10px_rgba(0,0,0,0.5)] flex flex-col relative overflow-hidden ring-4 ring-[#8b4513]/30`}>
+                        <div className="absolute inset-0 opacity-20 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                        
+                        <div className="flex justify-between items-center p-6 border-b border-white/10 border-dashed text-white/90 z-10">
+                        <div className="flex items-center gap-3">
+                            <Star className="w-8 h-8 text-yellow-300 fill-yellow-300 animate-pulse drop-shadow-md" />
+                            <h2 className="text-3xl font-black tracking-widest font-serif text-[#f0f0f0] drop-shadow-md">聯絡簿</h2>
+                        </div>
+                        <div className="flex items-center gap-3 bg-white/10 rounded-2xl p-1.5 shadow-inner">
+                            <button onClick={() => setNotebookDate(d => { const n = new Date(d); n.setDate(n.getDate()-1); return n; })} className="p-2 hover:bg-white/20 rounded-xl transition-colors"><ChevronLeft className="w-5 h-5" /></button>
+                            <span className="text-lg font-bold px-3 font-mono tracking-wider">{getNoteDateKey(notebookDate)}</span>
+                            <button onClick={() => setNotebookDate(d => { const n = new Date(d); n.setDate(n.getDate()+1); return n; })} className="p-2 hover:bg-white/20 rounded-xl transition-colors"><ChevronRight className="w-5 h-5" /></button>
+                        </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 px-6 py-3 z-10">
+                            <div className="flex items-center bg-white/10 rounded-xl shadow-inner">
+                                <button onClick={() => setNotebookFontSize(p => Math.max(16, p-2))} className="p-2 hover:bg-white/20 text-white rounded-l-xl transition-colors"><Minus className="w-4 h-4" /></button>
+                                <span className="text-sm font-mono w-8 text-center text-white/90 font-bold">{notebookFontSize}</span>
+                                <button onClick={() => setNotebookFontSize(p => Math.min(72, p+2))} className="p-2 hover:bg-white/20 text-white rounded-r-xl transition-colors"><Plus className="w-4 h-4" /></button>
+                            </div>
+                            
+                            <button 
+                            onClick={() => setWritingMode(prev => prev === 'horizontal' ? 'vertical' : 'horizontal')} 
+                            className={`p-2 rounded-xl text-white transition-all shadow-md ${writingMode === 'vertical' ? 'bg-indigo-500 border border-indigo-400' : 'bg-white/10 hover:bg-white/20 border border-white/10'}`} 
+                            title={writingMode === 'horizontal' ? "切換為直式" : "切換為橫式"}
+                            >
+                            {writingMode === 'horizontal' ? <AlignVerticalJustifyStart className="w-5 h-5" /> : <AlignHorizontalJustifyStart className="w-5 h-5" />}
+                            </button>
+                            
+                            <button onClick={confirmClearNote} className="p-2 rounded-xl text-white transition-all bg-rose-500 hover:bg-rose-400 shadow-md border border-rose-400" title="擦黑板 (清空內容)">
+                            <Eraser className="w-5 h-5" />
+                            </button>
+
+                            <button onClick={() => setIsEditingNote(!isEditingNote)} className={`p-2 rounded-xl text-white transition-all shadow-md border ${isEditingNote ? 'bg-green-500 hover:bg-green-400 border-green-400' : 'bg-yellow-500 hover:bg-yellow-400 border-yellow-400'}`}>
+                            {isEditingNote ? <Check className="w-5 h-5" /> : <Edit3 className="w-5 h-5" />}
+                            </button>
+                        </div>
+
+                        <div className="flex-1 p-8 relative overflow-hidden z-10">
+                        {isEditingNote ? (
+                            <textarea
+                            value={currentNoteContent}
+                            onChange={(e) => updateCurrentNote(e.target.value)}
+                            className={`w-full h-full bg-black/20 text-white font-serif outline-none resize-none p-6 rounded-3xl border-2 border-dashed border-white/20 leading-relaxed tracking-wider placeholder-white/30 ${writingMode === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}
+                            style={{ fontFamily: currentFontFamily, fontSize: `${notebookFontSize}px` }}
+                            placeholder="輸入事項 (每行一項)..."
+                            />
+                        ) : (
+                            <div 
+                            className={`w-full h-full content-start gap-x-16 gap-y-6 ${writingMode === 'vertical' ? 'flex flex-col flex-wrap [writing-mode:vertical-rl] items-start content-start' : 'grid grid-flow-col grid-rows-6'}`}
+                            style={{ fontFamily: currentFontFamily, fontSize: `${notebookFontSize}px` }}
+                            >
+                                {noteLines.map((line, idx) => (
+                                <div 
+                                    key={idx} 
+                                    className={`flex ${writingMode === 'vertical' ? 'flex-row items-center gap-3 py-2 min-h-[1em]' : 'flex-row items-baseline gap-4 my-1'} text-white font-medium drop-shadow-md`}
+                                >
+                                    <span className={`text-yellow-400 font-black font-mono select-none drop-shadow-md ${writingMode === 'vertical' ? '[writing-mode:horizontal-tb] mb-1' : ''}`}>
+                                    {idx + 1}.
+                                    </span>
+                                    <span className="whitespace-pre-wrap leading-relaxed tracking-wide drop-shadow-sm">{line}</span>
+                                </div>
+                                ))}
+                            </div>
+                        )}
+                        </div>
+                        
+                        <div className="h-10 bg-[#3e2714] border-t-8 border-[#2a1a0e] relative shadow-inner shrink-0 z-20 flex items-center px-10 gap-6">
+                            <div className="w-16 h-3 bg-white/90 rounded-sm shadow-md transform rotate-1"></div>
+                            <div className="w-10 h-3 bg-pink-300/90 rounded-sm shadow-md transform -rotate-2"></div>
+                            <div className="w-8 h-3 bg-blue-300/90 rounded-sm shadow-md transform rotate-3"></div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <div className="bg-slate-200 py-1 text-center text-[10px] text-slate-500 font-bold shrink-0">設計者：仙姑凱西</div>
+                </div>
+            );
+        };
+
+        const ModeButton = ({ active, onClick, icon, label, color }) => (
+            <button onClick={onClick} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all shrink-0 border whitespace-nowrap ${active ? `bg-white shadow-md border-slate-200 ${color.split(' ')[0]} ring-1 ring-slate-200` : 'border-transparent text-slate-500 hover:bg-white hover:text-slate-700'}`}>
+                {icon}<span className="text-xs font-bold">{label}</span>
+            </button>
+        );
+
+        const StudentButton = ({ student, onClick, fontFamily, mode }) => {
+            let bgClass = "bg-white hover:bg-slate-50", borderClass = "border-slate-200", textClass = "text-slate-800", statusIcon = null;
+            let shadowClass = "shadow-sm hover:shadow-md";
+
+            if (mode === 'attendance') {
+                switch (student.status) {
+                case 'idle': 
+                    bgClass = "bg-white hover:bg-slate-50"; 
+                    textClass = "text-slate-900"; 
+                    borderClass = "border-slate-200";
+                    break; 
+                case 'present': 
+                    bgClass = "bg-emerald-50 hover:bg-emerald-100"; 
+                    borderClass = "border-emerald-200"; 
+                    textClass = "text-emerald-700"; 
+                    statusIcon = <span className="text-[10px] bg-white/80 px-2 py-0.5 rounded-full text-emerald-800 font-black shadow-sm">{student.arrivalTime}</span>; 
+                    shadowClass = "shadow-md shadow-emerald-100";
+                    break;
+                case 'late_absent': 
+                    bgClass = "bg-rose-50 hover:bg-rose-100"; 
+                    borderClass = "border-rose-200"; 
+                    textClass = "text-rose-600"; 
+                    statusIcon = <span className="text-[10px] bg-white/80 px-2 py-0.5 rounded-full text-rose-700 font-black animate-pulse shadow-sm">遲到</span>; 
+                    shadowClass = "shadow-md shadow-rose-100 ring-2 ring-rose-200";
+                    break;
+                case 'late_arrived': 
+                    bgClass = "bg-orange-50 hover:bg-orange-100"; 
+                    borderClass = "border-orange-200"; 
+                    textClass = "text-orange-700"; 
+                    statusIcon = <div className="flex flex-col items-center leading-none"><span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.5 rounded-md font-bold mb-0.5 shadow-sm">遲到</span><span className="text-[10px] font-bold">{student.arrivalTime}</span></div>; 
+                    break;
+                default: break;
+                }
+            } else if (mode === 'brushing' && student.brushing) { bgClass = "bg-teal-50 hover:bg-teal-100"; borderClass = "border-teal-200"; textClass = "text-teal-700"; statusIcon = <Sparkles className="w-5 h-5 text-teal-500 fill-teal-200" />; }
+                else if (mode === 'lunch' && student.lunch) { bgClass = "bg-orange-50 hover:bg-orange-100"; borderClass = "border-orange-200"; textClass = "text-orange-700"; statusIcon = <Utensils className="w-5 h-5 text-orange-500" />; }
+                else if (mode === 'duty' && student.isDuty) { bgClass = "bg-purple-50 hover:bg-purple-100"; borderClass = "border-purple-300 ring-2 ring-purple-200"; textClass = "text-purple-700"; statusIcon = <Award className="w-6 h-6 text-purple-500 fill-purple-200 animate-bounce" />; }
+                else if (mode === 'correction' && student.correction) { bgClass = "bg-pink-50 hover:bg-pink-100"; borderClass = "border-pink-300 ring-2 ring-pink-200"; textClass = "text-pink-700"; statusIcon = <BookOpen className="w-5 h-5 text-pink-500 fill-pink-200" />; }
+
+            return (
+                <button 
+                    onClick={onClick} 
+                    style={{ containerType: 'size' }}
+                    className={`relative w-full h-full min-h-0 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 transform cursor-pointer select-none border-b-[4px] p-1 active:border-b-0 active:translate-y-[4px] px-1 ${bgClass} ${borderClass} ${textClass} ${shadowClass}`}
+                >
+                <span 
+                    className="font-bold leading-tight w-full text-center drop-shadow-sm whitespace-nowrap" 
+                    style={{ fontFamily, fontSize: 'clamp(1rem, min(18cqw, 35cqh), 4rem)' }}
+                >
+                    <span className="mr-[0.2em] opacity-60 font-mono text-[0.8em] align-baseline">{student.id}.</span>{student.name}
+                </span>
+                
+                <div className="flex items-center justify-center mt-[2cqh] h-[min(20px,15cqh)] w-full">
+                    <div style={{ width: 'clamp(12px, 15cqw, 24px)', height: 'clamp(12px, 15cqw, 24px)' }}>
+                        {statusIcon}
+                    </div>
+                </div>
+                </button>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
