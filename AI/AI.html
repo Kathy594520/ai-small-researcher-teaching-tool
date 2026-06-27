@@ -1,0 +1,1023 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 小小研究員：搶救淺山精靈教學工具網頁</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1"></script>
+  <style>
+    :root{
+      --bg:#eef2ea;
+      --ink:#142232;
+      --muted:#637284;
+      --line:rgba(20,34,50,.12);
+      --brand:#1f7a67;
+      --brand2:#d97706;
+      --brand3:#b45309;
+      --card:#ffffff;
+      --card2:#f8faf6;
+      --shadow:0 18px 45px rgba(12, 24, 39, .12);
+      --radius:24px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"Noto Sans TC",system-ui,-apple-system,"Segoe UI",sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(31,122,103,.16), transparent 26%),
+        radial-gradient(circle at top right, rgba(217,119,6,.14), transparent 24%),
+        linear-gradient(180deg, #0c1726 0%, #0f1c2f 30%, #eef2ea 30%, #eef2ea 100%);
+      min-height:100vh;
+    }
+    .wrap{
+      width:min(1450px, 100%);
+      margin:0 auto;
+      padding:24px 18px 34px;
+    }
+    .hero{
+      color:#fff;
+      background:linear-gradient(135deg, rgba(10,18,32,.96), rgba(18,42,64,.94));
+      border-radius:32px;
+      padding:26px 26px 22px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+    .hero::after{
+      content:"";
+      position:absolute;
+      right:-80px; bottom:-140px;
+      width:400px; height:400px;
+      border-radius:50%;
+      background:radial-gradient(circle, rgba(217,119,6,.22), transparent 68%);
+      pointer-events:none;
+    }
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      color:#d4e8f1;
+      font-size:13px;
+      letter-spacing:.04em;
+    }
+    h1{
+      margin:12px 0 10px;
+      font-size:clamp(30px, 4vw, 54px);
+      line-height:1.05;
+      letter-spacing:-.03em;
+    }
+    .hero p{
+      margin:0;
+      max-width:72ch;
+      line-height:1.78;
+      color:#d6e4ef;
+    }
+    .hero-grid{
+      margin-top:18px;
+      display:grid;
+      grid-template-columns:1fr 360px;
+      gap:14px;
+      position:relative;
+      z-index:1;
+    }
+    .hero-card{
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:20px;
+      padding:14px 16px;
+      backdrop-filter:blur(10px);
+    }
+    .hero-card strong{display:block;font-size:15px;margin-bottom:4px}
+    .hero-card span{display:block;font-size:13px;color:#c9dbe7;line-height:1.55}
+    .grid{
+      display:grid;
+      grid-template-columns:1.08fr .92fr;
+      gap:18px;
+      margin-top:20px;
+    }
+    .panel{
+      background:rgba(255,255,255,.92);
+      border:1px solid rgba(255,255,255,.62);
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .panel-head{
+      padding:18px 20px 14px;
+      border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg, #fff, #f7f6f1);
+    }
+    .panel-head h2{
+      margin:0;
+      font-size:18px;
+      letter-spacing:-.02em;
+    }
+    .panel-head .sub{
+      margin-top:5px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.5;
+    }
+    .panel-body{padding:18px 20px 20px}
+    .tabs{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-bottom:16px;
+    }
+    .tab-btn{
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--ink);
+      padding:10px 13px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:14px;
+    }
+    .tab-btn.active{
+      background:linear-gradient(135deg, var(--brand), #175c50);
+      color:#fff;
+      border-color:transparent;
+      box-shadow:0 10px 18px rgba(31,122,103,.18);
+    }
+    .toolbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      margin-bottom:12px;
+    }
+    .btn{
+      border:0;
+      border-radius:14px;
+      padding:11px 15px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:14px;
+      color:#fff;
+      background:linear-gradient(135deg, var(--brand), #175c50);
+    }
+    .btn.secondary{background:linear-gradient(135deg, #334155, #0f172a)}
+    .btn.warn{background:linear-gradient(135deg, var(--brand2), var(--brand3))}
+    .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .chipbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+    .chip{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 11px;border-radius:999px;
+      background:#fff;border:1px solid var(--line);
+      color:var(--muted);font-size:13px
+    }
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--muted)}
+    .dot.good{background:#2aa45e}.dot.warn{background:#d97706}.dot.brand{background:var(--brand)}
+    .view{display:none}
+    .view.active{display:block}
+    .class-list{display:grid;gap:14px}
+    .class-card{
+      background:linear-gradient(180deg, #fff, #faf8f2);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:15px;
+    }
+    .class-top{
+      display:grid;
+      grid-template-columns:1fr 86px auto;
+      gap:10px;
+      align-items:center;
+    }
+    .class-name{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px 12px;
+      font-size:16px;
+      font-weight:800;
+      background:#fff;
+    }
+    .count{
+      text-align:center;
+      padding:10px 12px;
+      border-radius:14px;
+      background:#eef7f4;
+      color:#13604f;
+      border:1px solid rgba(31,122,103,.18);
+      font-weight:800;
+    }
+    .class-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+    .file-input{display:none}
+    .sample-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(104px,1fr));
+      gap:10px;
+    }
+    .sample{
+      position:relative;
+      aspect-ratio:1;
+      border-radius:16px;
+      overflow:hidden;
+      background:#d9e3ec;
+      border:1px solid rgba(20,34,50,.10);
+    }
+    .sample img{width:100%;height:100%;object-fit:cover;display:block}
+    .sample button{
+      position:absolute;top:6px;right:6px;
+      width:24px;height:24px;border:0;border-radius:999px;
+      background:rgba(15,23,42,.78);color:#fff;cursor:pointer
+    }
+    .stage{
+      background:linear-gradient(180deg, #0f172a, #18263a);
+      color:#fff;
+      border-radius:24px;
+      padding:16px;
+      margin-bottom:14px;
+    }
+    .stage-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}
+    .video-box{
+      position:relative;
+      aspect-ratio:16/10;
+      border-radius:18px;
+      overflow:hidden;
+      background:#07111f;
+      border:1px solid rgba(255,255,255,.08);
+    }
+    video, canvas.preview{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+    .overlay{
+      position:absolute;left:12px;bottom:12px;
+      padding:7px 10px;border-radius:999px;
+      background:rgba(7,17,31,.66);border:1px solid rgba(255,255,255,.12);
+      font-size:12px;color:#dfeaf3;
+    }
+    .predictions{display:grid;gap:10px;margin-top:12px}
+    .pred-row{
+      display:grid;grid-template-columns:96px 1fr 58px;gap:10px;align-items:center;
+      font-size:14px;color:#dfeaf3
+    }
+    .pred-track{height:10px;background:rgba(255,255,255,.14);border-radius:999px;overflow:hidden}
+    .pred-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg, #22c55e, #7dd3fc);width:0%}
+    .pred-value{text-align:right;font-variant-numeric:tabular-nums}
+    .card{
+      background:linear-gradient(180deg, #fff, #faf8f2);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:16px;
+      margin-bottom:14px;
+    }
+    .card h3{margin:0 0 8px;font-size:16px}
+    .card p,.card li{color:#415166;line-height:1.72;font-size:14px}
+    .meter{margin-top:10px}
+    .meter-top{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-bottom:8px}
+    .bar{height:12px;background:#e7edf3;border-radius:999px;overflow:hidden}
+    .fill{height:100%;width:0%;border-radius:inherit;background:linear-gradient(90deg,var(--brand),#56b7a1)}
+    .log{
+      min-height:70px;
+      background:#0f172a;color:#dce6ef;border-radius:16px;
+      padding:12px 14px;white-space:pre-wrap;line-height:1.65;font-size:13px
+    }
+    .inputs{
+      display:grid;
+      gap:10px;
+    }
+    textarea,input[type="text"],select{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:11px 12px;
+      font:inherit;
+      background:#fff;
+      color:var(--ink);
+    }
+    textarea{min-height:120px;resize:vertical}
+    .split{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+    }
+    .result{
+      background:linear-gradient(135deg, rgba(31,122,103,.10), rgba(217,119,6,.09));
+      border:1px solid rgba(31,122,103,.18);
+      border-radius:20px;
+      padding:14px 15px;
+      color:#254156;
+      line-height:1.72;
+      white-space:pre-wrap;
+    }
+    .source-item{
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:12px;
+      margin-top:10px;
+      background:#fff;
+    }
+    .source-item strong{display:block;margin-bottom:5px}
+    .source-item small{display:block;color:var(--muted);line-height:1.55}
+    .footer{
+      margin-top:16px;
+      text-align:center;
+      color:#6a7d8f;
+      font-size:12px;
+      line-height:1.6;
+    }
+    @media (max-width: 1080px){
+      .grid,.hero-grid,.split{grid-template-columns:1fr}
+      .class-top{grid-template-columns:1fr}
+    }
+    @media (max-width: 720px){
+      .wrap{padding:14px 12px 26px}
+      .hero{padding:20px}
+      .panel-body,.panel-head{padding-left:14px;padding-right:14px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="eyebrow">AI 小小研究員 · 淺山生態 × 課堂工具</div>
+      <h1>AI 小小研究員：搶救淺山精靈教學工具網頁</h1>
+      <p>把這堂課需要的工具整合在同一頁：左邊做圖片訓練，右邊做相機照片分析；下方還有知識庫探究與宣導品生成。學生與老師都不用再切換到其他網站。</p>
+      <div class="hero-grid">
+        <div class="hero-card"><strong>課堂核心</strong><span>石虎、家貓、其他動物分類訓練，自動相機照片判讀，保育資料問答，最後產出宣導草稿。</span></div>
+        <div class="hero-card"><strong>使用方式</strong><span>直接用瀏覽器開啟本機頁面即可。模型、分析與知識庫都在同一個工具裡完成。</span></div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>左側：模型訓練</h2>
+          <div class="sub">建立分類、上傳圖片、訓練模型、測試預測。</div>
+        </div>
+        <div class="panel-body">
+          <div class="tabs" id="tabs">
+            <button class="tab-btn active" data-tab="train">訓練模型</button>
+            <button class="tab-btn" data-tab="analysis">相機分析</button>
+            <button class="tab-btn" data-tab="knowledge">知識庫</button>
+            <button class="tab-btn" data-tab="publish">宣導品</button>
+          </div>
+          <div class="chipbar" id="chips"></div>
+
+          <div class="view active" id="view-train">
+            <div class="toolbar">
+              <button class="btn ghost" id="loadModelBtn">載入辨識模型</button>
+              <button class="btn warn" id="trainBtn" disabled>Train Model / 訓練模型</button>
+              <button class="btn secondary" id="exportBtn" disabled>匯出模型</button>
+            </div>
+            <div class="class-list" id="classList"></div>
+          </div>
+
+          <div class="view" id="view-analysis">
+            <div class="card">
+              <h3>模擬「小小生態學家」分析相機照片</h3>
+              <p>上傳一張紅外線相機照片，頁面會用你剛訓練的模型做判讀，然後自動整理成老師可直接使用的分析文字。</p>
+              <div class="toolbar">
+                <input class="file-input" id="analysisInput" type="file" accept="image/*">
+                <button class="btn ghost" id="pickAnalysisBtn">選照片</button>
+                <button class="btn secondary" id="runAnalysisBtn" disabled>開始分析</button>
+                <button class="btn ghost" id="copyAnalysisBtn" disabled>複製分析</button>
+              </div>
+              <div class="video-box" style="aspect-ratio:16/9;background:#d9e3ec">
+                <canvas id="analysisCanvas" class="preview"></canvas>
+                <div class="overlay" id="analysisState">尚未選擇照片</div>
+              </div>
+            </div>
+            <div class="result" id="analysisResult">請先完成模型訓練，再上傳相機照片。</div>
+            <div class="predictions" id="analysisPredictions"></div>
+          </div>
+
+          <div class="view" id="view-knowledge">
+            <div class="card">
+              <h3>NotebookLM 式知識庫探究</h3>
+              <p>把保育資料貼進來，工具會自動切成重點段落，再根據你的問題找出最相關的內容，生成課堂答案。</p>
+              <div class="inputs">
+                <textarea id="kbInput" placeholder="貼上石虎保育資料、報導、課本內容或教師整理的文字。每段之間可空一行。"></textarea>
+                <div class="toolbar">
+                  <button class="btn ghost" id="addSampleKbBtn">加入示範資料</button>
+                  <button class="btn secondary" id="buildKbBtn">建立知識庫</button>
+                </div>
+                <input type="text" id="kbQuestion" placeholder="輸入問題，例如：石虎面臨哪些威脅？">
+                <div class="toolbar">
+                  <button class="btn warn" id="askKbBtn" disabled>提問</button>
+                  <button class="btn ghost" id="copyKbBtn" disabled>複製答案</button>
+                </div>
+              </div>
+            </div>
+            <div class="result" id="kbAnswer">尚未建立知識庫。</div>
+            <div id="kbSources"></div>
+          </div>
+
+          <div class="view" id="view-publish">
+            <div class="card">
+              <h3>自動生成宣導品草稿</h3>
+              <p>把剛剛的分析和知識庫內容，轉成簡報大綱、海報文字或宣導短文。</p>
+              <div class="toolbar">
+                <button class="btn warn" id="genSlidesBtn">生成教學簡報</button>
+                <button class="btn secondary" id="genPosterBtn">生成資訊圖表</button>
+                <button class="btn ghost" id="copyPublishBtn" disabled>複製內容</button>
+              </div>
+            </div>
+            <textarea id="publishBox" placeholder="生成結果會出現在這裡，可直接複製到簡報或文件。"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>右側：預覽與提醒</h2>
+          <div class="sub">顯示訓練進度、即時相機預覽與操作說明。</div>
+        </div>
+        <div class="panel-body">
+          <div class="stage">
+            <div class="stage-head">
+              <div>
+                <strong>相機預覽</strong><br>
+                <span>可直接用攝影機測試模型判斷。</span>
+              </div>
+              <div class="toolbar" style="margin:0">
+                <button class="btn ghost" id="camStartBtn">開啟相機</button>
+                <button class="btn secondary" id="camStopBtn" disabled>停止</button>
+              </div>
+            </div>
+            <div class="video-box">
+              <video id="camera" autoplay playsinline muted></video>
+              <div class="overlay" id="cameraState">相機未啟動</div>
+            </div>
+            <div class="predictions" id="livePredictions"></div>
+          </div>
+
+          <div class="card">
+            <h3>訓練進度</h3>
+            <div class="meter">
+              <div class="meter-top"><span id="meterText">尚未開始</span><span id="meterPercent">0%</span></div>
+              <div class="bar"><div class="fill" id="meterFill"></div></div>
+            </div>
+            <div class="log" id="logBox">先載入辨識模型，再建立分類。</div>
+          </div>
+
+          <div class="card">
+            <h3>教學提醒</h3>
+            <ul>
+              <li>石虎、家貓、其他動物三類先準備好再訓練。</li>
+              <li>每類至少 10 張以上，背景要多樣。</li>
+              <li>如果判斷不準，就回去補圖再訓練一次。</li>
+              <li>知識庫答案是依你上傳的內容整理，不是憑空產生。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">建議在 Chromebook 或 Chrome 開啟。此頁可獨立使用，不需要另外切換到 Teachable Machine、AI Studio 或 NotebookLM 網站。</div>
+  </div>
+
+  <script>
+    const DEFAULT_CLASSES = ['石虎', '家貓', '其他動物'];
+    const SAMPLE_KB = `石虎是台灣淺山重要的野生動物，常活動於森林邊緣、丘陵地與農地交錯區。石虎面臨的威脅包括道路穿越、棲地破碎化、犬隻干擾與人為開發。保育行動包含維持森林廊道、減少路殺風險、保護棲地與提升民眾認識。`;
+
+    const state = {
+      classes: [],
+      mobilenet: null,
+      model: null,
+      trained: false,
+      busy: false,
+      cameraStream: null,
+      cameraLoop: null,
+      testImage: null,
+      analysisImage: null,
+      kbChunks: [],
+      kbText: '',
+      lastAnalysis: '',
+      lastAnswer: '',
+    };
+
+    const el = {
+      tabs: document.getElementById('tabs'),
+      chips: document.getElementById('chips'),
+      classList: document.getElementById('classList'),
+      loadModelBtn: document.getElementById('loadModelBtn'),
+      trainBtn: document.getElementById('trainBtn'),
+      exportBtn: document.getElementById('exportBtn'),
+      meterFill: document.getElementById('meterFill'),
+      meterText: document.getElementById('meterText'),
+      meterPercent: document.getElementById('meterPercent'),
+      logBox: document.getElementById('logBox'),
+      camera: document.getElementById('camera'),
+      cameraState: document.getElementById('cameraState'),
+      camStartBtn: document.getElementById('camStartBtn'),
+      camStopBtn: document.getElementById('camStopBtn'),
+      livePredictions: document.getElementById('livePredictions'),
+      analysisInput: document.getElementById('analysisInput'),
+      pickAnalysisBtn: document.getElementById('pickAnalysisBtn'),
+      runAnalysisBtn: document.getElementById('runAnalysisBtn'),
+      copyAnalysisBtn: document.getElementById('copyAnalysisBtn'),
+      analysisCanvas: document.getElementById('analysisCanvas'),
+      analysisState: document.getElementById('analysisState'),
+      analysisResult: document.getElementById('analysisResult'),
+      analysisPredictions: document.getElementById('analysisPredictions'),
+      kbInput: document.getElementById('kbInput'),
+      addSampleKbBtn: document.getElementById('addSampleKbBtn'),
+      buildKbBtn: document.getElementById('buildKbBtn'),
+      kbQuestion: document.getElementById('kbQuestion'),
+      askKbBtn: document.getElementById('askKbBtn'),
+      copyKbBtn: document.getElementById('copyKbBtn'),
+      kbAnswer: document.getElementById('kbAnswer'),
+      kbSources: document.getElementById('kbSources'),
+      genSlidesBtn: document.getElementById('genSlidesBtn'),
+      genPosterBtn: document.getElementById('genPosterBtn'),
+      copyPublishBtn: document.getElementById('copyPublishBtn'),
+      publishBox: document.getElementById('publishBox'),
+    };
+
+    function setMeter(pct, text) {
+      el.meterFill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+      el.meterText.textContent = text;
+      el.meterPercent.textContent = `${Math.round(pct)}%`;
+    }
+    function log(message, append = false) {
+      el.logBox.textContent = append ? `${el.logBox.textContent}\n${message}` : message;
+    }
+    function copyText(value) {
+      navigator.clipboard?.writeText(value).catch(() => {});
+    }
+
+    function updateChips() {
+      const sampleCount = state.classes.reduce((a, c) => a + c.samples.length, 0);
+      el.chips.innerHTML = '';
+      const items = [
+        { label: state.mobilenet ? '基礎模型已載入' : '尚未載入模型', tone: state.mobilenet ? 'good' : 'warn' },
+        { label: `總圖片數：${sampleCount}`, tone: sampleCount ? 'good' : 'warn' },
+        { label: state.trained ? '分類器已訓練' : '尚未訓練', tone: state.trained ? 'good' : 'warn' },
+        { label: `知識庫段落：${state.kbChunks.length}`, tone: state.kbChunks.length ? 'good' : 'brand' },
+      ];
+      for (const item of items) {
+        const chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.innerHTML = `<span class="dot ${item.tone}"></span><span>${item.label}</span>`;
+        el.chips.appendChild(chip);
+      }
+      el.trainBtn.disabled = !state.mobilenet || state.busy || sampleCount === 0 || state.classes.some(c => c.samples.length === 0);
+      el.exportBtn.disabled = !state.trained || state.busy;
+      el.runAnalysisBtn.disabled = !state.trained;
+      el.askKbBtn.disabled = !state.kbChunks.length;
+      el.copyAnalysisBtn.disabled = !state.lastAnalysis;
+      el.copyKbBtn.disabled = !state.lastAnswer;
+      el.copyPublishBtn.disabled = !el.publishBox.value.trim();
+    }
+
+    function makeClassCard(cls, idx) {
+      const card = document.createElement('div');
+      card.className = 'class-card';
+      card.innerHTML = `
+        <div class="class-top">
+          <input class="class-name" type="text" value="${cls.name}">
+          <div class="count" data-count>0 張</div>
+          <button class="btn ghost" data-demo>加入示範圖</button>
+        </div>
+        <div class="class-actions">
+          <input class="file-input" type="file" accept="image/*" multiple>
+          <button class="btn secondary" data-upload>加入圖片</button>
+          <button class="btn warn" data-clear>清空這類</button>
+        </div>
+        <div class="sample-grid" data-grid></div>
+      `;
+      const nameInput = card.querySelector('.class-name');
+      const fileInput = card.querySelector('.file-input');
+      cls._count = card.querySelector('[data-count]');
+      cls._grid = card.querySelector('[data-grid]');
+
+      nameInput.addEventListener('input', () => {
+        cls.name = nameInput.value.trim() || `類別 ${idx + 1}`;
+        updateChips();
+      });
+      card.querySelector('[data-upload]').addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', async () => {
+        if (!fileInput.files?.length) return;
+        await addFilesToClass(idx, [...fileInput.files]);
+        fileInput.value = '';
+      });
+      card.querySelector('[data-clear]').addEventListener('click', () => {
+        cls.samples.forEach(s => URL.revokeObjectURL(s.url));
+        cls.samples = [];
+        renderClasses();
+      });
+      card.querySelector('[data-demo]').addEventListener('click', async () => {
+        const file = await makeDemoImage(cls.name);
+        await addFilesToClass(idx, [file]);
+      });
+      return card;
+    }
+
+    function renderClasses() {
+      el.classList.innerHTML = '';
+      state.classes.forEach((cls, idx) => {
+        cls._count.textContent = `${cls.samples.length} 張`;
+        cls._grid.innerHTML = '';
+        cls.samples.forEach((sample, sampleIndex) => {
+          const tile = document.createElement('div');
+          tile.className = 'sample';
+          tile.innerHTML = `<img src="${sample.url}" alt="${sample.name}"><button title="刪除">×</button>`;
+          tile.querySelector('button').addEventListener('click', () => {
+            URL.revokeObjectURL(sample.url);
+            cls.samples.splice(sampleIndex, 1);
+            renderClasses();
+          });
+          cls._grid.appendChild(tile);
+        });
+        el.classList.appendChild(cls._card);
+      });
+      updateChips();
+    }
+
+    function initClasses() {
+      state.classes = DEFAULT_CLASSES.map(name => ({ name, samples: [] }));
+      state.classes.forEach((cls, idx) => { cls._card = makeClassCard(cls, idx); });
+      renderClasses();
+    }
+
+    async function makeDemoImage(label) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 720;
+      canvas.height = 480;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 720, 480);
+      grad.addColorStop(0, '#dbe9dd');
+      grad.addColorStop(1, '#c8d5eb');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 720, 480);
+      ctx.fillStyle = 'rgba(31,122,103,.22)';
+      ctx.beginPath(); ctx.arc(120, 320, 90, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(217,119,6,.22)';
+      ctx.beginPath(); ctx.arc(560, 110, 76, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#203245';
+      ctx.font = 'bold 48px Noto Sans TC, sans-serif';
+      ctx.fillText(label, 42, 82);
+      ctx.font = '22px sans-serif';
+      ctx.fillText('示範圖片', 42, 122);
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      return new File([blob], `${label}-demo.png`, { type: 'image/png' });
+    }
+
+    function fileToImage(file) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => resolve({ img, url });
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    async function addFilesToClass(index, files) {
+      const cls = state.classes[index];
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+        const { img, url } = await fileToImage(file);
+        cls.samples.push({ file, img, url, name: file.name });
+      }
+      renderClasses();
+    }
+
+    async function loadModel() {
+      if (state.mobilenet) return;
+      log('正在載入辨識模型...');
+      setMeter(10, '載入中');
+      state.mobilenet = await mobilenet.load({ version: 2, alpha: 1.0 });
+      setMeter(100, '模型已就緒');
+      log('辨識模型已載入。');
+      updateChips();
+    }
+
+    function allSamples() {
+      return state.classes.flatMap((cls, classIndex) =>
+        cls.samples.map(sample => ({ ...sample, classIndex, className: cls.name }))
+      );
+    }
+
+    async function trainModel() {
+      const samples = allSamples();
+      if (!samples.length) return;
+      state.busy = true;
+      updateChips();
+      setMeter(0, '準備訓練');
+      log(`開始訓練，共 ${samples.length} 張圖片。`);
+
+      const xs = [];
+      const ys = [];
+      for (let i = 0; i < samples.length; i++) {
+        const sample = samples[i];
+        const tensor = tf.tidy(() => {
+          const feat = state.mobilenet.infer(sample.img, true);
+          return feat.reshape([feat.shape[feat.shape.length - 1]]);
+        });
+        xs.push(tensor);
+        ys.push(sample.classIndex);
+        setMeter((i / samples.length) * 25, `擷取特徵 ${i + 1}/${samples.length}`);
+        await tf.nextFrame();
+      }
+
+      const xsTensor = tf.stack(xs);
+      const labelsTensor = tf.tensor1d(ys, 'int32');
+      const ysTensor = tf.oneHot(labelsTensor, state.classes.length);
+      const featureDim = xs[0].shape[0];
+      const model = tf.sequential();
+      model.add(tf.layers.dense({ inputShape: [featureDim], units: 64, activation: 'relu' }));
+      model.add(tf.layers.dropout({ rate: 0.18 }));
+      model.add(tf.layers.dense({ units: state.classes.length, activation: 'softmax' }));
+      model.compile({ optimizer: tf.train.adam(0.001), loss: 'categoricalCrossentropy', metrics: ['accuracy'] });
+
+      const epochs = 18;
+      await model.fit(xsTensor, ysTensor, {
+        epochs,
+        batchSize: Math.min(8, samples.length),
+        shuffle: true,
+        validationSplit: samples.length >= 10 ? 0.2 : 0,
+        callbacks: {
+          onEpochEnd: async (epoch, logs) => {
+            setMeter(25 + ((epoch + 1) / epochs) * 75, `訓練第 ${epoch + 1}/${epochs} 輪`);
+            log(`第 ${epoch + 1} 輪：loss ${logs.loss.toFixed(3)}；accuracy ${(logs.acc ?? logs.accuracy ?? 0).toFixed(3)}`);
+            await tf.nextFrame();
+          }
+        }
+      });
+
+      xs.forEach(t => t.dispose());
+      xsTensor.dispose(); labelsTensor.dispose(); ysTensor.dispose();
+      state.model = model;
+      state.trained = true;
+      state.busy = false;
+      setMeter(100, '訓練完成');
+      log('訓練完成。可以到「相機分析」或開啟相機即時測試。');
+      updateChips();
+    }
+
+    async function predictElement(sourceEl) {
+      if (!state.trained || !state.model || !state.mobilenet) return null;
+      const emb = tf.tidy(() => state.mobilenet.infer(sourceEl, true).reshape([1, -1]));
+      const preds = state.model.predict(emb);
+      const values = await preds.data();
+      emb.dispose(); preds.dispose();
+      return Array.from(values);
+    }
+
+    async function drawImageToCanvas(file, canvas, stateTextEl) {
+      const { img, url } = await fileToImage(file);
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      if (stateTextEl) stateTextEl.textContent = file.name;
+      return { img, url };
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
+      document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === `view-${name}`));
+    }
+
+    async function runAnalysis() {
+      if (!state.analysisImage) return;
+      const values = await predictElement(state.analysisImage);
+      if (!values) return;
+      const ranked = values.map((value, i) => ({ name: state.classes[i].name, value })).sort((a, b) => b.value - a.value);
+      const top = ranked[0];
+      const second = ranked[1] || ranked[0];
+      const ratio = `${(top.value * 100).toFixed(1)}%`;
+      const threatList = [
+        '道路穿越風險',
+        '棲地破碎化',
+        '夜間干擾',
+        '人為活動接近',
+      ];
+      const suggestion = top.name === '石虎'
+        ? '建議保留森林與農地間的連通帶，降低路殺，並維持淺山廊道。'
+        : top.name === '家貓'
+        ? '若出現在保育課程中，可提醒學生：家貓與野外石虎外觀相似，但棲地與保育意義不同。'
+        : '建議補充更多背景、角度與時間資料，讓判讀更完整。';
+      const report = [
+        `分析結果：最可能是「${top.name}」，信心值 ${ratio}。`,
+        `第二順位：${second.name}，信心值 ${(second.value * 100).toFixed(1)}%。`,
+        '',
+        '觀察重點：',
+        `- 這張圖的動物種類與行為，會影響我們對棲地的理解。`,
+        `- 可提醒學生關注：${threatList.join('、')}。`,
+        '',
+        '棲地改善建議：',
+        `- ${suggestion}`,
+      ].join('\n');
+
+      state.lastAnalysis = report;
+      el.analysisResult.textContent = report;
+      el.analysisPredictions.innerHTML = '';
+      ranked.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'pred-row';
+        row.innerHTML = `
+          <div>${item.name}</div>
+          <div class="pred-track"><div class="pred-fill" style="width:${Math.max(2, item.value * 100)}%"></div></div>
+          <div class="pred-value">${(item.value * 100).toFixed(1)}%</div>
+        `;
+        el.analysisPredictions.appendChild(row);
+      });
+      updateChips();
+    }
+
+    function chunkText(text) {
+      return text
+        .split(/\n\s*\n/)
+        .map(s => s.trim())
+        .filter(Boolean)
+        .flatMap(block => block.split(/(?<=[。！？.!?])\s*/).map(s => s.trim()).filter(Boolean));
+    }
+
+    function buildKnowledgeBase() {
+      const text = el.kbInput.value.trim();
+      state.kbText = text;
+      state.kbChunks = chunkText(text);
+      el.kbSources.innerHTML = '';
+      if (!state.kbChunks.length) {
+        el.kbAnswer.textContent = '尚未建立知識庫。';
+        state.lastAnswer = '';
+        updateChips();
+        return;
+      }
+      state.kbChunks.slice(0, 8).forEach((chunk, i) => {
+        const box = document.createElement('div');
+        box.className = 'source-item';
+        box.innerHTML = `<strong>段落 ${i + 1}</strong><small>${chunk}</small>`;
+        el.kbSources.appendChild(box);
+      });
+      el.kbAnswer.textContent = '知識庫已建立，現在可以提問。';
+      updateChips();
+    }
+
+    function answerQuestion(question) {
+      const q = question.trim();
+      if (!q || !state.kbChunks.length) return '請先建立知識庫，再輸入問題。';
+      const keywords = q.split(/[^\u4e00-\u9fa5a-zA-Z0-9]+/).filter(Boolean);
+      const scored = state.kbChunks.map(chunk => {
+        const score = keywords.reduce((n, k) => n + (chunk.includes(k) ? 2 : 0), 0) + (chunk.length < 60 ? 0.3 : 0);
+        return { chunk, score };
+      }).sort((a, b) => b.score - a.score);
+      const hits = scored.slice(0, 3).filter(x => x.score > 0);
+      if (!hits.length) {
+        return `根據你上傳的知識庫內容，暫時找不到直接對應的段落。\n\n建議你改用更具體的關鍵字，例如：石虎、棲地、道路、保育、路殺、廊道。`;
+      }
+      const answer = [
+        `問題：${q}`,
+        '',
+        '整理回答：',
+        ...hits.map((h, i) => `${i + 1}. ${h.chunk}`),
+        '',
+        '教師提示：以上內容是根據你上傳的資料做重點整理，適合拿來做課堂討論。'
+      ].join('\n');
+      return answer;
+    }
+
+    function generateSlides() {
+      const base = state.lastAnalysis || '尚未完成相機分析。';
+      const kb = state.lastAnswer || '尚未建立知識庫答案。';
+      const content = [
+        '【石虎保育教學簡報大綱】',
+        '',
+        '1. 認識石虎與淺山生態',
+        '2. 石虎與家貓外觀比較',
+        '3. 紅外線相機拍到的野生動物',
+        '4. AI 分析相機照片的流程',
+        '5. 石虎面臨的威脅與保育行動',
+        '',
+        '【課堂可直接使用的重點】',
+        base,
+        '',
+        kb,
+        '',
+        '【結語】',
+        '讓學生知道：AI 不是取代觀察，而是幫助我們更快整理與理解自然資料。'
+      ].join('\n');
+      el.publishBox.value = content;
+      state.lastPublish = content;
+      updateChips();
+    }
+
+    function generatePoster() {
+      const base = state.lastAnalysis || '請先完成相機分析。';
+      const kb = state.lastAnswer || '請先建立知識庫。';
+      const content = [
+        '【石虎保育資訊圖表文字】',
+        '',
+        '主題：AI 小小研究員，搶救淺山精靈',
+        '',
+        '看見什麼：',
+        '- 石虎、家貓、其他動物、紅外線相機照片',
+        '',
+        'AI 做什麼：',
+        '- 訓練模型',
+        '- 分析相機照片',
+        '- 整理保育重點',
+        '',
+        '要保護什麼：',
+        '- 棲地連通',
+        '- 減少路殺',
+        '- 保留淺山廊道',
+        '',
+        '老師可直接說：',
+        base,
+        '',
+        kb
+      ].join('\n');
+      el.publishBox.value = content;
+      state.lastPublish = content;
+      updateChips();
+    }
+
+    el.tabs.addEventListener('click', e => {
+      const btn = e.target.closest('.tab-btn');
+      if (!btn) return;
+      switchTab(btn.dataset.tab);
+    });
+    el.loadModelBtn.addEventListener('click', loadModel);
+    el.trainBtn.addEventListener('click', trainModel);
+    el.exportBtn.addEventListener('click', async () => {
+      if (state.model) {
+        await state.model.save('downloads://ai-small-researcher-classifier');
+        log('模型已匯出到下載資料夾。');
+      }
+    });
+    el.pickAnalysisBtn.addEventListener('click', () => el.analysisInput.click());
+    el.analysisInput.addEventListener('change', async () => {
+      const file = el.analysisInput.files?.[0];
+      if (!file) return;
+      const { img } = await drawImageToCanvas(file, el.analysisCanvas, el.analysisState);
+      state.analysisImage = img;
+      el.runAnalysisBtn.disabled = !state.trained;
+    });
+    el.runAnalysisBtn.addEventListener('click', runAnalysis);
+    el.copyAnalysisBtn.addEventListener('click', () => copyText(state.lastAnalysis));
+    el.addSampleKbBtn.addEventListener('click', () => {
+      if (!el.kbInput.value.trim()) el.kbInput.value = SAMPLE_KB;
+      else el.kbInput.value += '\n\n' + SAMPLE_KB;
+    });
+    el.buildKbBtn.addEventListener('click', buildKnowledgeBase);
+    el.askKbBtn.addEventListener('click', () => {
+      const answer = answerQuestion(el.kbQuestion.value);
+      state.lastAnswer = answer;
+      el.kbAnswer.textContent = answer;
+      updateChips();
+    });
+    el.copyKbBtn.addEventListener('click', () => copyText(state.lastAnswer));
+    el.genSlidesBtn.addEventListener('click', generateSlides);
+    el.genPosterBtn.addEventListener('click', generatePoster);
+    el.copyPublishBtn.addEventListener('click', () => copyText(el.publishBox.value));
+
+    el.camStartBtn.addEventListener('click', async () => {
+      if (state.cameraStream) return;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        state.cameraStream = stream;
+        el.camera.srcObject = stream;
+        await el.camera.play();
+        el.cameraState.textContent = '相機已啟動';
+        el.camStartBtn.disabled = true;
+        el.camStopBtn.disabled = false;
+        state.cameraLoop = setInterval(async () => {
+          if (!state.trained) return;
+          const values = await predictElement(el.camera);
+          if (!values) return;
+          const ranked = values.map((value, i) => ({ name: state.classes[i].name, value })).sort((a, b) => b.value - a.value);
+          el.livePredictions.innerHTML = ranked.map(item => `
+            <div class="pred-row">
+              <div>${item.name}</div>
+              <div class="pred-track"><div class="pred-fill" style="width:${Math.max(2, item.value * 100)}%"></div></div>
+              <div class="pred-value">${(item.value * 100).toFixed(1)}%</div>
+            </div>
+          `).join('');
+        }, 900);
+      } catch (err) {
+        el.cameraState.textContent = '相機啟動失敗';
+        log(`相機啟動失敗：${err.message}`);
+      }
+    });
+    el.camStopBtn.addEventListener('click', () => {
+      if (state.cameraLoop) clearInterval(state.cameraLoop);
+      if (state.cameraStream) state.cameraStream.getTracks().forEach(t => t.stop());
+      state.cameraLoop = null;
+      state.cameraStream = null;
+      el.camera.srcObject = null;
+      el.cameraState.textContent = '相機未啟動';
+      el.camStartBtn.disabled = false;
+      el.camStopBtn.disabled = true;
+    });
+
+    initClasses();
+    updateChips();
+    setMeter(0, '尚未開始');
+  </script>
+</body>
+</html>

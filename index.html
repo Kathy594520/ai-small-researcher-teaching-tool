@@ -1,0 +1,522 @@
+﻿<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="AI 撠??弦?∴??嗆?瘛箏控蝎暸?嚗?????脯oogle AI 撌亙??Chromebook 撖虫???摮貊雯蝡? />
+  <title>AI 撠??弦?∴??嗆?瘛箏控蝎暸?</title>
+  <style>
+    :root{
+      --bg:#eef2ea;
+      --bg2:#f6f1e7;
+      --ink:#102033;
+      --muted:#5d6c7c;
+      --line:rgba(16,32,51,.12);
+      --brand:#1f7a67;
+      --brand2:#d97706;
+      --brand3:#b45309;
+      --card:#ffffff;
+      --shadow:0 18px 42px rgba(12,24,39,.12);
+      --radius:26px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      font-family:"Noto Sans TC", system-ui, -apple-system, "Segoe UI", sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(31,122,103,.16), transparent 28%),
+        radial-gradient(circle at top right, rgba(217,119,6,.15), transparent 24%),
+        linear-gradient(180deg, #0e1828 0%, #132238 28%, var(--bg) 28%, var(--bg) 100%);
+    }
+    a{color:inherit}
+    .wrap{
+      width:min(1180px, calc(100% - 28px));
+      margin:0 auto;
+      padding:18px 0 34px;
+    }
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      padding:6px 2px 16px;
+      color:#e5edf4;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+    .logo{
+      width:42px;
+      height:42px;
+      border-radius:14px;
+      background:linear-gradient(135deg, var(--brand), #165c50);
+      box-shadow:0 10px 22px rgba(31,122,103,.24);
+      display:grid;
+      place-items:center;
+      color:#fff;
+      font-weight:800;
+      flex:0 0 auto;
+    }
+    .brand h1{
+      margin:0;
+      font-size:16px;
+      letter-spacing:.02em;
+      line-height:1.2;
+    }
+    .brand p{
+      margin:2px 0 0;
+      font-size:12px;
+      color:#c7d5e0;
+    }
+    .nav{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      justify-content:flex-end;
+    }
+    .nav a{
+      text-decoration:none;
+      color:#e9f0f6;
+      font-size:13px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .hero{
+      margin-top:8px;
+      background:linear-gradient(135deg, rgba(11,19,31,.96), rgba(19,42,64,.94));
+      border-radius:34px;
+      padding:30px;
+      color:#fff;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+    .hero::before,
+    .hero::after{
+      content:"";
+      position:absolute;
+      border-radius:50%;
+      pointer-events:none;
+    }
+    .hero::before{
+      right:-120px;
+      top:-120px;
+      width:280px;
+      height:280px;
+      background:radial-gradient(circle, rgba(217,119,6,.22), transparent 70%);
+    }
+    .hero::after{
+      right:50px;
+      bottom:-160px;
+      width:360px;
+      height:360px;
+      background:radial-gradient(circle, rgba(31,122,103,.22), transparent 70%);
+    }
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      color:#d8e7f2;
+      font-size:13px;
+      letter-spacing:.04em;
+      position:relative;
+      z-index:1;
+    }
+    .hero-grid{
+      display:grid;
+      grid-template-columns:1.3fr .9fr;
+      gap:22px;
+      position:relative;
+      z-index:1;
+      align-items:center;
+      margin-top:18px;
+    }
+    h2{
+      margin:0;
+      font-size:clamp(34px, 5vw, 58px);
+      line-height:1.05;
+      letter-spacing:-.03em;
+    }
+    .hero p{
+      margin:16px 0 0;
+      max-width:64ch;
+      line-height:1.82;
+      color:#d9e6f0;
+      font-size:15px;
+    }
+    .actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:22px;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:12px 16px;
+      border-radius:14px;
+      text-decoration:none;
+      font-weight:700;
+      border:1px solid transparent;
+      transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{
+      color:#fff;
+      background:linear-gradient(135deg, var(--brand), #175c50);
+      box-shadow:0 12px 22px rgba(31,122,103,.18);
+    }
+    .btn.secondary{
+      color:#0f172a;
+      background:#fff;
+      border-color:rgba(255,255,255,.18);
+    }
+    .btn.warn{
+      color:#fff;
+      background:linear-gradient(135deg, var(--brand2), var(--brand3));
+    }
+    .hero-side{
+      display:grid;
+      gap:12px;
+    }
+    .stat{
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:22px;
+      padding:16px 16px 15px;
+      backdrop-filter:blur(10px);
+    }
+    .stat strong{
+      display:block;
+      font-size:22px;
+      margin-bottom:5px;
+    }
+    .stat span{
+      color:#d6e4ef;
+      font-size:13px;
+      line-height:1.6;
+    }
+    .grid{
+      margin-top:18px;
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      gap:18px;
+    }
+    .panel{
+      background:rgba(255,255,255,.92);
+      border:1px solid rgba(255,255,255,.6);
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .panel-head{
+      padding:18px 20px 14px;
+      border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg, #fff, #f7f6f1);
+    }
+    .panel-head h3{
+      margin:0;
+      font-size:20px;
+      letter-spacing:-.02em;
+    }
+    .panel-head p{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.65;
+    }
+    .panel-body{padding:18px 20px 20px}
+    .cards{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:12px;
+    }
+    .card{
+      background:linear-gradient(180deg, #fff, #fbf8f2);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:16px;
+    }
+    .card h4{
+      margin:0 0 6px;
+      font-size:16px;
+    }
+    .card p{
+      margin:0;
+      color:#405064;
+      line-height:1.75;
+      font-size:14px;
+    }
+    .section{
+      margin-top:18px;
+      background:rgba(255,255,255,.92);
+      border:1px solid rgba(255,255,255,.6);
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .section .section-body{
+      padding:18px 20px 20px;
+    }
+    .download-grid{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:12px;
+    }
+    .download-card{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, #fff, #fbf8f2);
+      border-radius:22px;
+      padding:16px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height:170px;
+    }
+    .download-card h4{margin:0;font-size:16px}
+    .download-card p{margin:0;color:#435265;line-height:1.7;font-size:14px;flex:1}
+    .download-card .meta{
+      font-size:12px;
+      color:var(--muted);
+    }
+    .download-card .btn{width:100%}
+    .callout{
+      background:linear-gradient(135deg, rgba(31,122,103,.1), rgba(217,119,6,.08));
+      border:1px solid rgba(31,122,103,.18);
+      border-radius:22px;
+      padding:16px;
+      color:#294155;
+      line-height:1.78;
+      font-size:14px;
+    }
+    .steps{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:12px;
+      margin-top:12px;
+    }
+    .step{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:20px;
+      padding:14px;
+      min-height:140px;
+    }
+    .step b{
+      display:inline-flex;
+      width:28px;
+      height:28px;
+      align-items:center;
+      justify-content:center;
+      border-radius:999px;
+      background:#eef7f4;
+      color:#14604f;
+      margin-bottom:10px;
+    }
+    .step h4{margin:0 0 6px;font-size:15px}
+    .step p{margin:0;color:#495869;font-size:14px;line-height:1.7}
+    .footer{
+      margin:18px 0 0;
+      text-align:center;
+      color:#6a7d8f;
+      font-size:12px;
+      line-height:1.7;
+    }
+    .public-link{
+      margin-top:12px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      color:#fff;
+      text-decoration:none;
+      font-size:13px;
+      font-weight:700;
+    }
+    .inline-links{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:10px;
+    }
+    .inline-links a{
+      text-decoration:none;
+      color:#165a4d;
+      font-weight:700;
+    }
+    @media (max-width: 980px){
+      .hero-grid,.grid,.download-grid,.steps{grid-template-columns:1fr}
+      .cards{grid-template-columns:1fr}
+      .nav{justify-content:flex-start}
+    }
+    @media (max-width: 640px){
+      .wrap{width:min(100% - 18px, 1180px)}
+      .hero{padding:22px}
+      .panel-body,.panel-head,.section .section-body{padding-left:14px;padding-right:14px}
+      .topbar{flex-direction:column;align-items:flex-start}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">AI</div>
+        <div>
+          <h1>AI 撠??弦?∴??嗆?瘛箏控蝎暸?</h1>
+          <p>???芰蝘飛 ? Google AI ??賣??摮?/p>
+        </div>
+      </div>
+      <nav class="nav" aria-label="銝餉?撠汗">
+        <a href="#overview">隤脩?蝮質汗</a>
+        <a href="#tool">?飛撌亙</a>
+        <a href="#download">銝???</a>
+        <a href="#domain">?芾?蝬脣?</a>
+      </nav>
+    </div>
+
+    <section class="hero" id="top">
+      <div class="eyebrow">Chromebook 撖虫? 繚 ?唾?靽 繚 AI ?Ｙ弦摮貊?</div>
+      <div class="hero-grid">
+        <div>
+          <h2>??獢極?瑯?頛?皞??渡?????憭?蝷箇?隤脩??亙??/h2>
+          <p>
+            ?雯蝡???唾?靽銝駁??????? AI ?飛撌亙?銝???Word 瑼?
+            霈葦??撖抵?摮貊??質敹恍??啗玨蝔?蝯∴?銋?湔??????          </p>
+          <div class="actions">
+            <a class="btn primary" href="AI/AI.html">???飛撌亙</a>
+            <a class="btn secondary" href="#download">銝???瑼?</a>
+            <a class="btn warn" href="#overview">?亦?隤脩?蝮質汗</a>
+          </div>
+        </div>
+        <div class="hero-side" aria-label="隤脩??鞈?">
+          <div class="stat">
+            <strong>15 - 20 ??</strong>
+            <span>?舐?亦?澆?瞍內蝭玨??挾隤脣?????/span>
+          </div>
+          <div class="stat">
+            <strong>3 憭批祕雿挾??/strong>
+            <span>璅∪?閮毀?I ???霅澈?Ｙ弦?恐撠?????/span>
+          </div>
+          <div class="stat">
+            <strong>?舐?亙?鈭?/strong>
+            <span>撌脫???祇?蝬脩?擐?嚗??憭?蝷箄??飛隤芣???/span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid" id="overview">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>隤脩?蝮質汗</h3>
+          <p>?冽??剜???摮貊???鞈????I ?方????脰????????/p>
+        </div>
+        <div class="panel-body">
+          <div class="cards">
+            <article class="card">
+              <h4>1. ??颲刻?璅∪?閮毀</h4>
+              <p>雿輻 Teachable Machine ??Chromebook 銝?蝺湧?西?閬箏?憿嚗?摮貊??圾鞈???蝐方?璅∪??斗??/p>
+            </article>
+            <article class="card">
+              <h4>2. 璅⊥撠???摮詨振</h4>
+              <p>??Google AI Studio / Gemini ??蝝?蝺璈??颲刻????銝行??箸ㄡ?唳?遣霅啜?/p>
+            </article>
+            <article class="card">
+              <h4>3. NotebookLM ?亥?摨急蝛?/h4>
+              <p>銝靽鞈?嚗?摮貊??其蜓憿?蝑撘??暺?敹恍遣蝡??暻潦??喟??暻潦?/p>
+            </article>
+            <article class="card">
+              <h4>4. ?芸???摰????/h4>
+              <p>?拍 NotebookLM 銝?萇????摮貊陛?梯?靽閮鞈??”嚗耦??澈????/p>
+            </article>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="tool">
+        <div class="panel-head">
+          <h3>?飛撌亙?亙</h3>
+          <p>?祇?撅內??隤脣????????嫣噶?葦??蝮質汗嚗??脣撖虫???/p>
+        </div>
+        <div class="panel-body">
+          <div class="callout">
+            <strong>?桀?蝬脩??批捆</strong><br>
+            1. ????鞎砍?憭?蝷箄?撠汗??br>
+            2. <a href="AI/AI.html">AI/AI.html</a> ?臬祕?玨??雿???br>
+            3. 銝?????舐?乩漱隞? Word ??瑼?          </div>
+          <div class="inline-links">
+            <a href="AI/AI.html">??鈭??飛??/a>
+            <a href="#download">?亦?銝?鞈?</a>
+            <a href="#domain">閮剖??芾?蝬脣?</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="download">
+      <div class="panel-head">
+        <h3>銝???</h3>
+        <p>隞乩?瑼???亦 GitHub Pages ??銝?嚗??憭?鈭怒?霅唳?敶梁?????隤脖蝙?具?/p>
+      </div>
+      <div class="section-body">
+        <div class="download-grid">
+          <div class="download-card">
+            <h4>??摰??/h4>
+            <p>?拙??葦?湔??楊靽殷?靽?摰隤脩??批捆?暑??蝔?/p>
+            <div class="meta">DOCX 繚 蝝?40 KB</div>
+            <a class="btn primary" href="AI%E5%B0%8F%E5%B0%8F%E7%A0%94%E7%A9%B6%E5%93%A1_%E6%90%B6%E6%95%91%E6%B7%BA%E5%B1%B1%E7%B2%BE%E9%9D%88_%E6%95%99%E6%A1%88.docx" download>銝?瑼?</a>
+          </div>
+          <div class="download-card">
+            <h4>???怠???</h4>
+            <p>撌脫???????嫣噶?撅?蝪∪??隤脰?蝢拇??飛瑼???/p>
+            <div class="meta">DOCX 繚 蝝?3.5 MB</div>
+            <a class="btn warn" href="AI%E5%B0%8F%E5%B0%8F%E7%A0%94%E7%A9%B6%E5%93%A1_%E6%90%B6%E6%95%91%E6%B7%BA%E5%B1%B1%E7%B2%BE%E9%9D%88_%E6%95%99%E6%A1%88_%E5%90%AB%E5%9C%96%E7%89%87.docx" download>銝?瑼?</a>
+          </div>
+          <div class="download-card">
+            <h4>?飛??/h4>
+            <p>?渡???湔?澈?玨蝔?摮詨?嚗靘踵??憭?蝷箄?隤芣???/p>
+            <div class="meta">DOCX 繚 蝝?41 KB</div>
+            <a class="btn secondary" href="?唾??振鞎儘霅I???飛??docx" download>銝?瑼?</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+        <section class="section" id="domain">
+      <div class="panel-head">
+        <h3>自訂網域</h3>
+        <p>如果你要把網站換成自己的正式網域，可以在 GitHub Pages 設定中接上去。</p>
+      </div>
+      <div class="section-body">
+        <div class="callout">
+          <strong>你只要提供這些資訊</strong><br>
+          1. 你要使用的網域名稱，例如 `example.org` 或 `ai.example.org`。<br>
+          2. 網域註冊商的 DNS 管理權限。<br>
+          3. 如果是子網域，我可以協助你準備 CNAME 設定。
+        </div>
+      </div>
+    </section>
+
+    <div class="footer">
+      Public URL: <a href="https://kathy594520.github.io/edu.github.io/" target="_blank" rel="noreferrer">https://kathy594520.github.io/edu.github.io/</a><br>
+      If you rename or move the repository, update this link to match the published Pages address.
+    </div>
+  </div>
+</body>
+</html>

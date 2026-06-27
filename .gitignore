@@ -1,0 +1,7 @@
+.pages-worktree/
+網頁修復/
+teachable-lab/server.err.txt
+teachable-lab/server.out.txt
+*.tmp
+Thumbs.db
+Desktop.ini

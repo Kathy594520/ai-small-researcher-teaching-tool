@@ -21,7 +21,8 @@
     const button = document.createElement('button');
     button.type = 'button';
     button.setAttribute(SAVE_ATTR, '1');
-    button.className = 'w-full py-2 bg-retro-ink text-white border-2 border-retro-ink font-bold hover:bg-black shadow-hard-sm flex items-center justify-center gap-2';
+    button.className =
+      'w-full py-2 bg-retro-ink text-white border-2 border-retro-ink font-bold hover:bg-black shadow-hard-sm flex items-center justify-center gap-2';
     button.textContent = '儲存設定';
     button.addEventListener('click', () => {
       localStorage.setItem(STORAGE_KEY, timeInput.value || '07:50');
