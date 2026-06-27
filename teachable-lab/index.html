@@ -378,106 +378,106 @@
 <body>
   <div class="wrap">
     <section class="hero">
-      <div class="eyebrow">AI 小小研究員 · 石虎保育 × 課堂實作</div>
+      <div class="eyebrow">石虎保育小任務 · 跟著 AI 一起學</div>
       <h1>AI 小小研究員：搶救淺山精靈</h1>
-      <p>這是一個以石虎保育為核心的公開展示型教學工具頁，整合圖像分類訓練、紅外線相機照片分析、知識庫探究與宣導品生成。學生可在 Chromebook 上完成觀察、判讀與表達，理解 AI 如何協助生態保育。</p>
+      <p>這是一個給小朋友用的學習小幫手，會帶你做照片分類、看相機照片、查石虎資料，最後還能做出自己的小成果。</p>
       <div class="hero-grid">
-        <div class="hero-card"><strong>課程定位</strong><span>適用於國小自然科學與跨域科技學習，亦可用於展演、示範課與成果發表。</span></div>
-        <div class="hero-card"><strong>教學特色</strong><span>以石虎保育為主題，串聯 Teachable Machine、Google AI Studio 與 NotebookLM 三項 Google AI 工具。</span></div>
+        <div class="hero-card"><strong>這堂課會做什麼</strong><span>適合國小自然課、科技課，也可以拿來做展演和發表。</span></div>
+        <div class="hero-card"><strong>好玩的地方</strong><span>用石虎保育當主題，把三個 Google AI 工具串在一起。</span></div>
       </div>
     </section>
 
     <div class="grid">
       <section class="panel">
         <div class="panel-head">
-          <h2>課程總覽</h2>
-          <div class="sub">從資料蒐集、模型訓練到保育表達，完整呈現 AI 與自然科學的整合學習脈絡。</div>
+          <h2>課程小地圖</h2>
+          <div class="sub">從找資料、學照片、到做成果，一步一步完成。</div>
         </div>
         <div class="panel-body">
           <div class="tabs" id="tabs">
-            <button class="tab-btn active" data-tab="train">訓練模型</button>
-            <button class="tab-btn" data-tab="analysis">相機分析</button>
-            <button class="tab-btn" data-tab="knowledge">知識庫</button>
-            <button class="tab-btn" data-tab="publish">宣導品</button>
+            <button class="tab-btn active" data-tab="train">餵 AI 學習</button>
+            <button class="tab-btn" data-tab="analysis">看照片</button>
+            <button class="tab-btn" data-tab="knowledge">小小百科</button>
+            <button class="tab-btn" data-tab="publish">做成果</button>
           </div>
           <div class="chipbar" id="chips"></div>
 
           <div class="view active" id="view-train">
             <div class="toolbar">
-              <button class="btn ghost" id="loadModelBtn">載入辨識模型</button>
-              <button class="btn warn" id="trainBtn" disabled>Train Model / 訓練模型</button>
-              <button class="btn secondary" id="exportBtn" disabled>匯出模型</button>
+              <button class="btn ghost" id="loadModelBtn">先把 AI 準備好</button>
+              <button class="btn warn" id="trainBtn" disabled>開始學習</button>
+              <button class="btn secondary" id="exportBtn" disabled>下載模型</button>
             </div>
             <div class="class-list" id="classList"></div>
           </div>
 
           <div class="view" id="view-analysis">
             <div class="card">
-              <h3>模擬「小小生態學家」分析相機照片</h3>
-              <p>上傳一張紅外線相機照片，頁面會用你剛訓練的模型做判讀，然後自動整理成老師可直接使用的分析文字。</p>
+              <h3>小小生態學家看照片</h3>
+              <p>上傳一張相機拍到的照片，頁面會幫你看看像不像石虎、家貓或其他動物，還會整理成簡單文字。</p>
               <div class="toolbar">
                 <input class="file-input" id="analysisInput" type="file" accept="image/*">
-                <button class="btn ghost" id="pickAnalysisBtn">選照片</button>
-                <button class="btn secondary" id="runAnalysisBtn" disabled>開始分析</button>
-                <button class="btn ghost" id="copyAnalysisBtn" disabled>複製分析</button>
+                <button class="btn ghost" id="pickAnalysisBtn">選一張照片</button>
+                <button class="btn secondary" id="runAnalysisBtn" disabled>幫我看看</button>
+                <button class="btn ghost" id="copyAnalysisBtn" disabled>複製結果</button>
               </div>
               <div class="video-box" style="aspect-ratio:16/9;background:#d9e3ec">
                 <canvas id="analysisCanvas" class="preview"></canvas>
-                <div class="overlay" id="analysisState">尚未選擇照片</div>
+                <div class="overlay" id="analysisState">還沒選照片</div>
               </div>
             </div>
-            <div class="result" id="analysisResult">請先完成模型訓練，再上傳相機照片。</div>
+            <div class="result" id="analysisResult">請先讓 AI 學會分類，再上傳照片。</div>
             <div class="predictions" id="analysisPredictions"></div>
           </div>
 
           <div class="view" id="view-knowledge">
             <div class="card">
-              <h3>NotebookLM 式知識庫探究</h3>
-              <p>把保育資料貼進來，工具會自動切成重點段落，再根據你的問題找出最相關的內容，生成課堂答案。</p>
+              <h3>小小百科整理</h3>
+              <p>把石虎資料貼進來，工具會幫你抓重點，還可以回答你的問題。</p>
               <div class="inputs">
                 <textarea id="kbInput" placeholder="貼上石虎保育資料、報導、課本內容或教師整理的文字。每段之間可空一行。"></textarea>
                 <div class="toolbar">
-                  <button class="btn ghost" id="addSampleKbBtn">加入示範資料</button>
-                  <button class="btn secondary" id="buildKbBtn">建立知識庫</button>
+                  <button class="btn ghost" id="addSampleKbBtn">放入石虎資料</button>
+                  <button class="btn secondary" id="buildKbBtn">幫我整理</button>
                 </div>
                 <input type="text" id="kbQuestion" placeholder="輸入問題，例如：石虎面臨哪些威脅？">
                 <div class="toolbar">
-                  <button class="btn warn" id="askKbBtn" disabled>提問</button>
-                  <button class="btn ghost" id="copyKbBtn" disabled>複製答案</button>
+                  <button class="btn warn" id="askKbBtn" disabled>我想問</button>
+                  <button class="btn ghost" id="copyKbBtn" disabled>複製重點</button>
                 </div>
               </div>
             </div>
-            <div class="result" id="kbAnswer">尚未建立知識庫。</div>
+            <div class="result" id="kbAnswer">還沒整理好小小百科。</div>
             <div id="kbSources"></div>
           </div>
 
           <div class="view" id="view-publish">
             <div class="card">
-              <h3>自動生成宣導品草稿</h3>
-              <p>把剛剛的分析和知識庫內容，轉成簡報大綱、海報文字或宣導短文。</p>
+              <h3>做小成果</h3>
+              <p>把剛剛的分析和小小百科內容，轉成簡報大綱、海報文字或宣導短文。</p>
               <div class="toolbar">
-                <button class="btn warn" id="genSlidesBtn">生成教學簡報</button>
-                <button class="btn secondary" id="genPosterBtn">生成資訊圖表</button>
-                <button class="btn ghost" id="copyPublishBtn" disabled>複製內容</button>
+                <button class="btn warn" id="genSlidesBtn">做簡報</button>
+                <button class="btn secondary" id="genPosterBtn">做圖卡</button>
+                <button class="btn ghost" id="copyPublishBtn" disabled>複製全部</button>
               </div>
               <div class="resource-links">
                 <a class="resource-link" href="https://gemini.google.com/share/c86fb6de9fa0" target="_blank" rel="noreferrer">
                   <div>
-                    <strong>教學簡報連結工具網址</strong>
-                    <span>Gemini 分享頁：可查看或編修教學簡報內容。</span>
+                    <strong>簡報工具連結</strong>
+                    <span>可以打開 Gemini 頁面，看看或修改簡報。</span>
                   </div>
                   <em>Open</em>
                 </a>
                 <a class="resource-link" href="https://gemini.google.com/share/12572faa8d29" target="_blank" rel="noreferrer">
                   <div>
-                    <strong>資訊圖表連結工具網址</strong>
-                    <span>Gemini 分享頁：可查看或編修資訊圖表內容。</span>
+                    <strong>圖卡工具連結</strong>
+                    <span>可以打開 Gemini 頁面，看看或修改圖卡。</span>
                   </div>
                   <em>Open</em>
                 </a>
               </div>
             </div>
-            <textarea id="publishBox" placeholder="生成結果會出現在這裡，可直接複製到簡報或文件。"></textarea>
+            <textarea id="publishBox" placeholder="結果會出現在這裡，可以直接複製。"></textarea>
           </div>
         </div>
       </section>
@@ -485,50 +485,50 @@
       <section class="panel">
         <div class="panel-head">
           <h2>現場操作區</h2>
-          <div class="sub">透過相機預覽、即時回饋與訓練提示，展示課堂中的實際操作流程。</div>
+          <div class="sub">這裡可以看相機畫面、學習進度和小提醒。</div>
         </div>
         <div class="panel-body">
           <div class="stage">
             <div class="stage-head">
               <div>
-                <strong>相機預覽</strong><br>
-                <span>可直接用攝影機測試模型判斷。</span>
+                <strong>相機畫面</strong><br>
+                <span>可以打開鏡頭來試試看。</span>
               </div>
               <div class="toolbar" style="margin:0">
-                <button class="btn ghost" id="camStartBtn">開啟相機</button>
-                <button class="btn secondary" id="camStopBtn" disabled>停止</button>
+                <button class="btn ghost" id="camStartBtn">打開相機</button>
+                <button class="btn secondary" id="camStopBtn" disabled>關閉</button>
               </div>
             </div>
             <div class="video-box">
               <video id="camera" autoplay playsinline muted></video>
-              <div class="overlay" id="cameraState">相機未啟動</div>
+              <div class="overlay" id="cameraState">相機還沒打開</div>
             </div>
             <div class="predictions" id="livePredictions"></div>
           </div>
 
           <div class="card">
-            <h3>訓練進度</h3>
+            <h3>學習進度</h3>
             <div class="meter">
-              <div class="meter-top"><span id="meterText">尚未開始</span><span id="meterPercent">0%</span></div>
+              <div class="meter-top"><span id="meterText">還沒開始</span><span id="meterPercent">0%</span></div>
               <div class="bar"><div class="fill" id="meterFill"></div></div>
             </div>
-            <div class="log" id="logBox">先載入辨識模型，再建立分類。</div>
+            <div class="log" id="logBox">先把 AI 準備好，再開始學習。</div>
           </div>
 
           <div class="card">
-            <h3>教學提醒</h3>
+            <h3>小提醒</h3>
             <ul>
-              <li>石虎、家貓、其他動物三類先準備好再訓練。</li>
-              <li>每類至少 10 張以上，背景要多樣。</li>
-              <li>如果判斷不準，就回去補圖再訓練一次。</li>
-              <li>知識庫答案是依你上傳的內容整理，不是憑空產生。</li>
+              <li>石虎、家貓、其他動物三類都要各放一些圖片。</li>
+              <li>每一類最好放 10 張以上，而且背景要不一樣。</li>
+              <li>如果 AI 猜錯了，就再多放一些照片重新學一次。</li>
+              <li>小小百科答案會依你上傳的內容整理，不是 AI 自己亂猜的。</li>
             </ul>
           </div>
         </div>
       </section>
     </div>
 
-    <div class="footer">建議在 Chromebook 或 Chrome 開啟。此頁可獨立使用，不需要另外切換到 Teachable Machine、AI Studio 或 NotebookLM 網站。</div>
+    <div class="footer">建議用 Chromebook 或 Chrome 開啟。這一頁就能完成大部分操作，不用一直換網站。</div>
   </div>
 
   <script>
@@ -605,10 +605,10 @@
       const sampleCount = state.classes.reduce((a, c) => a + c.samples.length, 0);
       el.chips.innerHTML = '';
       const items = [
-        { label: state.mobilenet ? '基礎模型已載入' : '尚未載入模型', tone: state.mobilenet ? 'good' : 'warn' },
-        { label: `總圖片數：${sampleCount}`, tone: sampleCount ? 'good' : 'warn' },
-        { label: state.trained ? '分類器已訓練' : '尚未訓練', tone: state.trained ? 'good' : 'warn' },
-        { label: `知識庫段落：${state.kbChunks.length}`, tone: state.kbChunks.length ? 'good' : 'brand' },
+        { label: state.mobilenet ? 'AI 已準備好' : 'AI 還沒準備好', tone: state.mobilenet ? 'good' : 'warn' },
+        { label: `圖片總數：${sampleCount}`, tone: sampleCount ? 'good' : 'warn' },
+        { label: state.trained ? 'AI 已學會' : 'AI 還沒學會', tone: state.trained ? 'good' : 'warn' },
+        { label: `小小百科段落：${state.kbChunks.length}`, tone: state.kbChunks.length ? 'good' : 'brand' },
       ];
       for (const item of items) {
         const chip = document.createElement('div');
@@ -632,12 +632,12 @@
         <div class="class-top">
           <input class="class-name" type="text" value="${cls.name}">
           <div class="count" data-count>0 張</div>
-          <button class="btn ghost" data-demo>加入示範圖</button>
+          <button class="btn ghost" data-demo>放入示範圖</button>
         </div>
         <div class="class-actions">
           <input class="file-input" type="file" accept="image/*" multiple>
-          <button class="btn secondary" data-upload>加入圖片</button>
-          <button class="btn warn" data-clear>清空這類</button>
+          <button class="btn secondary" data-upload>放照片</button>
+          <button class="btn warn" data-clear>清空這一類</button>
         </div>
         <div class="sample-grid" data-grid></div>
       `;
@@ -676,7 +676,7 @@
         cls.samples.forEach((sample, sampleIndex) => {
           const tile = document.createElement('div');
           tile.className = 'sample';
-          tile.innerHTML = `<img src="${sample.url}" alt="${sample.name}"><button title="刪除">×</button>`;
+          tile.innerHTML = `<img src="${sample.url}" alt="${sample.name}"><button title="刪掉">×</button>`;
           tile.querySelector('button').addEventListener('click', () => {
             URL.revokeObjectURL(sample.url);
             cls.samples.splice(sampleIndex, 1);
@@ -740,11 +740,11 @@
 
     async function loadModel() {
       if (state.mobilenet) return;
-      log('正在載入辨識模型...');
-      setMeter(10, '載入中');
+      log('正在準備 AI...');
+      setMeter(10, '準備中');
       state.mobilenet = await mobilenet.load({ version: 2, alpha: 1.0 });
-      setMeter(100, '模型已就緒');
-      log('辨識模型已載入。');
+      setMeter(100, 'AI 可以開始學了');
+      log('AI 已經準備好了。');
       updateChips();
     }
 
@@ -759,8 +759,8 @@
       if (!samples.length) return;
       state.busy = true;
       updateChips();
-      setMeter(0, '準備訓練');
-      log(`開始訓練，共 ${samples.length} 張圖片。`);
+      setMeter(0, '準備學習');
+      log(`開始學習，共 ${samples.length} 張圖片。`);
 
       const xs = [];
       const ys = [];
@@ -772,7 +772,7 @@
         });
         xs.push(tensor);
         ys.push(sample.classIndex);
-        setMeter((i / samples.length) * 25, `擷取特徵 ${i + 1}/${samples.length}`);
+        setMeter((i / samples.length) * 25, `整理圖片 ${i + 1}/${samples.length}`);
         await tf.nextFrame();
       }
 
@@ -794,8 +794,8 @@
         validationSplit: samples.length >= 10 ? 0.2 : 0,
         callbacks: {
           onEpochEnd: async (epoch, logs) => {
-            setMeter(25 + ((epoch + 1) / epochs) * 75, `訓練第 ${epoch + 1}/${epochs} 輪`);
-            log(`第 ${epoch + 1} 輪：loss ${logs.loss.toFixed(3)}；accuracy ${(logs.acc ?? logs.accuracy ?? 0).toFixed(3)}`);
+            setMeter(25 + ((epoch + 1) / epochs) * 75, `學習第 ${epoch + 1}/${epochs} 輪`);
+            log(`第 ${epoch + 1} 輪：錯誤值 ${logs.loss.toFixed(3)}；答對率 ${(logs.acc ?? logs.accuracy ?? 0).toFixed(3)}`);
             await tf.nextFrame();
           }
         }
@@ -807,7 +807,7 @@
       state.trained = true;
       state.busy = false;
       setMeter(100, '訓練完成');
-      log('訓練完成。可以到「相機分析」或開啟相機即時測試。');
+      log('訓練完成。可以到「看照片」或打開相機即時測試。');
       updateChips();
     }
 
@@ -852,10 +852,10 @@
         ? '建議保留森林與農地間的連通帶，降低路殺，並維持淺山廊道。'
         : top.name === '家貓'
         ? '若出現在保育課程中，可提醒學生：家貓與野外石虎外觀相似，但棲地與保育意義不同。'
-        : '建議補充更多背景、角度與時間資料，讓判讀更完整。';
+        : '建議再放更多背景、角度和時間不同的照片。';
       const report = [
-        `分析結果：最可能是「${top.name}」，信心值 ${ratio}。`,
-        `第二順位：${second.name}，信心值 ${(second.value * 100).toFixed(1)}%。`,
+        `我猜這張照片最像「${top.name}」，把握度 ${ratio}。`,
+        `第二像：${second.name}，把握度 ${(second.value * 100).toFixed(1)}%。`,
         '',
         '觀察重點：',
         `- 這張圖的動物種類與行為，會影響我們對棲地的理解。`,
@@ -895,7 +895,7 @@
       state.kbChunks = chunkText(text);
       el.kbSources.innerHTML = '';
       if (!state.kbChunks.length) {
-        el.kbAnswer.textContent = '尚未建立知識庫。';
+        el.kbAnswer.textContent = '還沒整理好小小百科。';
         state.lastAnswer = '';
         updateChips();
         return;
@@ -906,13 +906,13 @@
         box.innerHTML = `<strong>段落 ${i + 1}</strong><small>${chunk}</small>`;
         el.kbSources.appendChild(box);
       });
-      el.kbAnswer.textContent = '知識庫已建立，現在可以提問。';
+      el.kbAnswer.textContent = '小小百科整理好了，現在可以提問。';
       updateChips();
     }
 
     function answerQuestion(question) {
       const q = question.trim();
-      if (!q || !state.kbChunks.length) return '請先建立知識庫，再輸入問題。';
+      if (!q || !state.kbChunks.length) return '請先整理好小小百科，再來問問題。';
       const keywords = q.split(/[^\u4e00-\u9fa5a-zA-Z0-9]+/).filter(Boolean);
       const scored = state.kbChunks.map(chunk => {
         const score = keywords.reduce((n, k) => n + (chunk.includes(k) ? 2 : 0), 0) + (chunk.length < 60 ? 0.3 : 0);
@@ -920,7 +920,7 @@
       }).sort((a, b) => b.score - a.score);
       const hits = scored.slice(0, 3).filter(x => x.score > 0);
       if (!hits.length) {
-        return `根據你上傳的知識庫內容，暫時找不到直接對應的段落。\n\n建議你改用更具體的關鍵字，例如：石虎、棲地、道路、保育、路殺、廊道。`;
+        return `在你上傳的小小百科裡，暫時找不到直接對應的段落。\n\n可以換成更清楚的關鍵字，例如：石虎、棲地、道路、保育、路殺、廊道。`;
       }
       const answer = [
         `問題：${q}`,
@@ -934,15 +934,15 @@
     }
 
     function generateSlides() {
-      const base = state.lastAnalysis || '尚未完成相機分析。';
-      const kb = state.lastAnswer || '尚未建立知識庫答案。';
+      const base = state.lastAnalysis || '尚未完成看照片。';
+      const kb = state.lastAnswer || '還沒整理好小小百科答案。';
       const content = [
         '【石虎保育教學簡報大綱】',
         '',
         '1. 認識石虎與淺山生態',
         '2. 石虎與家貓外觀比較',
         '3. 紅外線相機拍到的野生動物',
-        '4. AI 分析相機照片的流程',
+        '4. AI 幫忙看相機照片',
         '5. 石虎面臨的威脅與保育行動',
         '',
         '【課堂可直接使用的重點】',
@@ -959,8 +959,8 @@
     }
 
     function generatePoster() {
-      const base = state.lastAnalysis || '請先完成相機分析。';
-      const kb = state.lastAnswer || '請先建立知識庫。';
+      const base = state.lastAnalysis || '請先完成看照片。';
+      const kb = state.lastAnswer || '請先整理好小小百科。';
       const content = [
         '【石虎保育資訊圖表文字】',
         '',
@@ -970,8 +970,8 @@
         '- 石虎、家貓、其他動物、紅外線相機照片',
         '',
         'AI 做什麼：',
-        '- 訓練模型',
-        '- 分析相機照片',
+        '- 餵 AI 學習',
+        '- 看相機照片',
         '- 整理保育重點',
         '',
         '要保護什麼：',
@@ -999,7 +999,7 @@
     el.exportBtn.addEventListener('click', async () => {
       if (state.model) {
         await state.model.save('downloads://ai-small-researcher-classifier');
-        log('模型已匯出到下載資料夾。');
+        log('模型已經下載到你的電腦。');
       }
     });
     el.pickAnalysisBtn.addEventListener('click', () => el.analysisInput.click());
@@ -1035,7 +1035,7 @@
         state.cameraStream = stream;
         el.camera.srcObject = stream;
         await el.camera.play();
-        el.cameraState.textContent = '相機已啟動';
+        el.cameraState.textContent = '相機已打開';
         el.camStartBtn.disabled = true;
         el.camStopBtn.disabled = false;
         state.cameraLoop = setInterval(async () => {
@@ -1052,8 +1052,8 @@
           `).join('');
         }, 900);
       } catch (err) {
-        el.cameraState.textContent = '相機啟動失敗';
-        log(`相機啟動失敗：${err.message}`);
+        el.cameraState.textContent = '相機打不開';
+        log(`相機打不開：${err.message}`);
       }
     });
     el.camStopBtn.addEventListener('click', () => {
@@ -1062,14 +1062,14 @@
       state.cameraLoop = null;
       state.cameraStream = null;
       el.camera.srcObject = null;
-      el.cameraState.textContent = '相機未啟動';
+      el.cameraState.textContent = '相機還沒打開';
       el.camStartBtn.disabled = false;
       el.camStopBtn.disabled = true;
     });
 
     initClasses();
     updateChips();
-    setMeter(0, '尚未開始');
+    setMeter(0, '還沒開始');
   </script>
 </body>
 </html>
