@@ -348,6 +348,19 @@
       line-height:1.72;
       white-space:pre-wrap;
     }
+    .status-note{
+      margin-top:10px;
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:13px;
+      font-weight:700;
+      color:#19543f;
+      background:#eaf6ee;
+      border:1px solid rgba(26, 115, 72, .18);
+      min-height:36px;
+      display:flex;
+      align-items:center;
+    }
     .source-item{
       border:1px solid var(--line);
       border-radius:18px;
@@ -460,6 +473,7 @@
                 <button class="btn secondary" id="genPosterBtn">做圖卡</button>
                 <button class="btn ghost" id="copyPublishBtn" disabled>複製全部</button>
               </div>
+              <div class="status-note" id="publishStatus">還沒做成果，先按「做簡報」或「做圖卡」。</div>
               <div class="resource-links">
                 <a class="resource-link" href="https://gemini.google.com/share/c86fb6de9fa0" target="_blank" rel="noreferrer">
                   <div>
@@ -587,6 +601,7 @@
       genPosterBtn: document.getElementById('genPosterBtn'),
       copyPublishBtn: document.getElementById('copyPublishBtn'),
       publishBox: document.getElementById('publishBox'),
+      publishStatus: document.getElementById('publishStatus'),
     };
 
     function setMeter(pct, text) {
@@ -596,6 +611,9 @@
     }
     function log(message, append = false) {
       el.logBox.textContent = append ? `${el.logBox.textContent}\n${message}` : message;
+    }
+    function setPublishStatus(message) {
+      if (el.publishStatus) el.publishStatus.textContent = message;
     }
     async function copyText(value) {
       const text = String(value || '').trim();
@@ -980,6 +998,7 @@
       ].join('\n');
       el.publishBox.value = content;
       state.lastPublish = content;
+      setPublishStatus('已做出簡報內容，可以直接複製。');
       updateChips();
     }
 
@@ -1011,6 +1030,7 @@
       ].join('\n');
       el.publishBox.value = content;
       state.lastPublish = content;
+      setPublishStatus('已做出圖卡內容，可以直接複製。');
       updateChips();
     }
 
@@ -1059,7 +1079,13 @@
     el.genPosterBtn.addEventListener('click', generatePoster);
     el.copyPublishBtn.addEventListener('click', async () => {
       const ok = await copyText(el.publishBox.value);
-      log(ok ? '已複製全部內容。' : '複製失敗，請先按一次「做簡報」或「做圖卡」。');
+      if (ok) {
+        setPublishStatus('已複製全部內容。');
+        log('已複製全部內容。');
+      } else {
+        setPublishStatus('複製失敗，請先按一次「做簡報」或「做圖卡」。');
+        log('複製失敗，請先按一次「做簡報」或「做圖卡」。');
+      }
     });
 
     el.camStartBtn.addEventListener('click', async () => {
