@@ -597,8 +597,33 @@
     function log(message, append = false) {
       el.logBox.textContent = append ? `${el.logBox.textContent}\n${message}` : message;
     }
-    function copyText(value) {
-      navigator.clipboard?.writeText(value).catch(() => {});
+    async function copyText(value) {
+      const text = String(value || '').trim();
+      if (!text) return false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (err) {
+        // fallback below
+      }
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+      } catch (err) {
+        return false;
+      }
     }
 
     function updateChips() {
@@ -1011,7 +1036,10 @@
       el.runAnalysisBtn.disabled = !state.trained;
     });
     el.runAnalysisBtn.addEventListener('click', runAnalysis);
-    el.copyAnalysisBtn.addEventListener('click', () => copyText(state.lastAnalysis));
+    el.copyAnalysisBtn.addEventListener('click', async () => {
+      const ok = await copyText(state.lastAnalysis);
+      log(ok ? '已複製分析結果。' : '複製失敗，請再試一次。');
+    });
     el.addSampleKbBtn.addEventListener('click', () => {
       if (!el.kbInput.value.trim()) el.kbInput.value = SAMPLE_KB;
       else el.kbInput.value += '\n\n' + SAMPLE_KB;
@@ -1023,10 +1051,16 @@
       el.kbAnswer.textContent = answer;
       updateChips();
     });
-    el.copyKbBtn.addEventListener('click', () => copyText(state.lastAnswer));
+    el.copyKbBtn.addEventListener('click', async () => {
+      const ok = await copyText(state.lastAnswer);
+      log(ok ? '已複製小小百科重點。' : '複製失敗，請再試一次。');
+    });
     el.genSlidesBtn.addEventListener('click', generateSlides);
     el.genPosterBtn.addEventListener('click', generatePoster);
-    el.copyPublishBtn.addEventListener('click', () => copyText(el.publishBox.value));
+    el.copyPublishBtn.addEventListener('click', async () => {
+      const ok = await copyText(el.publishBox.value);
+      log(ok ? '已複製全部內容。' : '複製失敗，請先按一次「做簡報」或「做圖卡」。');
+    });
 
     el.camStartBtn.addEventListener('click', async () => {
       if (state.cameraStream) return;
