@@ -1,56 +1,57 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gemini Canvas 教學工具頁</title>
+  <title>AI 小小研究員：搶救淺山精靈教學工具網頁</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1"></script>
   <style>
     :root{
-      --bg:#eef3ee;
-      --ink:#132232;
-      --muted:#5f7181;
-      --line:rgba(19,34,50,.12);
-      --brand:#166c5a;
-      --brand2:#d67a15;
-      --brand3:#2e4057;
+      --bg:#eef2ea;
+      --ink:#142232;
+      --muted:#637284;
+      --line:rgba(20,34,50,.12);
+      --brand:#1f7a67;
+      --brand2:#d97706;
+      --brand3:#b45309;
       --card:#ffffff;
-      --soft:#f8faf7;
-      --shadow:0 18px 42px rgba(12, 24, 39, .12);
+      --card2:#f8faf6;
+      --shadow:0 18px 45px rgba(12, 24, 39, .12);
       --radius:24px;
     }
     *{box-sizing:border-box}
-    html,body{margin:0;min-height:100%}
     body{
+      margin:0;
       font-family:"Noto Sans TC",system-ui,-apple-system,"Segoe UI",sans-serif;
       color:var(--ink);
       background:
-        radial-gradient(circle at top left, rgba(22,108,90,.14), transparent 24%),
-        radial-gradient(circle at top right, rgba(214,122,21,.12), transparent 24%),
-        linear-gradient(180deg, #0d1726 0%, #102033 26%, #eef3ee 26%, #eef3ee 100%);
+        radial-gradient(circle at top left, rgba(31,122,103,.16), transparent 26%),
+        radial-gradient(circle at top right, rgba(217,119,6,.14), transparent 24%),
+        linear-gradient(180deg, #0c1726 0%, #0f1c2f 30%, #eef2ea 30%, #eef2ea 100%);
+      min-height:100vh;
     }
     .wrap{
-      width:min(1440px, 100%);
+      width:min(1450px, 100%);
       margin:0 auto;
       padding:24px 18px 34px;
     }
     .hero{
-      position:relative;
-      overflow:hidden;
-      border-radius:32px;
-      padding:28px;
       color:#fff;
-      background:linear-gradient(135deg, rgba(11,20,36,.98), rgba(18,44,61,.94));
+      background:linear-gradient(135deg, rgba(10,18,32,.96), rgba(18,42,64,.94));
+      border-radius:32px;
+      padding:26px 26px 22px;
       box-shadow:var(--shadow);
+      overflow:hidden;
+      position:relative;
     }
     .hero::after{
       content:"";
       position:absolute;
-      right:-90px;
-      bottom:-120px;
-      width:360px;
-      height:360px;
+      right:-80px; bottom:-140px;
+      width:400px; height:400px;
       border-radius:50%;
-      background:radial-gradient(circle, rgba(214,122,21,.2), transparent 68%);
+      background:radial-gradient(circle, rgba(217,119,6,.22), transparent 68%);
       pointer-events:none;
     }
     .eyebrow{
@@ -60,7 +61,7 @@
       padding:7px 12px;
       border-radius:999px;
       background:rgba(255,255,255,.08);
-      color:#d7e9f4;
+      color:#d4e8f1;
       font-size:13px;
       letter-spacing:.04em;
     }
@@ -72,30 +73,30 @@
     }
     .hero p{
       margin:0;
-      max-width:80ch;
-      line-height:1.8;
-      color:#d4e2ed;
+      max-width:72ch;
+      line-height:1.78;
+      color:#d6e4ef;
     }
     .hero-grid{
-      position:relative;
-      z-index:1;
       margin-top:18px;
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns:1fr 360px;
       gap:14px;
+      position:relative;
+      z-index:1;
     }
     .hero-card{
       background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.10);
       border-radius:20px;
       padding:14px 16px;
       backdrop-filter:blur(10px);
     }
     .hero-card strong{display:block;font-size:15px;margin-bottom:4px}
-    .hero-card span{display:block;font-size:13px;color:#c7d9e6;line-height:1.6}
+    .hero-card span{display:block;font-size:13px;color:#c9dbe7;line-height:1.55}
     .grid{
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns:1.08fr .92fr;
       gap:18px;
       margin-top:20px;
     }
@@ -120,9 +121,31 @@
       margin-top:5px;
       color:var(--muted);
       font-size:13px;
-      line-height:1.55;
+      line-height:1.5;
     }
     .panel-body{padding:18px 20px 20px}
+    .tabs{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-bottom:16px;
+    }
+    .tab-btn{
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--ink);
+      padding:10px 13px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:14px;
+    }
+    .tab-btn.active{
+      background:linear-gradient(135deg, var(--brand), #175c50);
+      color:#fff;
+      border-color:transparent;
+      box-shadow:0 10px 18px rgba(31,122,103,.18);
+    }
     .toolbar{
       display:flex;
       flex-wrap:wrap;
@@ -138,41 +161,170 @@
       font-weight:700;
       font-size:14px;
       color:#fff;
-      background:linear-gradient(135deg, var(--brand), #145447);
-      transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+      background:linear-gradient(135deg, var(--brand), #175c50);
     }
-    .btn:hover{transform:translateY(-1px);box-shadow:0 10px 18px rgba(22,108,90,.18)}
-    .btn.secondary{background:linear-gradient(135deg, var(--brand3), #182736)}
-    .btn.warn{background:linear-gradient(135deg, var(--brand2), #b35f0d)}
-    .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none}
-    .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+    .btn.secondary{background:linear-gradient(135deg, #334155, #0f172a)}
+    .btn.warn{background:linear-gradient(135deg, var(--brand2), var(--brand3))}
+    .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
     .chipbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
     .chip{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 11px;
-      border-radius:999px;
-      background:#fff;
-      border:1px solid var(--line);
-      color:var(--muted);
-      font-size:13px;
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 11px;border-radius:999px;
+      background:#fff;border:1px solid var(--line);
+      color:var(--muted);font-size:13px
     }
     .dot{width:10px;height:10px;border-radius:50%;background:var(--muted)}
-    .dot.good{background:#2aa45e}
-    .dot.warn{background:#d97706}
-    .dot.brand{background:var(--brand)}
-    .stack{display:grid;gap:12px}
-    .field{
+    .dot.good{background:#2aa45e}.dot.warn{background:#d97706}.dot.brand{background:var(--brand)}
+    .view{display:none}
+    .view.active{display:block}
+    .class-list{display:grid;gap:14px}
+    .class-card{
+      background:linear-gradient(180deg, #fff, #faf8f2);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:15px;
+    }
+    .class-top{
       display:grid;
-      gap:8px;
+      grid-template-columns:1fr 86px auto;
+      gap:10px;
+      align-items:center;
     }
-    label{
-      font-size:13px;
+    .class-name{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px 12px;
+      font-size:16px;
       font-weight:800;
-      color:#304458;
+      background:#fff;
     }
-    input[type="text"],input[type="password"],select,textarea{
+    .count{
+      text-align:center;
+      padding:10px 12px;
+      border-radius:14px;
+      background:#eef7f4;
+      color:#13604f;
+      border:1px solid rgba(31,122,103,.18);
+      font-weight:800;
+    }
+    .class-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+    .file-input{display:none}
+    .sample-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(104px,1fr));
+      gap:10px;
+    }
+    .sample{
+      position:relative;
+      aspect-ratio:1;
+      border-radius:16px;
+      overflow:hidden;
+      background:#d9e3ec;
+      border:1px solid rgba(20,34,50,.10);
+    }
+    .sample img{width:100%;height:100%;object-fit:cover;display:block}
+    .sample button{
+      position:absolute;top:6px;right:6px;
+      width:24px;height:24px;border:0;border-radius:999px;
+      background:rgba(15,23,42,.78);color:#fff;cursor:pointer
+    }
+    .stage{
+      background:linear-gradient(180deg, #0f172a, #18263a);
+      color:#fff;
+      border-radius:24px;
+      padding:16px;
+      margin-bottom:14px;
+    }
+    .stage-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}
+    .video-box{
+      position:relative;
+      aspect-ratio:16/10;
+      border-radius:18px;
+      overflow:hidden;
+      background:#07111f;
+      border:1px solid rgba(255,255,255,.08);
+    }
+    video, canvas.preview{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+    .overlay{
+      position:absolute;left:12px;bottom:12px;
+      padding:7px 10px;border-radius:999px;
+      background:rgba(7,17,31,.66);border:1px solid rgba(255,255,255,.12);
+      font-size:12px;color:#dfeaf3;
+    }
+    .predictions{display:grid;gap:10px;margin-top:12px}
+    .pred-row{
+      display:grid;grid-template-columns:96px 1fr 58px;gap:10px;align-items:center;
+      font-size:14px;color:#dfeaf3
+    }
+    .pred-track{height:10px;background:rgba(255,255,255,.14);border-radius:999px;overflow:hidden}
+    .pred-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg, #22c55e, #7dd3fc);width:0%}
+    .pred-value{text-align:right;font-variant-numeric:tabular-nums}
+    .card{
+      background:linear-gradient(180deg, #fff, #faf8f2);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:16px;
+      margin-bottom:14px;
+    }
+    .card h3{margin:0 0 8px;font-size:16px}
+    .card p,.card li{color:#415166;line-height:1.72;font-size:14px}
+    .resource-links{
+      display:grid;
+      gap:10px;
+      margin:12px 0 14px;
+    }
+    .resource-link{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      text-decoration:none;
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:18px;
+      padding:12px 14px;
+      color:var(--ink);
+    }
+    .resource-link strong{
+      display:block;
+      font-size:14px;
+      margin-bottom:4px;
+    }
+    .resource-link span{
+      display:block;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.55;
+    }
+    .resource-link em{
+      font-style:normal;
+      font-size:12px;
+      color:#14604f;
+      font-weight:700;
+      white-space:nowrap;
+      padding-top:2px;
+    }
+    .meter{margin-top:10px}
+    .meter-top{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-bottom:8px}
+    .bar{height:12px;background:#e7edf3;border-radius:999px;overflow:hidden}
+    .fill{height:100%;width:0%;border-radius:inherit;background:linear-gradient(90deg,var(--brand),#56b7a1)}
+    .log{
+      min-height:70px;
+      background:#0f172a;color:#dce6ef;border-radius:16px;
+      padding:12px 14px;white-space:pre-wrap;line-height:1.65;font-size:13px
+    }
+    .inputs{
+      display:grid;
+      gap:10px;
+    }
+    textarea,input[type="text"],select{
       width:100%;
       border:1px solid var(--line);
       border-radius:14px;
@@ -181,69 +333,43 @@
       background:#fff;
       color:var(--ink);
     }
-    textarea{min-height:104px;resize:vertical}
-    .note{
-      border-radius:18px;
-      padding:12px 14px;
-      background:#f5fbf7;
-      border:1px solid rgba(22,108,90,.16);
-      color:#234335;
-      line-height:1.7;
-      font-size:13px;
-    }
-    .status{
-      min-height:44px;
-      display:flex;
-      align-items:center;
-      padding:10px 12px;
-      border-radius:16px;
-      border:1px solid rgba(22,108,90,.18);
-      background:#eaf6ee;
-      color:#1b5946;
-      font-weight:800;
-      line-height:1.5;
-    }
-    .result-grid{
+    textarea{min-height:120px;resize:vertical}
+    .split{
       display:grid;
-      gap:12px;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
     }
-    .result-card{
-      background:linear-gradient(180deg, #fff, #faf8f2);
-      border:1px solid var(--line);
-      border-radius:22px;
-      padding:15px;
-    }
-    .result-card h3{
-      margin:0 0 8px;
-      font-size:16px;
-    }
-    .result-card p{
-      margin:0 0 10px;
-      color:#415166;
-      font-size:13px;
-      line-height:1.7;
-    }
-    .result-toolbar{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      margin-bottom:10px;
-    }
-    .mini{
-      padding:9px 12px;
-      font-size:13px;
-      border-radius:12px;
-    }
-    .prompt-box{
-      border:1px dashed rgba(22,108,90,.26);
-      background:#fbfdfb;
-      border-radius:18px;
-      padding:12px;
-      color:#415166;
-      line-height:1.7;
-      font-size:13px;
+    .result{
+      background:linear-gradient(135deg, rgba(31,122,103,.10), rgba(217,119,6,.09));
+      border:1px solid rgba(31,122,103,.18);
+      border-radius:20px;
+      padding:14px 15px;
+      color:#254156;
+      line-height:1.72;
       white-space:pre-wrap;
     }
+    .status-note{
+      margin-top:10px;
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:13px;
+      font-weight:700;
+      color:#19543f;
+      background:#eaf6ee;
+      border:1px solid rgba(26, 115, 72, .18);
+      min-height:36px;
+      display:flex;
+      align-items:center;
+    }
+    .source-item{
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:12px;
+      margin-top:10px;
+      background:#fff;
+    }
+    .source-item strong{display:block;margin-bottom:5px}
+    .source-item small{display:block;color:var(--muted);line-height:1.55}
     .footer{
       margin-top:16px;
       text-align:center;
@@ -251,332 +377,244 @@
       font-size:12px;
       line-height:1.6;
     }
-    .full{
-      grid-column:1 / -1;
-    }
-    .two-col{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:14px;
-    }
     @media (max-width: 1080px){
-      .grid,.hero-grid,.two-col{grid-template-columns:1fr}
+      .grid,.hero-grid,.split{grid-template-columns:1fr}
+      .class-top{grid-template-columns:1fr}
     }
     @media (max-width: 720px){
       .wrap{padding:14px 12px 26px}
       .hero{padding:20px}
-      .panel-head,.panel-body{padding-left:14px;padding-right:14px}
+      .panel-body,.panel-head{padding-left:14px;padding-right:14px}
     }
   </style>
 </head>
 <body>
   <div class="wrap">
     <section class="hero">
-      <div class="eyebrow">Gemini Canvas 教學工具頁</div>
-      <h1>AI 編輯簡報大綱與資訊圖表大綱</h1>
-      <p>把課堂資料貼進來，這一頁就能幫你整理成兩種可直接教學的草稿：一份給簡報，一份給資訊圖表。你可以先讓 AI 幫你生成，再在頁面裡直接改字、縮短、補充，最後複製到 Gemini Canvas、簡報或文件裡。</p>
+      <div class="eyebrow">石虎保育小任務 · 跟著 AI 一起學</div>
+      <h1>AI 小小研究員：搶救淺山精靈</h1>
+      <p>這是一個給小朋友用的學習小幫手，會帶你做照片分類、看相機照片、查石虎資料，最後還能做出自己的小成果。</p>
       <div class="hero-grid">
-        <div class="hero-card"><strong>用途</strong><span>適合國小自然科學、跨域課程、展演簡報與宣導圖卡。</span></div>
-        <div class="hero-card"><strong>特色</strong><span>支援 Gemini API，生成後可直接在網頁內編輯，像一個簡單的 Canvas 工作台。</span></div>
+        <div class="hero-card"><strong>這堂課會做什麼</strong><span>適合國小自然課、科技課，也可以拿來做展演和發表。</span></div>
+        <div class="hero-card"><strong>好玩的地方</strong><span>用石虎保育當主題，把三個 Google AI 工具串在一起。</span></div>
       </div>
     </section>
 
     <div class="grid">
       <section class="panel">
         <div class="panel-head">
-          <h2>課堂資料輸入</h2>
-          <div class="sub">先把主題、對象、重點和素材放進來，AI 才知道要怎麼幫你整理。</div>
+          <h2>課程小地圖</h2>
+          <div class="sub">從找資料、學照片、到做成果，一步一步完成。</div>
         </div>
         <div class="panel-body">
+          <div class="tabs" id="tabs">
+            <button class="tab-btn active" data-tab="train">餵 AI 學習</button>
+            <button class="tab-btn" data-tab="analysis">看照片</button>
+            <button class="tab-btn" data-tab="knowledge">小小百科</button>
+            <button class="tab-btn" data-tab="publish">做成果</button>
+          </div>
           <div class="chipbar" id="chips"></div>
 
-          <div class="stack">
-            <div class="field">
-              <label for="apiKey">Gemini API Key</label>
-              <input id="apiKey" type="password" placeholder="貼上你在 Google AI Studio 申請的金鑰">
-            </div>
-
-            <div class="field two-col">
-              <div>
-                <label for="modelName">模型</label>
-                <select id="modelName">
-                  <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
-                  <option value="gemini-3.5-pro">Gemini 3.5 Pro</option>
-                </select>
-              </div>
-              <div>
-                <label for="toneMode">語氣</label>
-                <select id="toneMode">
-                  <option value="小朋友聽得懂、老師可直接使用">小朋友聽得懂、老師可直接使用</option>
-                  <option value="更精簡，方便貼到簡報">更精簡，方便貼到簡報</option>
-                  <option value="適合教學發表與口語說明">適合教學發表與口語說明</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="field">
-              <label for="topic">課程主題</label>
-              <input id="topic" type="text" placeholder="例如：AI 小小研究員：搶救淺山精靈">
-            </div>
-
-            <div class="field two-col">
-              <div>
-                <label for="audience">教學對象</label>
-                <input id="audience" type="text" placeholder="例如：國小中高年級">
-              </div>
-              <div>
-                <label for="goalCount">希望幾個重點</label>
-                <input id="goalCount" type="text" placeholder="例如：6">
-              </div>
-            </div>
-
-            <div class="field">
-              <label for="learningGoals">學習目標</label>
-              <textarea id="learningGoals" placeholder="例如：認識石虎、比較石虎與家貓、學會整理相機照片、做出宣導簡報與圖卡。"></textarea>
-            </div>
-
-            <div class="field">
-              <label for="sourceText">課堂素材 / 原始資料</label>
-              <textarea id="sourceText" placeholder="把報導、教案重點、觀察紀錄、石虎資料貼進來。"></textarea>
-            </div>
-
+          <div class="view active" id="view-train">
             <div class="toolbar">
-              <button class="btn ghost" id="fillSampleBtn">放入石虎範例</button>
-              <button class="btn ghost" id="clearBtn">清空</button>
-              <button class="btn warn" id="saveBtn">儲存設定</button>
+              <button class="btn ghost" id="loadModelBtn">先把 AI 準備好</button>
+              <button class="btn warn" id="trainBtn" disabled>開始學習</button>
+              <button class="btn secondary" id="exportBtn" disabled>下載模型</button>
             </div>
+            <div class="class-list" id="classList"></div>
+          </div>
 
-            <div class="toolbar">
-              <button class="btn" id="genSlidesBtn">生成簡報大綱</button>
-              <button class="btn secondary" id="genPosterBtn">生成資訊圖表大綱</button>
-              <button class="btn warn" id="genBothBtn">一起生成</button>
-              <button class="btn ghost" id="rewriteBtn">把內容改更好懂</button>
+          <div class="view" id="view-analysis">
+            <div class="card">
+              <h3>小小生態學家看照片</h3>
+              <p>上傳一張相機拍到的照片，頁面會幫你看看像不像石虎、家貓或其他動物，還會整理成簡單文字。</p>
+              <div class="toolbar">
+                <input class="file-input" id="analysisInput" type="file" accept="image/*">
+                <button class="btn ghost" id="pickAnalysisBtn">選一張照片</button>
+                <button class="btn secondary" id="runAnalysisBtn" disabled>幫我看看</button>
+                <button class="btn ghost" id="copyAnalysisBtn" disabled>複製結果</button>
+              </div>
+              <div class="video-box" style="aspect-ratio:16/9;background:#d9e3ec">
+                <canvas id="analysisCanvas" class="preview"></canvas>
+                <div class="overlay" id="analysisState">還沒選照片</div>
+              </div>
             </div>
+            <div class="result" id="analysisResult">請先讓 AI 學會分類，再上傳照片。</div>
+            <div class="predictions" id="analysisPredictions"></div>
+          </div>
 
-            <div class="status" id="statusBox">還沒開始。先輸入資料，再按生成。</div>
-            <div class="note">
-              提醒：這一頁會直接連到 Gemini API。API Key 只會留在你的瀏覽器裡，不會自動上傳到這個網站本身。
+          <div class="view" id="view-knowledge">
+            <div class="card">
+              <h3>小小百科整理</h3>
+              <p>把石虎資料貼進來，工具會幫你抓重點，還可以回答你的問題。</p>
+              <div class="inputs">
+                <textarea id="kbInput" placeholder="貼上石虎保育資料、報導、課本內容或教師整理的文字。每段之間可空一行。"></textarea>
+                <div class="toolbar">
+                  <button class="btn ghost" id="addSampleKbBtn">放入石虎資料</button>
+                  <button class="btn secondary" id="buildKbBtn">幫我整理</button>
+                </div>
+                <input type="text" id="kbQuestion" placeholder="輸入問題，例如：石虎面臨哪些威脅？">
+                <div class="toolbar">
+                  <button class="btn warn" id="askKbBtn" disabled>我想問</button>
+                  <button class="btn ghost" id="copyKbBtn" disabled>複製重點</button>
+                </div>
+              </div>
             </div>
+            <div class="result" id="kbAnswer">還沒整理好小小百科。</div>
+            <div id="kbSources"></div>
+          </div>
+
+          <div class="view" id="view-publish">
+            <div class="card">
+              <h3>做小成果</h3>
+              <p>把剛剛的分析和小小百科內容，轉成簡報大綱、海報文字或宣導短文。</p>
+              <div class="toolbar">
+                <button class="btn warn" id="genSlidesBtn">做簡報</button>
+                <button class="btn secondary" id="genPosterBtn">做圖卡</button>
+                <button class="btn ghost" id="copyPublishBtn" disabled>複製全部</button>
+              </div>
+              <div class="status-note" id="publishStatus">還沒做成果，先按「做簡報」或「做圖卡」。</div>
+              <div class="resource-links">
+                <a class="resource-link" href="https://gemini.google.com/share/c86fb6de9fa0" target="_blank" rel="noreferrer">
+                  <div>
+                    <strong>簡報工具連結</strong>
+                    <span>可以打開 Gemini 頁面，看看或修改簡報。</span>
+                  </div>
+                  <em>Open</em>
+                </a>
+                <a class="resource-link" href="https://gemini.google.com/share/12572faa8d29" target="_blank" rel="noreferrer">
+                  <div>
+                    <strong>圖卡工具連結</strong>
+                    <span>可以打開 Gemini 頁面，看看或修改圖卡。</span>
+                  </div>
+                  <em>Open</em>
+                </a>
+              </div>
+            </div>
+            <textarea id="publishBox" placeholder="結果會出現在這裡，可以直接複製。"></textarea>
           </div>
         </div>
       </section>
 
       <section class="panel">
         <div class="panel-head">
-          <h2>Canvas 編輯區</h2>
-          <div class="sub">AI 先幫你出草稿，你可以直接在這裡修改、縮短、補充，再複製使用。</div>
+          <h2>現場操作區</h2>
+          <div class="sub">這裡可以看相機畫面、學習進度和小提醒。</div>
         </div>
         <div class="panel-body">
-          <div class="result-grid">
-            <div class="result-card">
-              <h3>簡報大綱</h3>
-              <p>適合直接貼到簡報、教案或發表稿。</p>
-              <div class="result-toolbar">
-                <button class="btn mini ghost" id="copySlidesBtn">複製簡報</button>
-                <button class="btn mini ghost" id="downloadSlidesBtn">下載文字檔</button>
+          <div class="stage">
+            <div class="stage-head">
+              <div>
+                <strong>相機畫面</strong><br>
+                <span>可以打開鏡頭來試試看。</span>
               </div>
-              <textarea id="slidesOutput" placeholder="生成後會出現在這裡，你也可以直接改。"></textarea>
+              <div class="toolbar" style="margin:0">
+                <button class="btn ghost" id="camStartBtn">打開相機</button>
+                <button class="btn secondary" id="camStopBtn" disabled>關閉</button>
+              </div>
             </div>
+            <div class="video-box">
+              <video id="camera" autoplay playsinline muted></video>
+              <div class="overlay" id="cameraState">相機還沒打開</div>
+            </div>
+            <div class="predictions" id="livePredictions"></div>
+          </div>
 
-            <div class="result-card">
-              <h3>資訊圖表大綱</h3>
-              <p>適合直接貼到圖卡、海報或展板。</p>
-              <div class="result-toolbar">
-                <button class="btn mini ghost" id="copyPosterBtn">複製圖表</button>
-                <button class="btn mini ghost" id="downloadPosterBtn">下載文字檔</button>
-              </div>
-              <textarea id="posterOutput" placeholder="生成後會出現在這裡，你也可以直接改。"></textarea>
+          <div class="card">
+            <h3>學習進度</h3>
+            <div class="meter">
+              <div class="meter-top"><span id="meterText">還沒開始</span><span id="meterPercent">0%</span></div>
+              <div class="bar"><div class="fill" id="meterFill"></div></div>
             </div>
+            <div class="log" id="logBox">先把 AI 準備好，再開始學習。</div>
+          </div>
 
-            <div class="result-card full">
-              <h3>給 Gemini Canvas 的提示詞預覽</h3>
-              <p>如果你想把這份內容再拿去 Gemini Canvas 繼續編修，可以直接複製這段提示。</p>
-              <div class="result-toolbar">
-                <button class="btn mini ghost" id="copyPromptBtn">複製提示詞</button>
-                <button class="btn mini ghost" id="copyAllBtn">複製全部</button>
-              </div>
-              <div class="prompt-box" id="promptBox">還沒有提示詞。</div>
-            </div>
+          <div class="card">
+            <h3>小提醒</h3>
+            <ul>
+              <li>石虎、家貓、其他動物三類都要各放一些圖片。</li>
+              <li>每一類最好放 10 張以上，而且背景要不一樣。</li>
+              <li>如果 AI 猜錯了，就再多放一些照片重新學一次。</li>
+              <li>小小百科答案會依你上傳的內容整理，不是 AI 自己亂猜的。</li>
+            </ul>
           </div>
         </div>
       </section>
     </div>
 
-    <div class="footer">
-      建議在 Chrome 或 Chromebook 上使用。若學校網路有管制，請先確認可以連到 `generativelanguage.googleapis.com`。這個工具頁是教學工作台，不是正式版排版器。
-    </div>
+    <div class="footer">建議用 Chromebook 或 Chrome 開啟。這一頁就能完成大部分操作，不用一直換網站。</div>
   </div>
 
   <script>
-    const STORAGE_KEY = 'gemini-canvas-teaching-tool-v1';
-    const DEFAULT_MODEL = 'gemini-3.5-flash';
-    const SAMPLE_TEXT = `石虎是台灣淺山重要的野生動物，常活動在森林邊緣、丘陵地與農地交錯區。石虎面臨的威脅包括道路穿越、棲地破碎化、犬隻干擾與人為開發。保育行動包含維持森林廊道、減少路殺風險、保護棲地與提升民眾認識。`;
+    const DEFAULT_CLASSES = ['石虎', '家貓', '其他動物'];
+    const SAMPLE_KB = `石虎是台灣淺山重要的野生動物，常活動於森林邊緣、丘陵地與農地交錯區。石虎面臨的威脅包括道路穿越、棲地破碎化、犬隻干擾與人為開發。保育行動包含維持森林廊道、減少路殺風險、保護棲地與提升民眾認識。`;
 
-    const el = {
-      apiKey: document.getElementById('apiKey'),
-      modelName: document.getElementById('modelName'),
-      toneMode: document.getElementById('toneMode'),
-      topic: document.getElementById('topic'),
-      audience: document.getElementById('audience'),
-      goalCount: document.getElementById('goalCount'),
-      learningGoals: document.getElementById('learningGoals'),
-      sourceText: document.getElementById('sourceText'),
-      fillSampleBtn: document.getElementById('fillSampleBtn'),
-      clearBtn: document.getElementById('clearBtn'),
-      saveBtn: document.getElementById('saveBtn'),
-      genSlidesBtn: document.getElementById('genSlidesBtn'),
-      genPosterBtn: document.getElementById('genPosterBtn'),
-      genBothBtn: document.getElementById('genBothBtn'),
-      rewriteBtn: document.getElementById('rewriteBtn'),
-      statusBox: document.getElementById('statusBox'),
-      slidesOutput: document.getElementById('slidesOutput'),
-      posterOutput: document.getElementById('posterOutput'),
-      promptBox: document.getElementById('promptBox'),
-      copySlidesBtn: document.getElementById('copySlidesBtn'),
-      downloadSlidesBtn: document.getElementById('downloadSlidesBtn'),
-      copyPosterBtn: document.getElementById('copyPosterBtn'),
-      downloadPosterBtn: document.getElementById('downloadPosterBtn'),
-      copyPromptBtn: document.getElementById('copyPromptBtn'),
-      copyAllBtn: document.getElementById('copyAllBtn'),
-      chips: document.getElementById('chips'),
+    const state = {
+      classes: [],
+      mobilenet: null,
+      model: null,
+      trained: false,
+      busy: false,
+      cameraStream: null,
+      cameraLoop: null,
+      testImage: null,
+      analysisImage: null,
+      kbChunks: [],
+      kbText: '',
+      lastAnalysis: '',
+      lastAnswer: '',
     };
 
-    let busy = false;
-    let state = loadState();
+    const el = {
+      tabs: document.getElementById('tabs'),
+      chips: document.getElementById('chips'),
+      classList: document.getElementById('classList'),
+      loadModelBtn: document.getElementById('loadModelBtn'),
+      trainBtn: document.getElementById('trainBtn'),
+      exportBtn: document.getElementById('exportBtn'),
+      meterFill: document.getElementById('meterFill'),
+      meterText: document.getElementById('meterText'),
+      meterPercent: document.getElementById('meterPercent'),
+      logBox: document.getElementById('logBox'),
+      camera: document.getElementById('camera'),
+      cameraState: document.getElementById('cameraState'),
+      camStartBtn: document.getElementById('camStartBtn'),
+      camStopBtn: document.getElementById('camStopBtn'),
+      livePredictions: document.getElementById('livePredictions'),
+      analysisInput: document.getElementById('analysisInput'),
+      pickAnalysisBtn: document.getElementById('pickAnalysisBtn'),
+      runAnalysisBtn: document.getElementById('runAnalysisBtn'),
+      copyAnalysisBtn: document.getElementById('copyAnalysisBtn'),
+      analysisCanvas: document.getElementById('analysisCanvas'),
+      analysisState: document.getElementById('analysisState'),
+      analysisResult: document.getElementById('analysisResult'),
+      analysisPredictions: document.getElementById('analysisPredictions'),
+      kbInput: document.getElementById('kbInput'),
+      addSampleKbBtn: document.getElementById('addSampleKbBtn'),
+      buildKbBtn: document.getElementById('buildKbBtn'),
+      kbQuestion: document.getElementById('kbQuestion'),
+      askKbBtn: document.getElementById('askKbBtn'),
+      copyKbBtn: document.getElementById('copyKbBtn'),
+      kbAnswer: document.getElementById('kbAnswer'),
+      kbSources: document.getElementById('kbSources'),
+      genSlidesBtn: document.getElementById('genSlidesBtn'),
+      genPosterBtn: document.getElementById('genPosterBtn'),
+      copyPublishBtn: document.getElementById('copyPublishBtn'),
+      publishBox: document.getElementById('publishBox'),
+      publishStatus: document.getElementById('publishStatus'),
+    };
 
-    function loadState() {
-      try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {};
-      } catch {
-        return {};
-      }
+    function setMeter(pct, text) {
+      el.meterFill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+      el.meterText.textContent = text;
+      el.meterPercent.textContent = `${Math.round(pct)}%`;
     }
-
-    function saveState() {
-      const next = {
-        apiKey: el.apiKey.value.trim(),
-        modelName: el.modelName.value,
-        toneMode: el.toneMode.value,
-        topic: el.topic.value.trim(),
-        audience: el.audience.value.trim(),
-        goalCount: el.goalCount.value.trim(),
-        learningGoals: el.learningGoals.value.trim(),
-        sourceText: el.sourceText.value.trim(),
-        slidesOutput: el.slidesOutput.value.trim(),
-        posterOutput: el.posterOutput.value.trim(),
-        promptBox: el.promptBox.textContent.trim(),
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      updateChips();
+    function log(message, append = false) {
+      el.logBox.textContent = append ? `${el.logBox.textContent}\n${message}` : message;
     }
-
-    function applyState() {
-      el.apiKey.value = state.apiKey || '';
-      el.modelName.value = state.modelName || DEFAULT_MODEL;
-      el.toneMode.value = state.toneMode || el.toneMode.value;
-      el.topic.value = state.topic || 'AI 小小研究員：搶救淺山精靈';
-      el.audience.value = state.audience || '國小中高年級';
-      el.goalCount.value = state.goalCount || '6';
-      el.learningGoals.value = state.learningGoals || '認識石虎、比較石虎與家貓、學會整理相機照片、做出宣導簡報與圖卡。';
-      el.sourceText.value = state.sourceText || '';
-      el.slidesOutput.value = state.slidesOutput || '';
-      el.posterOutput.value = state.posterOutput || '';
-      el.promptBox.textContent = state.promptBox || '還沒有提示詞。';
+    function setPublishStatus(message) {
+      if (el.publishStatus) el.publishStatus.textContent = message;
     }
-
-    function updateChips() {
-      const apiReady = Boolean(el.apiKey.value.trim());
-      const hasTopic = Boolean(el.topic.value.trim());
-      const hasSource = Boolean(el.sourceText.value.trim());
-      const hasSlides = Boolean(el.slidesOutput.value.trim());
-      const hasPoster = Boolean(el.posterOutput.value.trim());
-      const items = [
-        { label: apiReady ? 'API 已填好' : '先輸入 API Key', tone: apiReady ? 'good' : 'warn' },
-        { label: hasTopic ? '主題已填' : '主題待輸入', tone: hasTopic ? 'good' : 'warn' },
-        { label: hasSource ? '素材已放入' : '素材還沒貼', tone: hasSource ? 'good' : 'warn' },
-        { label: hasSlides ? '簡報草稿已完成' : '簡報草稿待生成', tone: hasSlides ? 'good' : 'brand' },
-        { label: hasPoster ? '圖表草稿已完成' : '圖表草稿待生成', tone: hasPoster ? 'good' : 'brand' },
-      ];
-      el.chips.innerHTML = '';
-      for (const item of items) {
-        const chip = document.createElement('div');
-        chip.className = 'chip';
-        chip.innerHTML = `<span class="dot ${item.tone}"></span><span>${item.label}</span>`;
-        el.chips.appendChild(chip);
-      }
-      const canRun = apiReady && !busy;
-      el.genSlidesBtn.disabled = !canRun;
-      el.genPosterBtn.disabled = !canRun;
-      el.genBothBtn.disabled = !canRun;
-      el.rewriteBtn.disabled = !canRun || (!hasSlides && !hasPoster);
-      el.copySlidesBtn.disabled = !hasSlides;
-      el.copyPosterBtn.disabled = !hasPoster;
-      el.copyPromptBtn.disabled = !el.promptBox.textContent.trim();
-      el.copyAllBtn.disabled = !(hasSlides || hasPoster);
-    }
-
-    function setStatus(message) {
-      el.statusBox.textContent = message;
-    }
-
-    function fillPromptBox(mode) {
-      const prompt = makePrompt(mode);
-      el.promptBox.textContent = prompt;
-      state.promptBox = prompt;
-      saveState();
-      return prompt;
-    }
-
-    function gatherContext() {
-      return {
-        topic: el.topic.value.trim() || '未命名主題',
-        audience: el.audience.value.trim() || '國小學生',
-        goalCount: parseInt(el.goalCount.value.trim(), 10) || 6,
-        learningGoals: el.learningGoals.value.trim() || '請整理成清楚的教學重點。',
-        sourceText: el.sourceText.value.trim() || '沒有額外素材。',
-        tone: el.toneMode.value,
-      };
-    }
-
-    function makePrompt(mode) {
-      const ctx = gatherContext();
-      const common = [
-        '你是國小課程的教學設計助手。',
-        '請全部使用繁體中文，句子短、清楚、可直接給老師使用。',
-        `教學對象：${ctx.audience}`,
-        `課程主題：${ctx.topic}`,
-        `希望重點數：${ctx.goalCount}`,
-        `語氣要求：${ctx.tone}`,
-        `學習目標：${ctx.learningGoals}`,
-        `素材內容：${ctx.sourceText}`,
-      ].join('\n');
-
-      if (mode === 'slides') {
-        return `${common}\n\n請輸出「簡報大綱」，格式固定如下：\n【簡報大綱】\n1. ...\n2. ...\n3. ...\n4. ...\n5. ...\n6. ...\n【老師備註】\n- ...\n\n每一點都要短，方便直接貼進簡報。`;
-      }
-      if (mode === 'poster') {
-        return `${common}\n\n請輸出「資訊圖表大綱」，格式固定如下：\n【資訊圖表大綱】\n主標：...\n區塊1：...\n區塊2：...\n區塊3：...\n視覺建議：...\n【老師備註】\n- ...\n\n每一個區塊都要簡短，適合做成海報或圖卡。`;
-      }
-      if (mode === 'both') {
-        return `${common}\n\n請一次輸出兩種草稿，格式固定如下，不要改標題：\n【簡報大綱】\n1. ...\n2. ...\n3. ...\n4. ...\n5. ...\n6. ...\n【資訊圖表大綱】\n主標：...\n區塊1：...\n區塊2：...\n區塊3：...\n視覺建議：...\n【給小朋友看的話】\n- ...\n【老師備註】\n- ...`;
-      }
-      return `${common}\n\n請把下面的內容改寫得更好懂、更適合小朋友或老師直接使用。\n如果文字太長，請幫我縮短，但保留重點。\n\n【目前簡報草稿】\n${el.slidesOutput.value || '（空）'}\n\n【目前圖表草稿】\n${el.posterOutput.value || '（空）'}\n\n請輸出成容易直接複製的條列內容。`;
-    }
-
-    function parseSections(text) {
-      const slide = extractSection(text, '簡報大綱');
-      const poster = extractSection(text, '資訊圖表大綱');
-      const tips = extractSection(text, '老師備註');
-      return { slide, poster, tips };
-    }
-
-    function extractSection(text, title) {
-      const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const re = new RegExp(`【${escaped}】([\\s\\S]*?)(?=\\n【|$)`, 'm');
-      const match = text.match(re);
-      return match ? match[1].trim() : '';
-    }
-
     async function copyText(value) {
       const text = String(value || '').trim();
       if (!text) return false;
@@ -585,198 +623,513 @@
           await navigator.clipboard.writeText(text);
           return true;
         }
-      } catch {}
+      } catch (err) {
+        // fallback below
+      }
       try {
         const ta = document.createElement('textarea');
         ta.value = text;
         ta.setAttribute('readonly', '');
         ta.style.position = 'fixed';
         ta.style.left = '-9999px';
+        ta.style.top = '0';
         document.body.appendChild(ta);
+        ta.focus();
         ta.select();
         const ok = document.execCommand('copy');
         document.body.removeChild(ta);
         return ok;
-      } catch {
+      } catch (err) {
         return false;
       }
     }
 
-    async function downloadText(name, content) {
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = name;
-      a.click();
-      URL.revokeObjectURL(url);
+    function updateChips() {
+      const sampleCount = state.classes.reduce((a, c) => a + c.samples.length, 0);
+      el.chips.innerHTML = '';
+      const items = [
+        { label: state.mobilenet ? 'AI 已準備好' : 'AI 還沒準備好', tone: state.mobilenet ? 'good' : 'warn' },
+        { label: `圖片總數：${sampleCount}`, tone: sampleCount ? 'good' : 'warn' },
+        { label: state.trained ? 'AI 已學會' : 'AI 還沒學會', tone: state.trained ? 'good' : 'warn' },
+        { label: `小小百科段落：${state.kbChunks.length}`, tone: state.kbChunks.length ? 'good' : 'brand' },
+      ];
+      for (const item of items) {
+        const chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.innerHTML = `<span class="dot ${item.tone}"></span><span>${item.label}</span>`;
+        el.chips.appendChild(chip);
+      }
+      el.trainBtn.disabled = !state.mobilenet || state.busy || sampleCount === 0 || state.classes.some(c => c.samples.length === 0);
+      el.exportBtn.disabled = !state.trained || state.busy;
+      el.runAnalysisBtn.disabled = !state.trained;
+      el.askKbBtn.disabled = !state.kbChunks.length;
+      el.copyAnalysisBtn.disabled = !state.lastAnalysis;
+      el.copyKbBtn.disabled = !state.lastAnswer;
+      el.copyPublishBtn.disabled = !el.publishBox.value.trim();
     }
 
-    async function callGemini(mode) {
-      const apiKey = el.apiKey.value.trim();
-      if (!apiKey) {
-        setStatus('請先輸入 Gemini API Key。');
-        return null;
-      }
-      const prompt = fillPromptBox(mode);
-      const model = el.modelName.value || DEFAULT_MODEL;
-      const body = {
-        model,
-        system_instruction: '你是國小教學設計助手，請以繁體中文輸出，句子短、清楚、可直接貼入教案、簡報或圖卡。',
-        input: prompt,
-        generation_config: { temperature: 0.6 }
-      };
-      setStatus('Gemini 正在幫你整理，請等一下。');
-      busy = true;
-      updateChips();
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/interactions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey,
-          },
-          body: JSON.stringify(body),
-        });
-        const raw = await res.text();
-        let data = {};
-        try { data = raw ? JSON.parse(raw) : {}; } catch { data = { raw }; }
-        if (!res.ok) {
-          throw new Error(data.error?.message || data.message || raw || `HTTP ${res.status}`);
-        }
-        return data.output_text || data.outputText || data.output || data.raw || '';
-      } catch (err) {
-        setStatus(`生成失敗：${err.message}`);
-        return null;
-      } finally {
-        busy = false;
+    function makeClassCard(cls, idx) {
+      const card = document.createElement('div');
+      card.className = 'class-card';
+      card.innerHTML = `
+        <div class="class-top">
+          <input class="class-name" type="text" value="${cls.name}">
+          <div class="count" data-count>0 張</div>
+          <button class="btn ghost" data-demo>放入示範圖</button>
+        </div>
+        <div class="class-actions">
+          <input class="file-input" type="file" accept="image/*" multiple>
+          <button class="btn secondary" data-upload>放照片</button>
+          <button class="btn warn" data-clear>清空這一類</button>
+        </div>
+        <div class="sample-grid" data-grid></div>
+      `;
+      const nameInput = card.querySelector('.class-name');
+      const fileInput = card.querySelector('.file-input');
+      cls._count = card.querySelector('[data-count]');
+      cls._grid = card.querySelector('[data-grid]');
+
+      nameInput.addEventListener('input', () => {
+        cls.name = nameInput.value.trim() || `類別 ${idx + 1}`;
         updateChips();
-      }
+      });
+      card.querySelector('[data-upload]').addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', async () => {
+        if (!fileInput.files?.length) return;
+        await addFilesToClass(idx, [...fileInput.files]);
+        fileInput.value = '';
+      });
+      card.querySelector('[data-clear]').addEventListener('click', () => {
+        cls.samples.forEach(s => URL.revokeObjectURL(s.url));
+        cls.samples = [];
+        renderClasses();
+      });
+      card.querySelector('[data-demo]').addEventListener('click', async () => {
+        const file = await makeDemoImage(cls.name);
+        await addFilesToClass(idx, [file]);
+      });
+      return card;
     }
 
-    async function runMode(mode) {
-      const text = await callGemini(mode);
-      if (!text) return;
-      if (mode === 'slides') {
-        el.slidesOutput.value = text.trim();
-        setStatus('簡報大綱已生成，可以直接修改。');
-      } else if (mode === 'poster') {
-        el.posterOutput.value = text.trim();
-        setStatus('資訊圖表大綱已生成，可以直接修改。');
-      } else if (mode === 'both') {
-        const sections = parseSections(text);
-        el.slidesOutput.value = sections.slide || text.trim();
-        el.posterOutput.value = sections.poster || text.trim();
-        setStatus('兩種草稿都生成好了。');
-      } else if (mode === 'rewrite') {
-        const sections = parseSections(text);
-        if (sections.slide) el.slidesOutput.value = sections.slide;
-        if (sections.poster) el.posterOutput.value = sections.poster;
-        if (!sections.slide && !sections.poster) {
-          el.slidesOutput.value = text.trim();
-        }
-        setStatus('內容已幫你改寫。');
-      }
-      saveState();
-    }
-
-    function sampleFill() {
-      el.topic.value = 'AI 小小研究員：搶救淺山精靈';
-      el.audience.value = '國小中高年級';
-      el.goalCount.value = '6';
-      el.learningGoals.value = '認識石虎、比較石虎與家貓、學會整理紅外線相機照片、做出簡報大綱與資訊圖表大綱。';
-      el.sourceText.value = SAMPLE_TEXT;
-      el.modelName.value = DEFAULT_MODEL;
-      el.toneMode.value = '小朋友聽得懂、老師可直接使用';
-      setStatus('已放入石虎範例，可以直接按生成。');
-      fillPromptBox('both');
-      saveState();
-    }
-
-    function clearAll() {
-      el.topic.value = '';
-      el.audience.value = '';
-      el.goalCount.value = '6';
-      el.learningGoals.value = '';
-      el.sourceText.value = '';
-      el.slidesOutput.value = '';
-      el.posterOutput.value = '';
-      el.promptBox.textContent = '還沒有提示詞。';
-      setStatus('已清空。');
-      saveState();
-    }
-
-    function wireAutosave() {
-      [
-        el.apiKey, el.modelName, el.toneMode, el.topic, el.audience,
-        el.goalCount, el.learningGoals, el.sourceText, el.slidesOutput, el.posterOutput
-      ].forEach(node => {
-        const ev = node.tagName === 'SELECT' ? 'change' : 'input';
-        node.addEventListener(ev, () => {
-          updateChips();
-          if (node === el.topic || node === el.audience || node === el.goalCount || node === el.learningGoals || node === el.sourceText) {
-            fillPromptBox('both');
-          } else {
-            saveState();
-          }
+    function renderClasses() {
+      el.classList.innerHTML = '';
+      state.classes.forEach((cls, idx) => {
+        cls._count.textContent = `${cls.samples.length} 張`;
+        cls._grid.innerHTML = '';
+        cls.samples.forEach((sample, sampleIndex) => {
+          const tile = document.createElement('div');
+          tile.className = 'sample';
+          tile.innerHTML = `<img src="${sample.url}" alt="${sample.name}"><button title="刪掉">×</button>`;
+          tile.querySelector('button').addEventListener('click', () => {
+            URL.revokeObjectURL(sample.url);
+            cls.samples.splice(sampleIndex, 1);
+            renderClasses();
+          });
+          cls._grid.appendChild(tile);
         });
+        el.classList.appendChild(cls._card);
       });
-    }
-
-    async function init() {
-      applyState();
       updateChips();
-      wireAutosave();
-      fillPromptBox('both');
-
-      el.fillSampleBtn.addEventListener('click', sampleFill);
-      el.clearBtn.addEventListener('click', clearAll);
-      el.saveBtn.addEventListener('click', () => {
-        saveState();
-        setStatus('設定已儲存到這台電腦。');
-      });
-      el.genSlidesBtn.addEventListener('click', () => runMode('slides'));
-      el.genPosterBtn.addEventListener('click', () => runMode('poster'));
-      el.genBothBtn.addEventListener('click', () => runMode('both'));
-      el.rewriteBtn.addEventListener('click', () => runMode('rewrite'));
-      el.copySlidesBtn.addEventListener('click', async () => {
-        const ok = await copyText(el.slidesOutput.value);
-        setStatus(ok ? '簡報大綱已複製。' : '複製失敗，請先生成內容。');
-      });
-      el.copyPosterBtn.addEventListener('click', async () => {
-        const ok = await copyText(el.posterOutput.value);
-        setStatus(ok ? '資訊圖表大綱已複製。' : '複製失敗，請先生成內容。');
-      });
-      el.copyPromptBtn.addEventListener('click', async () => {
-        const ok = await copyText(el.promptBox.textContent);
-        setStatus(ok ? '提示詞已複製。' : '複製失敗。');
-      });
-      el.copyAllBtn.addEventListener('click', async () => {
-        const content = [
-          '【簡報大綱】',
-          el.slidesOutput.value.trim(),
-          '',
-          '【資訊圖表大綱】',
-          el.posterOutput.value.trim(),
-        ].join('\n');
-        const ok = await copyText(content);
-        setStatus(ok ? '全部內容已複製。' : '複製失敗。');
-      });
-      el.downloadSlidesBtn.addEventListener('click', async () => {
-        await downloadText('簡報大綱.txt', el.slidesOutput.value || '尚未生成內容。');
-        setStatus('簡報大綱已下載。');
-      });
-      el.downloadPosterBtn.addEventListener('click', async () => {
-        await downloadText('資訊圖表大綱.txt', el.posterOutput.value || '尚未生成內容。');
-        setStatus('資訊圖表大綱已下載。');
-      });
-
-      if (state.apiKey || state.topic || state.sourceText) {
-        setStatus('已載入上次設定。你可以直接生成。');
-      }
     }
 
-    init();
+    function initClasses() {
+      state.classes = DEFAULT_CLASSES.map(name => ({ name, samples: [] }));
+      state.classes.forEach((cls, idx) => { cls._card = makeClassCard(cls, idx); });
+      renderClasses();
+    }
+
+    async function makeDemoImage(label) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 720;
+      canvas.height = 480;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 720, 480);
+      grad.addColorStop(0, '#dbe9dd');
+      grad.addColorStop(1, '#c8d5eb');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 720, 480);
+      ctx.fillStyle = 'rgba(31,122,103,.22)';
+      ctx.beginPath(); ctx.arc(120, 320, 90, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(217,119,6,.22)';
+      ctx.beginPath(); ctx.arc(560, 110, 76, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#203245';
+      ctx.font = 'bold 48px Noto Sans TC, sans-serif';
+      ctx.fillText(label, 42, 82);
+      ctx.font = '22px sans-serif';
+      ctx.fillText('示範圖片', 42, 122);
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      return new File([blob], `${label}-demo.png`, { type: 'image/png' });
+    }
+
+    function fileToImage(file) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => resolve({ img, url });
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    async function addFilesToClass(index, files) {
+      const cls = state.classes[index];
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+        const { img, url } = await fileToImage(file);
+        cls.samples.push({ file, img, url, name: file.name });
+      }
+      renderClasses();
+    }
+
+    async function loadModel() {
+      if (state.mobilenet) return;
+      log('正在準備 AI...');
+      setMeter(10, '準備中');
+      state.mobilenet = await mobilenet.load({ version: 2, alpha: 1.0 });
+      setMeter(100, 'AI 可以開始學了');
+      log('AI 已經準備好了。');
+      updateChips();
+    }
+
+    function allSamples() {
+      return state.classes.flatMap((cls, classIndex) =>
+        cls.samples.map(sample => ({ ...sample, classIndex, className: cls.name }))
+      );
+    }
+
+    async function trainModel() {
+      const samples = allSamples();
+      if (!samples.length) return;
+      state.busy = true;
+      updateChips();
+      setMeter(0, '準備學習');
+      log(`開始學習，共 ${samples.length} 張圖片。`);
+
+      const xs = [];
+      const ys = [];
+      for (let i = 0; i < samples.length; i++) {
+        const sample = samples[i];
+        const tensor = tf.tidy(() => {
+          const feat = state.mobilenet.infer(sample.img, true);
+          return feat.reshape([feat.shape[feat.shape.length - 1]]);
+        });
+        xs.push(tensor);
+        ys.push(sample.classIndex);
+        setMeter((i / samples.length) * 25, `整理圖片 ${i + 1}/${samples.length}`);
+        await tf.nextFrame();
+      }
+
+      const xsTensor = tf.stack(xs);
+      const labelsTensor = tf.tensor1d(ys, 'int32');
+      const ysTensor = tf.oneHot(labelsTensor, state.classes.length);
+      const featureDim = xs[0].shape[0];
+      const model = tf.sequential();
+      model.add(tf.layers.dense({ inputShape: [featureDim], units: 64, activation: 'relu' }));
+      model.add(tf.layers.dropout({ rate: 0.18 }));
+      model.add(tf.layers.dense({ units: state.classes.length, activation: 'softmax' }));
+      model.compile({ optimizer: tf.train.adam(0.001), loss: 'categoricalCrossentropy', metrics: ['accuracy'] });
+
+      const epochs = 18;
+      await model.fit(xsTensor, ysTensor, {
+        epochs,
+        batchSize: Math.min(8, samples.length),
+        shuffle: true,
+        validationSplit: samples.length >= 10 ? 0.2 : 0,
+        callbacks: {
+          onEpochEnd: async (epoch, logs) => {
+            setMeter(25 + ((epoch + 1) / epochs) * 75, `學習第 ${epoch + 1}/${epochs} 輪`);
+            log(`第 ${epoch + 1} 輪：錯誤值 ${logs.loss.toFixed(3)}；答對率 ${(logs.acc ?? logs.accuracy ?? 0).toFixed(3)}`);
+            await tf.nextFrame();
+          }
+        }
+      });
+
+      xs.forEach(t => t.dispose());
+      xsTensor.dispose(); labelsTensor.dispose(); ysTensor.dispose();
+      state.model = model;
+      state.trained = true;
+      state.busy = false;
+      setMeter(100, '訓練完成');
+      log('訓練完成。可以到「看照片」或打開相機即時測試。');
+      updateChips();
+    }
+
+    async function predictElement(sourceEl) {
+      if (!state.trained || !state.model || !state.mobilenet) return null;
+      const emb = tf.tidy(() => state.mobilenet.infer(sourceEl, true).reshape([1, -1]));
+      const preds = state.model.predict(emb);
+      const values = await preds.data();
+      emb.dispose(); preds.dispose();
+      return Array.from(values);
+    }
+
+    async function drawImageToCanvas(file, canvas, stateTextEl) {
+      const { img, url } = await fileToImage(file);
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      if (stateTextEl) stateTextEl.textContent = file.name;
+      return { img, url };
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
+      document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === `view-${name}`));
+    }
+
+    async function runAnalysis() {
+      if (!state.analysisImage) return;
+      const values = await predictElement(state.analysisImage);
+      if (!values) return;
+      const ranked = values.map((value, i) => ({ name: state.classes[i].name, value })).sort((a, b) => b.value - a.value);
+      const top = ranked[0];
+      const second = ranked[1] || ranked[0];
+      const ratio = `${(top.value * 100).toFixed(1)}%`;
+      const threatList = [
+        '道路穿越風險',
+        '棲地破碎化',
+        '夜間干擾',
+        '人為活動接近',
+      ];
+      const suggestion = top.name === '石虎'
+        ? '建議保留森林與農地間的連通帶，降低路殺，並維持淺山廊道。'
+        : top.name === '家貓'
+        ? '若出現在保育課程中，可提醒學生：家貓與野外石虎外觀相似，但棲地與保育意義不同。'
+        : '建議再放更多背景、角度和時間不同的照片。';
+      const report = [
+        `我猜這張照片最像「${top.name}」，把握度 ${ratio}。`,
+        `第二像：${second.name}，把握度 ${(second.value * 100).toFixed(1)}%。`,
+        '',
+        '觀察重點：',
+        `- 這張圖的動物種類與行為，會影響我們對棲地的理解。`,
+        `- 可提醒學生關注：${threatList.join('、')}。`,
+        '',
+        '棲地改善建議：',
+        `- ${suggestion}`,
+      ].join('\n');
+
+      state.lastAnalysis = report;
+      el.analysisResult.textContent = report;
+      el.analysisPredictions.innerHTML = '';
+      ranked.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'pred-row';
+        row.innerHTML = `
+          <div>${item.name}</div>
+          <div class="pred-track"><div class="pred-fill" style="width:${Math.max(2, item.value * 100)}%"></div></div>
+          <div class="pred-value">${(item.value * 100).toFixed(1)}%</div>
+        `;
+        el.analysisPredictions.appendChild(row);
+      });
+      updateChips();
+    }
+
+    function chunkText(text) {
+      return text
+        .split(/\n\s*\n/)
+        .map(s => s.trim())
+        .filter(Boolean)
+        .flatMap(block => block.split(/(?<=[。！？.!?])\s*/).map(s => s.trim()).filter(Boolean));
+    }
+
+    function buildKnowledgeBase() {
+      const text = el.kbInput.value.trim();
+      state.kbText = text;
+      state.kbChunks = chunkText(text);
+      el.kbSources.innerHTML = '';
+      if (!state.kbChunks.length) {
+        el.kbAnswer.textContent = '還沒整理好小小百科。';
+        state.lastAnswer = '';
+        updateChips();
+        return;
+      }
+      state.kbChunks.slice(0, 8).forEach((chunk, i) => {
+        const box = document.createElement('div');
+        box.className = 'source-item';
+        box.innerHTML = `<strong>段落 ${i + 1}</strong><small>${chunk}</small>`;
+        el.kbSources.appendChild(box);
+      });
+      el.kbAnswer.textContent = '小小百科整理好了，現在可以提問。';
+      updateChips();
+    }
+
+    function answerQuestion(question) {
+      const q = question.trim();
+      if (!q || !state.kbChunks.length) return '請先整理好小小百科，再來問問題。';
+      const keywords = q.split(/[^\u4e00-\u9fa5a-zA-Z0-9]+/).filter(Boolean);
+      const scored = state.kbChunks.map(chunk => {
+        const score = keywords.reduce((n, k) => n + (chunk.includes(k) ? 2 : 0), 0) + (chunk.length < 60 ? 0.3 : 0);
+        return { chunk, score };
+      }).sort((a, b) => b.score - a.score);
+      const hits = scored.slice(0, 3).filter(x => x.score > 0);
+      if (!hits.length) {
+        return `在你上傳的小小百科裡，暫時找不到直接對應的段落。\n\n可以換成更清楚的關鍵字，例如：石虎、棲地、道路、保育、路殺、廊道。`;
+      }
+      const answer = [
+        `問題：${q}`,
+        '',
+        '整理回答：',
+        ...hits.map((h, i) => `${i + 1}. ${h.chunk}`),
+        '',
+        '教師提示：以上內容是根據你上傳的資料做重點整理，適合拿來做課堂討論。'
+      ].join('\n');
+      return answer;
+    }
+
+    function generateSlides() {
+      const base = state.lastAnalysis || '尚未完成看照片。';
+      const kb = state.lastAnswer || '還沒整理好小小百科答案。';
+      const content = [
+        '【石虎保育教學簡報大綱】',
+        '',
+        '1. 認識石虎與淺山生態',
+        '2. 石虎與家貓外觀比較',
+        '3. 紅外線相機拍到的野生動物',
+        '4. AI 幫忙看相機照片',
+        '5. 石虎面臨的威脅與保育行動',
+        '',
+        '【課堂可直接使用的重點】',
+        base,
+        '',
+        kb,
+        '',
+        '【結語】',
+        '讓學生知道：AI 不是取代觀察，而是幫助我們更快整理與理解自然資料。'
+      ].join('\n');
+      el.publishBox.value = content;
+      state.lastPublish = content;
+      setPublishStatus('已做出簡報內容，可以直接複製。');
+      updateChips();
+    }
+
+    function generatePoster() {
+      const base = state.lastAnalysis || '請先完成看照片。';
+      const kb = state.lastAnswer || '請先整理好小小百科。';
+      const content = [
+        '【石虎保育資訊圖表文字】',
+        '',
+        '主題：AI 小小研究員，搶救淺山精靈',
+        '',
+        '看見什麼：',
+        '- 石虎、家貓、其他動物、紅外線相機照片',
+        '',
+        'AI 做什麼：',
+        '- 餵 AI 學習',
+        '- 看相機照片',
+        '- 整理保育重點',
+        '',
+        '要保護什麼：',
+        '- 棲地連通',
+        '- 減少路殺',
+        '- 保留淺山廊道',
+        '',
+        '老師可直接說：',
+        base,
+        '',
+        kb
+      ].join('\n');
+      el.publishBox.value = content;
+      state.lastPublish = content;
+      setPublishStatus('已做出圖卡內容，可以直接複製。');
+      updateChips();
+    }
+
+    el.tabs.addEventListener('click', e => {
+      const btn = e.target.closest('.tab-btn');
+      if (!btn) return;
+      switchTab(btn.dataset.tab);
+    });
+    el.loadModelBtn.addEventListener('click', loadModel);
+    el.trainBtn.addEventListener('click', trainModel);
+    el.exportBtn.addEventListener('click', async () => {
+      if (state.model) {
+        await state.model.save('downloads://ai-small-researcher-classifier');
+        log('模型已經下載到你的電腦。');
+      }
+    });
+    el.pickAnalysisBtn.addEventListener('click', () => el.analysisInput.click());
+    el.analysisInput.addEventListener('change', async () => {
+      const file = el.analysisInput.files?.[0];
+      if (!file) return;
+      const { img } = await drawImageToCanvas(file, el.analysisCanvas, el.analysisState);
+      state.analysisImage = img;
+      el.runAnalysisBtn.disabled = !state.trained;
+    });
+    el.runAnalysisBtn.addEventListener('click', runAnalysis);
+    el.copyAnalysisBtn.addEventListener('click', async () => {
+      const ok = await copyText(state.lastAnalysis);
+      log(ok ? '已複製分析結果。' : '複製失敗，請再試一次。');
+    });
+    el.addSampleKbBtn.addEventListener('click', () => {
+      if (!el.kbInput.value.trim()) el.kbInput.value = SAMPLE_KB;
+      else el.kbInput.value += '\n\n' + SAMPLE_KB;
+    });
+    el.buildKbBtn.addEventListener('click', buildKnowledgeBase);
+    el.askKbBtn.addEventListener('click', () => {
+      const answer = answerQuestion(el.kbQuestion.value);
+      state.lastAnswer = answer;
+      el.kbAnswer.textContent = answer;
+      updateChips();
+    });
+    el.copyKbBtn.addEventListener('click', async () => {
+      const ok = await copyText(state.lastAnswer);
+      log(ok ? '已複製小小百科重點。' : '複製失敗，請再試一次。');
+    });
+    el.genSlidesBtn.addEventListener('click', generateSlides);
+    el.genPosterBtn.addEventListener('click', generatePoster);
+    el.copyPublishBtn.addEventListener('click', async () => {
+      const ok = await copyText(el.publishBox.value);
+      if (ok) {
+        setPublishStatus('已複製全部內容。');
+        log('已複製全部內容。');
+      } else {
+        setPublishStatus('複製失敗，請先按一次「做簡報」或「做圖卡」。');
+        log('複製失敗，請先按一次「做簡報」或「做圖卡」。');
+      }
+    });
+
+    el.camStartBtn.addEventListener('click', async () => {
+      if (state.cameraStream) return;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        state.cameraStream = stream;
+        el.camera.srcObject = stream;
+        await el.camera.play();
+        el.cameraState.textContent = '相機已打開';
+        el.camStartBtn.disabled = true;
+        el.camStopBtn.disabled = false;
+        state.cameraLoop = setInterval(async () => {
+          if (!state.trained) return;
+          const values = await predictElement(el.camera);
+          if (!values) return;
+          const ranked = values.map((value, i) => ({ name: state.classes[i].name, value })).sort((a, b) => b.value - a.value);
+          el.livePredictions.innerHTML = ranked.map(item => `
+            <div class="pred-row">
+              <div>${item.name}</div>
+              <div class="pred-track"><div class="pred-fill" style="width:${Math.max(2, item.value * 100)}%"></div></div>
+              <div class="pred-value">${(item.value * 100).toFixed(1)}%</div>
+            </div>
+          `).join('');
+        }, 900);
+      } catch (err) {
+        el.cameraState.textContent = '相機打不開';
+        log(`相機打不開：${err.message}`);
+      }
+    });
+    el.camStopBtn.addEventListener('click', () => {
+      if (state.cameraLoop) clearInterval(state.cameraLoop);
+      if (state.cameraStream) state.cameraStream.getTracks().forEach(t => t.stop());
+      state.cameraLoop = null;
+      state.cameraStream = null;
+      el.camera.srcObject = null;
+      el.cameraState.textContent = '相機還沒打開';
+      el.camStartBtn.disabled = false;
+      el.camStopBtn.disabled = true;
+    });
+
+    initClasses();
+    updateChips();
+    setMeter(0, '還沒開始');
   </script>
 </body>
 </html>
