@@ -176,6 +176,17 @@
       box-shadow:0 6px 12px rgba(16,32,51,.08);
       text-shadow:none;
     }
+    .ext-link{
+      background:linear-gradient(135deg, #f6efe2, #eef6f4) !important;
+      color:#30485f !important;
+      border:1px solid rgba(93, 110, 129, .16) !important;
+      box-shadow:0 6px 14px rgba(93, 110, 129, .10) !important;
+      text-shadow:none !important;
+    }
+    .ext-link:hover:not(:disabled){
+      filter:brightness(1.02);
+      transform:translateY(-1px);
+    }
     .btn:hover:not(:disabled){filter:brightness(1.03)}
     .btn:focus-visible{
       outline:3px solid rgba(31,122,103,.28);
@@ -301,11 +312,12 @@
       justify-content:space-between;
       gap:12px;
       text-decoration:none;
-      border:1px solid var(--line);
-      background:#fff;
+      border:1px solid rgba(93, 110, 129, .14);
+      background:linear-gradient(135deg, rgba(246,239,226,.94), rgba(238,246,244,.94));
       border-radius:18px;
       padding:12px 14px;
-      color:var(--ink);
+      color:#30485f;
+      box-shadow:0 6px 14px rgba(93, 110, 129, .08);
     }
     .resource-link strong{
       display:block;
@@ -446,7 +458,7 @@
               <button class="btn secondary" id="exportBtn" disabled>下載模型</button>
               <button class="btn secondary" id="importZipBtn" type="button">匯入模型 ZIP</button>
               <button class="btn ghost" id="importFolderBtn" type="button">匯入模型資料夾</button>
-              <a class="btn ghost" href="https://teachablemachine.withgoogle.com/" target="_blank" rel="noreferrer" style="text-decoration:none;display:inline-flex;align-items:center;">Teachable Machine</a>
+              <a class="btn ghost ext-link" href="https://teachablemachine.withgoogle.com/" target="_blank" rel="noreferrer" style="text-decoration:none;display:inline-flex;align-items:center;">Teachable Machine</a>
             </div>
             <input class="file-input" id="importZipInput" type="file" accept=".zip,application/zip">
             <input class="file-input" id="importFolderInput" type="file" webkitdirectory directory multiple>
@@ -478,7 +490,7 @@
               <h3>小小百科整理</h3>
               <p>把石虎資料貼進來，工具會幫你抓重點，還可以回答你的問題。</p>
               <div class="toolbar">
-                <a class="btn ghost" href="https://gemini.google.com/gem/1V3uo0KRMQ38nCXnh5RPk8aOXoECSi1lw?usp=sharing" target="_blank" rel="noreferrer" style="text-decoration:none;display:inline-flex;align-items:center;">Gemini 小小生態學家</a>
+                <a class="btn ghost ext-link" href="https://gemini.google.com/gem/1V3uo0KRMQ38nCXnh5RPk8aOXoECSi1lw?usp=sharing" target="_blank" rel="noreferrer" style="text-decoration:none;display:inline-flex;align-items:center;">Gemini 小小生態學家</a>
               </div>
               <div class="inputs">
                 <textarea id="kbInput" placeholder="貼上石虎保育資料、報導、課本內容或教師整理的文字。每段之間可空一行。"></textarea>
